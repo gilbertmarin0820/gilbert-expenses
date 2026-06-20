@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Gilbert Expenses</title>
+
+<!-- PWA: manifest + icons + theme -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- iOS standalone-mode support (Android uses the manifest above) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Expenses">
+
+<!-- Android Chrome standalone-mode support -->
+<meta name="mobile-web-app-capable" content="yes">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --surface3: #21262d;
+    --border: #30363d;
+    --border2: #444c56;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --green: #3fb950;
+    --green-dim: #1a3726;
+    --green-text: #56d364;
+    --red: #f85149;
+    --red-dim: #3d1b1b;
+    --red-text: #ff7b72;
+    --amber: #d29922;
+    --amber-dim: #2e2108;
+    --amber-text: #e3b341;
+    --blue: #388bfd;
+    --blue-dim: #0c2d6b;
+    --blue-text: #79c0ff;
+    --purple: #8b5cf6;
+    --purple-dim: #2e1065;
+    --purple-text: #a78bfa;
+    --teal: #0d9488;
+    --teal-dim: #042f2e;
+    --teal-text: #2dd4bf;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); }
+  .logo span { color: var(--green-text); }
+  .rate-badge {
+    background: var(--green-dim);
+    color: var(--green-text);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--green);
+    font-family: 'DM Mono', monospace;
+  }
+  .fx-bar {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .fx-label { font-size: 11px; color: var(--text3); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .fx-rate { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: var(--amber-text); }
+  .fx-meta { font-size: 12px; color: var(--text3); }
+  .fx-source { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .fx-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .fx-countdown { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+  .fx-status {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+  .fx-status.live { background: var(--green-dim); color: var(--green-text); border: 1px solid var(--green); }
+  .fx-status.error { background: var(--red-dim); color: var(--red-text); border: 1px solid var(--red); }
+  .fx-status.loading { background: var(--amber-dim); color: var(--amber-text); border: 1px solid var(--amber); }
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { border-color: var(--amber); color: var(--amber-text); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+  .main { padding: 28px 32px; display: grid; gap: 24px; max-width: 1100px; margin: 0 auto; }
+  .section-title {
+    font-size: 11px; font-weight: 500; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+
+  /* HOURS */
+  .hours-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .input-block { }
+  .input-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; display: block; }
+  .input-row {
+    display: flex; align-items: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: var(--blue); }
+  .input-prefix {
+    padding: 0 10px; font-size: 13px; color: var(--text3);
+    background: var(--surface3); border-right: 1px solid var(--border);
+    height: 42px; display: flex; align-items: center;
+    font-family: 'DM Mono', monospace; white-space: nowrap; min-width: 70px;
+  }
+  .big-input {
+    flex: 1; background: none; border: none; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+    padding: 8px 12px; width: 100%; text-align: left;
+  }
+  .big-input:focus { outline: none; }
+
+  .hours-summary {
+    margin-top: 18px; padding: 16px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  }
+  .hs-item { }
+  .hs-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 5px; }
+  .hs-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+
+  /* RATE / TAX PRESETS */
+  .rate-tax-row { display: flex; gap: 16px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .preset-chips { display: flex; gap: 6px; margin-top: 7px; }
+  .preset-btn {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text2); font-family: 'DM Mono', monospace; font-size: 12px;
+    padding: 4px 12px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--amber); color: var(--amber-text); background: var(--amber-dim); }
+  .preset-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber-text); font-weight: 500; }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: flex; gap: 0; margin-bottom: 18px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; width: fit-content;
+  }
+  .mode-btn {
+    background: none; border: none; color: var(--text2);
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 8px 22px; cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .mode-btn.active {
+    background: var(--blue-dim); color: var(--blue-text);
+    box-shadow: inset 0 0 0 1px var(--blue);
+  }
+  .mode-btn:not(.active):hover { color: var(--text); background: var(--surface3); }
+
+  /* DATE RANGE */
+  .date-range-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .date-input-wrap {
+    display: flex; align-items: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s;
+  }
+  .date-input-wrap:focus-within { border-color: var(--blue); }
+  .date-prefix {
+    padding: 0 10px; font-size: 12px; color: var(--text3);
+    background: var(--surface3); border-right: 1px solid var(--border);
+    height: 42px; display: flex; align-items: center;
+    font-family: 'DM Mono', monospace; white-space: nowrap; min-width: 60px;
+  }
+  .date-input {
+    flex: 1; background: none; border: none; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 14px;
+    padding: 8px 12px; width: 100%;
+    color-scheme: dark;
+  }
+  .date-input:focus { outline: none; }
+
+  /* WORKING DAYS VISUAL */
+  .workdays-bar {
+    margin-top: 14px; padding: 12px 14px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .workdays-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .day-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .day-chip {
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+    padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border);
+    color: var(--text3); background: var(--surface3);
+  }
+  .day-chip.work { background: var(--green-dim); color: var(--green-text); border-color: var(--green); }
+  .day-chip.off  { background: var(--surface3); color: var(--text3); border-color: var(--border); opacity: 0.5; }
+  .workdays-count { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text2); }
+  .workdays-count span { color: var(--green-text); font-weight: 500; }
+
+  /* SAVINGS + DEBT */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .paylater-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .paylater-logo { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .badge-shopee { background: #ff5722; color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .badge-tiktok { background: #111; color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 1px solid #444; }
+
+  .pl-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .month-select {
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 13px; padding: 6px 8px; border-radius: var(--radius-sm);
+    cursor: pointer; flex: 0 0 115px;
+  }
+  .month-select:focus { outline: none; border-color: var(--blue); }
+  .pl-input {
+    flex: 1; background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px;
+    padding: 6px 10px; border-radius: var(--radius-sm); transition: border-color 0.2s;
+  }
+  .pl-input:focus { outline: none; border-color: var(--red); }
+  .del-btn {
+    background: none; border: none; color: var(--text3); cursor: pointer;
+    font-size: 15px; padding: 4px 8px; border-radius: var(--radius-sm); transition: all 0.2s;
+  }
+  .del-btn:hover { color: var(--red-text); background: var(--red-dim); }
+  .add-btn {
+    background: none; border: 1px dashed var(--border2); color: var(--text2);
+    cursor: pointer; font-size: 13px; padding: 7px 14px;
+    border-radius: var(--radius-sm); margin-top: 8px;
+    font-family: 'Outfit', sans-serif; transition: all 0.2s; width: 100%;
+  }
+  .add-btn:hover { border-color: var(--green); color: var(--green-text); }
+  .pl-total-row {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+  }
+
+  /* NECESSITIES */
+  .nec-table { width: 100%; border-collapse: collapse; }
+  .nec-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .nec-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .nec-cat-input {
+    background: var(--surface2); border: 1px solid transparent;
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 14px; padding: 6px 8px; border-radius: var(--radius-sm); width: 100%; transition: border-color 0.2s;
+  }
+  .nec-cat-input:focus { outline: none; border-color: var(--blue); background: var(--surface3); }
+  .nec-amt-input {
+    background: var(--surface2); border: 1px solid transparent;
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 14px; padding: 6px 8px; border-radius: var(--radius-sm);
+    width: 100%; text-align: right; transition: border-color 0.2s;
+  }
+  .nec-amt-input:focus { outline: none; border-color: var(--red); background: var(--surface3); }
+
+  /* PAY DAY input */
+  .nec-day-input {
+    background: var(--surface2); border: 1px solid transparent;
+    color: var(--teal-text); font-family: 'DM Mono', monospace;
+    font-size: 14px; padding: 5px 6px; border-radius: var(--radius-sm);
+    width: 52px; text-align: center; transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  .nec-day-input::-webkit-outer-spin-button,
+  .nec-day-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .nec-day-input:focus { outline: none; border-color: var(--teal); background: var(--surface3); }
+  .nec-day-input::placeholder { color: var(--text3); font-size: 11px; }
+
+  /* multiplier badge shown when day auto-multiplies */
+  .nec-mult-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    background: var(--teal-dim); color: var(--teal-text);
+    border: 1px solid var(--teal); border-radius: 20px;
+    padding: 1px 6px; white-space: nowrap; display: inline-block;
+    margin-left: 4px; vertical-align: middle;
+  }
+
+  /* CALC table */
+  #calcTable .nec-amt-input:focus { border-color: var(--amber); }
+
+  /* CALCULATOR BUTTONS */
+  .calc-btn {
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 18px;
+    padding: 0; height: 56px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .calc-btn:hover  { background: var(--surface2); border-color: var(--border2); }
+  .calc-btn:active { transform: scale(0.93); }
+  .calc-fn { background: var(--surface2); color: var(--text2); }
+  .calc-fn:hover { background: var(--border); color: var(--text); }
+  .calc-op { background: var(--amber-dim); color: var(--amber-text); border-color: var(--amber); }
+  .calc-op:hover { background: var(--amber); color: var(--bg); }
+  .calc-op.active-op { background: var(--amber-text); color: var(--bg); }
+  .calc-eq { background: var(--green-dim); color: var(--green-text); border-color: var(--green); }
+  .calc-eq:hover { background: var(--green); color: var(--bg); }
+
+  /* SALARY BREAKDOWN */
+  .sal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .sal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sal-card.day   { border-top: 3px solid var(--amber); }
+  .sal-card.week  { border-top: 3px solid var(--blue); }
+  .sal-card.month { border-top: 3px solid var(--green); }
+  .sal-period { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text3); }
+  .sal-usd { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; margin-top: 4px; }
+  .sal-card.day   .sal-usd { color: var(--amber-text); }
+  .sal-card.week  .sal-usd { color: var(--blue-text); }
+  .sal-card.month .sal-usd { color: var(--green-text); }
+  .sal-php { font-family: 'DM Mono', monospace; font-size: 15px; color: var(--teal-text); }
+  .sal-note { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  @media (max-width: 700px) { .sal-grid { grid-template-columns: 1fr; } }
+
+  /* BONUS */
+  .bonus-card {
+    background: var(--surface);
+    border: 1px solid var(--purple);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .bonus-preview {
+    margin-top: 14px; padding: 14px 16px;
+    background: var(--purple-dim); border-radius: var(--radius-sm);
+    border: 1px solid var(--purple);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .bonus-toggle {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px; cursor: pointer;
+    user-select: none;
+  }
+  .bonus-toggle input[type=checkbox] {
+    width: 16px; height: 16px; accent-color: var(--purple); cursor: pointer;
+  }
+  .bonus-toggle-label { font-size: 13px; color: var(--text2); }
+
+  /* NET SUMMARY */
+  .net-card {
+    background: var(--surface);
+    border: 1px solid var(--green);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  .net-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; letter-spacing: 0.5px; }
+  .net-value { font-family: 'DM Mono', monospace; font-size: 34px; font-weight: 500; color: var(--green-text); }
+  .net-sub { font-size: 13px; color: var(--text2); margin-top: 6px; font-family: 'DM Mono', monospace; }
+  .nb-row { display: flex; justify-content: space-between; gap: 32px; font-size: 13px; margin-bottom: 7px; font-family: 'DM Mono', monospace; }
+  .nb-label { color: var(--text2); }
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+  .c-green { color: var(--green-text); }
+  .c-red { color: var(--red-text); }
+  .c-amber { color: var(--amber-text); }
+  .c-blue { color: var(--blue-text); }
+  .c-teal { color: var(--teal-text); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--green);
+    color: var(--green-text); padding: 10px 18px;
+    border-radius: var(--radius); font-size: 13px;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease; z-index: 999;
+    font-family: 'DM Mono', monospace;
+  }
+  .toast.err { border-color: var(--red); color: var(--red-text); }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* BANK SELECTOR */
+  .bank-select-wrap {
+    position: relative; display: flex; align-items: center;
+    flex: 1; min-width: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s;
+  }
+  .bank-select-wrap:focus-within { border-color: var(--blue); }
+  .bank-icon {
+    flex: 0 0 36px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; font-family: 'DM Mono', monospace;
+    color: #fff; letter-spacing: -0.5px;
+    border-right: 1px solid rgba(255,255,255,0.12); flex-shrink: 0;
+  }
+  .bank-select {
+    flex: 1; min-width: 0; background: transparent; border: none;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px;
+    padding: 8px 4px 8px 10px; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .bank-select:focus { outline: none; }
+  .bank-select option { background: #161b22; color: var(--text); }
+  .bank-chevron {
+    padding: 0 8px; color: var(--text3); font-size: 9px;
+    pointer-events: none; flex-shrink: 0;
+  }
+  .bank-custom-label {
+    flex: 1; min-width: 0; background: none; border: none;
+    border-left: 1px solid var(--border);
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px;
+    padding: 8px 10px;
+  }
+  .bank-custom-label:focus { outline: none; }
+  .bank-custom-label::placeholder { color: var(--text3); }
+
+  /* PAGE NAV */
+  .page-nav {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 12px 32px; display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .page-tab {
+    background: none; border: 1px solid var(--border2); color: var(--text2);
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 8px 20px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .page-tab.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue-text); }
+  .page-tab:not(.active):hover { color: var(--text); background: var(--surface3); border-color: var(--border2); }
+
+  /* CC SPLITTER: person chips + split-with toggles */
+  .person-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 6px 5px 14px; font-size: 13px;
+  }
+  .split-chip {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text2); font-family: 'Outfit', sans-serif; font-size: 13px;
+    padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+  }
+  .split-chip:hover { border-color: var(--border2); background: var(--surface3); color: var(--text); }
+  .split-chip.active {
+    background: var(--green-dim); border-color: var(--green); color: var(--green-text); font-weight: 500;
+  }
+  .split-chip.active:hover { background: var(--green-dim); }
+
+  /* SAVINGS ALLOCATION ITEMS */
+  .sav-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .sav-panel-title {
+    font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ACTION BUTTONS (Reset / Undo in header) */
+  .action-btn {
+    background: none; border: 1px solid var(--border2);
+    color: var(--text2); padding: 5px 13px; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 12px; font-family: 'Outfit', sans-serif;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .action-btn:hover { border-color: var(--amber); color: var(--amber-text); }
+  .action-btn.danger { border-color: var(--border2); color: var(--red-text); }
+  .action-btn.danger:hover { border-color: var(--red); background: var(--red-dim); }
+  .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .action-btn:disabled:hover { border-color: var(--border2); color: var(--text2); background: none; }
+
+  /* ═══════════════════════════════════════════════════════════
+     MOBILE OPTIMIZATIONS — tested on Redmi Note 12 Pro+ Chrome
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Global horizontal-overflow lock — nothing can scroll sideways */
+  html { overflow-x: hidden; }
+
+  /* Tap highlight removal for Android Chrome */
+  button, input, select { -webkit-tap-highlight-color: transparent; }
+
+  /* iOS Safari: inputs < 16px trigger viewport zoom on focus.
+     Force 16px minimum so the page never jumps. */
+  @media (max-width: 900px) {
+    input, select, textarea { font-size: 16px !important; }
+    .big-input              { font-size: 20px !important; }
+  }
+
+  @media (max-width: 700px) {
+
+    /* ── Global overflow + box model ─────────────────────── */
+    body { overflow-x: hidden; }
+    /* min-width: 0 on all flex/grid children lets them shrink
+       below their content size, preventing the most common cause
+       of content spilling past the right viewport edge */
+    .main > *, .card > *, .rate-tax-row > *,
+    .hours-inputs > *, .date-range-grid > *,
+    .two-col > *, .sal-grid > *, .net-card > *,
+    .hours-summary > *, .paylater-grid > * { min-width: 0; }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .main          { padding: 12px; gap: 16px; }
+    .card          {
+      padding: 14px;
+      /* subtle shadow makes cards "float" above the bg on mobile */
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .two-col           { grid-template-columns: 1fr; }
+    .hours-inputs      { grid-template-columns: 1fr; }
+    .date-range-grid   { grid-template-columns: 1fr; }
+    /* 2-column for the 5-item summary (2+2+1 rows) */
+    .hours-summary     { grid-template-columns: repeat(2, 1fr); padding: 12px; }
+    .sal-grid          { grid-template-columns: 1fr; }
+    .net-card          { grid-template-columns: 1fr; gap: 16px; }
+    /* Override inline style on the PayLater grid */
+    .paylater-grid     { grid-template-columns: 1fr !important; }
+
+    /* ── Header ───────────────────────────────────────────── */
+    header         { padding: 11px 14px; }
+    .logo          { font-size: 18px; }
+    .rate-badge    { display: none; }  /* shown in FX bar instead */
+    .action-btn    { font-size: 11px; padding: 5px 10px; min-height: 34px; }
+    #expenseControls { gap: 7px; }
+
+    /* ── FX bar — compact 2-row mobile layout ─────────────── */
+    .fx-bar {
+      padding: 10px 14px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .fx-rate       { font-size: 22px; }
+    .fx-label      { font-size: 10px; margin-bottom: 1px; }
+    .fx-right      { margin-left: 0; flex-wrap: wrap; gap: 8px; }
+    .refresh-btn   { min-height: 34px; padding: 5px 12px; font-size: 12px; }
+
+    /* ── Rate/tax inputs ──────────────────────────────────── */
+    .rate-tax-row  { flex-direction: column; gap: 14px; }
+    /* Override the inline min-width:150px on .input-block */
+    .rate-tax-row .input-block { min-width: 0 !important; width: 100%; }
+    .input-prefix  { min-width: 56px; font-size: 12px; padding: 0 8px; height: 44px; }
+    .date-prefix   { min-width: 46px; font-size: 12px; padding: 0 8px; height: 44px; }
+    .big-input     { font-size: 20px; padding: 8px 10px; }
+    .input-row     { min-width: 0; }   /* allow the row itself to shrink */
+    .date-input    { height: 44px; font-size: 15px; }
+
+    /* ── Mode toggle ──────────────────────────────────────── */
+    .mode-toggle   { width: 100%; }
+    .mode-btn      { flex: 1; padding: 10px 12px; font-size: 14px; justify-content: center; }
+
+    /* ── Preset chips ─────────────────────────────────────── */
+    .preset-chips  { flex-wrap: wrap; gap: 8px; }
+    .preset-btn    { min-height: 36px; padding: 6px 16px; font-size: 13px; }
+
+    /* ── Necessities table — horizontal scroll inside card ── */
+    .nec-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      /* pull to card edges so scroll bar aligns nicely */
+      margin: 0 -14px;
+      padding: 0 14px;
+    }
+    .nec-table         { min-width: 440px; }
+    .nec-table th,
+    .nec-table td      { padding: 5px 4px; font-size: 13px; }
+    .nec-day-input     { width: 46px; font-size: 14px; }
+    .nec-cat-input     { font-size: 14px; }
+
+    /* ── Calculator ───────────────────────────────────────── */
+    .calc-card     { flex: 0 0 100% !important; max-width: 100% !important; }
+    .calc-btn      { height: 64px; font-size: 22px; border-radius: 10px; }
+    #calcScreen    { font-size: 28px !important; }
+
+    /* ── Touch targets ────────────────────────────────────── */
+    .add-btn       { min-height: 46px; padding: 10px 14px; font-size: 14px; }
+    .del-btn       { min-height: 40px; min-width: 40px; padding: 7px 10px; font-size: 16px; }
+    .split-chip    { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+    .person-tag    { font-size: 14px; padding: 9px 8px 9px 14px; }
+
+    /* ── Net summary ──────────────────────────────────────── */
+    .net-value     { font-size: 30px; }
+    .nb-row        { gap: 10px; font-size: 13px; }
+
+    /* ── Salary cards ─────────────────────────────────────── */
+    .sal-usd       { font-size: 20px; }
+    .sal-card      { padding: 14px; }
+
+    /* ── Savings allocation ───────────────────────────────── */
+    .sav-item-row  { flex-wrap: wrap; }
+    .sav-item-row .bank-select-wrap { flex: 1 1 100%; }
+
+    /* ── Bottom tab bar ───────────────────────────────────── */
+    .page-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      padding: 6px 8px;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: none;
+      z-index: 200;
+      justify-content: space-around;
+      gap: 4px;
+    }
+    .page-tab {
+      flex: 1;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 10px;
+      padding: 7px 4px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      min-height: 54px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .page-tab.active {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue-text);
+    }
+    .tab-icon  { font-size: 22px; line-height: 1; display: block; }
+    .tab-label { font-size: 10px; display: block; line-height: 1.2; }
+
+    /* Body bottom padding so content stays above the tab bar */
+    body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+    /* Toast above bottom bar */
+    .toast {
+      bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 8px);
+      right: 12px; left: 12px; text-align: center;
+    }
+
+    /* ── Section titles ───────────────────────────────────── */
+    .section-title { font-size: 10px; margin-bottom: 12px; }
+
+    /* ── Bonus ────────────────────────────────────────────── */
+    .bonus-preview { flex-direction: column; gap: 8px; }
+    .bonus-preview > div:last-child { text-align: left; }
+
+    /* ── Paylater ─────────────────────────────────────────── */
+    .pl-row { flex-wrap: wrap; gap: 6px; }
+    .month-select { flex: 0 0 100%; }
+  }
+
+  /* Extra-small phones (iPhone SE gen 1, some Android budget phones) */
+  @media (max-width: 390px) {
+    .main          { padding: 10px; gap: 12px; }
+    .calc-btn      { height: 58px; font-size: 20px; }
+    #calcScreen    { font-size: 24px !important; }
+    .net-value     { font-size: 26px; }
+    .nb-row        { font-size: 12px; }
+    .card          { padding: 12px; }
+    .mode-btn      { padding: 9px 8px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Gilbert <span>Expenses</span></div>
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;" id="expenseControls">
+    <button class="action-btn" id="undoBtn" onclick="undo()" disabled title="Undo last change (Ctrl+Z)">↩ Undo</button>
+    <button class="action-btn danger" onclick="resetAll()" title="Clear all fields to blank">✕ Reset All</button>
+    <div class="rate-badge">$3.50 / hr &nbsp;·&nbsp; 15% tax</div>
+  </div>
+</header>
+
+<!-- PAGE NAV -->
+<nav class="page-nav">
+  <button class="page-tab active" id="tabExpenses" onclick="switchPage('expenses')">
+    <span class="tab-icon">💰</span><span class="tab-label">Expenses</span>
+  </button>
+  <button class="page-tab" id="tabSplitter" onclick="switchPage('splitter')">
+    <span class="tab-icon">💳</span><span class="tab-label">CC Split</span>
+  </button>
+  <button class="page-tab" id="tabHangout" onclick="switchPage('hangout')">
+    <span class="tab-icon">🍻</span><span class="tab-label">Hangout</span>
+  </button>
+</nav>
+
+<!-- FX BAR -->
+<div class="fx-bar" id="fxBar">
+  <div>
+    <div class="fx-label">USD → PHP Exchange Rate</div>
+    <div class="fx-rate" id="fxRate">—</div>
+  </div>
+  <div>
+    <div class="fx-meta" id="fxUpdated">Fetching…</div>
+    <div class="fx-source" id="fxSource"></div>
+  </div>
+  <div class="fx-right">
+    <span class="fx-countdown" id="fxCountdown"></span>
+    <span class="fx-status loading" id="fxStatus">Loading</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchRate(true)">
+      <span id="refreshIcon">↻</span> Refresh now
+    </button>
+  </div>
+</div>
+
+<div class="main" id="pageExpenses">
+
+  <!-- HOURS -->
+  <div>
+    <div class="section-title">Hours &amp; Pay</div>
+    <div class="card">
+
+      <!-- RATE & TAX -->
+      <div class="rate-tax-row">
+        <div class="input-block" style="flex:1; min-width:150px;">
+          <label class="input-label">Hourly rate (USD)</label>
+          <div class="input-row">
+            <div class="input-prefix">$ / hr</div>
+            <input class="big-input" type="number" id="rateInput" value="3.50" min="0" step="0.01" inputmode="decimal" oninput="updateRateTax(); saveData()">
+          </div>
+          <div class="preset-chips">
+            <button class="preset-btn active" id="presetRate350" onclick="setRate(3.50)">$3.50</button>
+            <button class="preset-btn" id="presetRate400" onclick="setRate(4.00)">$4.00</button>
+          </div>
+        </div>
+        <div class="input-block" style="flex:1; min-width:150px;">
+          <label class="input-label">Tax rate</label>
+          <div class="input-row">
+            <div class="input-prefix">%</div>
+            <input class="big-input" type="number" id="taxInput" value="15" min="0" max="100" step="0.5" inputmode="decimal" oninput="updateRateTax(); saveData()">
+          </div>
+          <div class="preset-chips">
+            <button class="preset-btn" id="presetTax10" onclick="setTax(10)">10%</button>
+            <button class="preset-btn active" id="presetTax15" onclick="setTax(15)">15%</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE TOGGLE -->
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeWeekly" onclick="setMode('weekly')">📅 Weekly</button>
+        <button class="mode-btn" id="modeMonthly" onclick="setMode('monthly')">📆 Monthly</button>
+      </div>
+
+      <!-- WEEKLY PANEL -->
+      <div id="panelWeekly">
+        <div class="hours-inputs">
+          <div class="input-block">
+            <label class="input-label">Daily hours worked</label>
+            <div class="input-row">
+              <div class="input-prefix">hrs / day</div>
+              <input class="big-input" type="number" id="dailyHours" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcAll(); saveData()">
+            </div>
+          </div>
+          <div class="input-block">
+            <label class="input-label">Number of weeks worked</label>
+            <div class="input-row">
+              <div class="input-prefix">weeks</div>
+              <input class="big-input" type="number" id="weeksWorked" placeholder="1" min="0" step="1" inputmode="numeric" oninput="recalcAll(); saveData()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MONTHLY PANEL -->
+      <div id="panelMonthly" style="display:none;">
+        <div class="date-range-grid">
+          <div class="input-block">
+            <label class="input-label">Start date</label>
+            <div class="date-input-wrap">
+              <div class="date-prefix">From</div>
+              <input class="date-input" type="date" id="dateStart" oninput="renderNec(); recalcAll(); saveData()">
+            </div>
+          </div>
+          <div class="input-block">
+            <label class="input-label">End date</label>
+            <div class="date-input-wrap">
+              <div class="date-prefix">To</div>
+              <input class="date-input" type="date" id="dateEnd" oninput="renderNec(); recalcAll(); saveData()">
+            </div>
+          </div>
+        </div>
+        <div class="input-block" style="margin-top:14px;">
+          <label class="input-label">Daily hours worked</label>
+          <div class="input-row">
+            <div class="input-prefix">hrs / day</div>
+            <input class="big-input" type="number" id="dailyHoursM" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcAll(); saveData()">
+          </div>
+        </div>
+        <div class="workdays-bar" id="workdaysBar" style="display:none;">
+          <div class="workdays-label">Working days in range (Sun – Thu)</div>
+          <div class="day-chips" id="dayChips"></div>
+          <div class="workdays-count" id="workdaysCount"></div>
+        </div>
+      </div>
+
+      <!-- SUMMARY (shared) -->
+      <div class="hours-summary" style="margin-top:18px;">
+        <div class="hs-item">
+          <div class="hs-label">Days worked</div>
+          <div class="hs-value c-amber" id="sDays">0</div>
+        </div>
+        <div class="hs-item">
+          <div class="hs-label">Total hours</div>
+          <div class="hs-value c-amber" id="sTotalHrs">0 hrs</div>
+        </div>
+        <div class="hs-item">
+          <div class="hs-label">Gross (USD)</div>
+          <div class="hs-value c-green" id="sGross">$0.00</div>
+        </div>
+        <div class="hs-item">
+          <div class="hs-label" id="sTaxLabel">Tax 15%</div>
+          <div class="hs-value c-red" id="sTax">-$0.00</div>
+        </div>
+        <div class="hs-item">
+          <div class="hs-label">Net pay (USD)</div>
+          <div class="hs-value c-blue" id="sNetUSD">$0.00</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; padding:14px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:11px; color:var(--text3); margin-bottom:3px;">Net pay in PHP</div>
+          <div class="c-teal" style="font-family:'DM Mono',monospace; font-size:26px; font-weight:500;" id="sNetPHP">₱—</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:3px;" id="breakdownLabel">Weekly breakdown</div>
+          <div style="font-family:'DM Mono',monospace; font-size:13px; color:var(--text2);" id="sWeekBreak">—</div>
+          <div style="font-family:'DM Mono',monospace; font-size:13px; color:var(--text2); margin-top:3px;" id="sDailyBreak">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SALARY BREAKDOWN -->
+  <div>
+    <div class="section-title">Salary Breakdown</div>
+    <div class="sal-grid">
+      <div class="sal-card day">
+        <div class="sal-period">Per Day</div>
+        <div class="sal-usd" id="salDayUSD">$0.00</div>
+        <div class="sal-php" id="salDayPHP">₱—</div>
+        <div class="sal-note" id="salDayNote">Enter your daily hours above</div>
+      </div>
+      <div class="sal-card week">
+        <div class="sal-period">Per Week</div>
+        <div class="sal-usd" id="salWeekUSD">$0.00</div>
+        <div class="sal-php" id="salWeekPHP">₱—</div>
+        <div class="sal-note">5 working days / week</div>
+      </div>
+      <div class="sal-card month">
+        <div class="sal-period">Per Month</div>
+        <div class="sal-usd" id="salMonthUSD">$0.00</div>
+        <div class="sal-php" id="salMonthPHP">₱—</div>
+        <div class="sal-note">≈ 21.67 working days / month</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAVINGS + PAYLATER -->
+  <div class="two-col">
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div>
+        <div class="section-title">Savings</div>
+        <div class="card">
+          <div class="input-block" style="margin-bottom:14px;">
+            <label class="input-label">Current savings balance (₱)</label>
+            <div class="input-row">
+              <div class="input-prefix">₱</div>
+              <input class="big-input" type="number" id="savingsInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="recalcAll(); saveData()">
+            </div>
+          </div>
+          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Savings + payroll + bonus (₱)</div>
+            <div class="c-green" style="font-family:'DM Mono',monospace; font-size:22px; font-weight:500;" id="savingsPlusPayroll">₱0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BONUS -->
+      <div>
+        <div class="section-title">Bonus</div>
+        <div class="bonus-card">
+          <label class="bonus-toggle">
+            <input type="checkbox" id="bonusEnabled" onchange="recalcAll(); saveData()">
+            <span class="bonus-toggle-label">Include a bonus this period</span>
+          </label>
+          <div id="bonusFields" style="display:none;">
+            <div class="input-block" style="margin-bottom:12px;">
+              <label class="input-label">Bonus amount (USD $)</label>
+              <div class="input-row" style="border-color: var(--purple);">
+                <div class="input-prefix" style="color:var(--purple-text);">$ USD</div>
+                <input class="big-input" type="number" id="bonusUSD" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+                  oninput="recalcAll(); saveData()" style="color:var(--purple-text);">
+              </div>
+            </div>
+            <div class="bonus-preview">
+              <div>
+                <div style="font-size:11px; color:var(--text3); margin-bottom:3px;">Bonus in PHP</div>
+                <div style="font-family:'DM Mono',monospace; font-size:22px; font-weight:500; color:var(--purple-text);" id="bonusPHP">₱—</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:var(--text3); margin-bottom:3px;">At current rate</div>
+                <div style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3);" id="bonusRateNote">—</div>
+              </div>
+            </div>
+          </div>
+          <div id="bonusDisabledMsg" style="font-size:12px; color:var(--text3); padding:4px 0;">
+            Enable the checkbox above to add a bonus.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">PayLater Debts</div>
+      <div class="paylater-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <!-- Shopee -->
+        <div class="paylater-card">
+          <div class="paylater-logo"><span class="badge-shopee">Shopee</span> SPayLater</div>
+          <div id="shopeeRows"></div>
+          <button class="add-btn" onclick="addPLRow('shopee')">+ Add month</button>
+          <div class="pl-total-row">
+            <span style="color:var(--text3);">Total</span>
+            <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="shopeeTotal">₱0.00</span>
+          </div>
+        </div>
+        <!-- TikTok -->
+        <div class="paylater-card">
+          <div class="paylater-logo"><span class="badge-tiktok">TikTok</span> PayLater</div>
+          <div id="tiktokRows"></div>
+          <button class="add-btn" onclick="addPLRow('tiktok')">+ Add month</button>
+          <div class="pl-total-row">
+            <span style="color:var(--text3);">Total</span>
+            <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="tiktokTotal">₱0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NECESSITIES -->
+  <div>
+    <div class="section-title">Necessities &amp; Expenses (₱)</div>
+    <div class="card">
+      <div class="nec-table-wrap">
+        <table class="nec-table">
+          <thead>
+            <tr>
+              <th style="width:30%">Category</th>
+              <th style="width:22%; text-align:right">Amount (₱)</th>
+              <th style="width:14%; text-align:center" title="Day of month this is due. If set and a date range is selected, the amount auto-multiplies by how many times that day falls in the range.">Pay Day</th>
+              <th style="width:18%">Note</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="necBody"></tbody>
+        </table>
+      </div>
+      <button class="add-btn" onclick="addNec()">+ Add category</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:var(--text2);">Total necessities</span>
+        <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="necTotal">₱0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALCULATOR + SAVINGS ALLOCATION -->
+  <div>
+    <div class="section-title">Calculator &amp; Savings Allocation</div>
+    <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+
+      <!-- Calculator -->
+      <div class="card calc-card" style="flex:0 0 300px; max-width:300px;">
+        <div id="calcDisplay" style="
+          background:var(--surface2); border:1px solid var(--border);
+          border-radius:var(--radius-sm); padding:12px 16px;
+          margin-bottom:12px; text-align:right; min-height:64px;
+          display:flex; flex-direction:column; justify-content:flex-end; gap:4px;">
+          <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); min-height:16px; word-break:break-all;"></div>
+          <div id="calcScreen" style="font-family:'DM Mono',monospace; font-size:32px; font-weight:500; color:var(--text); word-break:break-all;">0</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+          <!-- Row 1 -->
+          <button class="calc-btn calc-fn" onclick="calcClear()">AC</button>
+          <button class="calc-btn calc-fn" onclick="calcToggleSign()">+/−</button>
+          <button class="calc-btn calc-fn" onclick="calcPercent()">%</button>
+          <button class="calc-btn calc-op" onclick="calcOp('/')">÷</button>
+          <!-- Row 2 -->
+          <button class="calc-btn" onclick="calcDigit('7')">7</button>
+          <button class="calc-btn" onclick="calcDigit('8')">8</button>
+          <button class="calc-btn" onclick="calcDigit('9')">9</button>
+          <button class="calc-btn calc-op" onclick="calcOp('*')">×</button>
+          <!-- Row 3 -->
+          <button class="calc-btn" onclick="calcDigit('4')">4</button>
+          <button class="calc-btn" onclick="calcDigit('5')">5</button>
+          <button class="calc-btn" onclick="calcDigit('6')">6</button>
+          <button class="calc-btn calc-op" onclick="calcOp('-')">−</button>
+          <!-- Row 4 -->
+          <button class="calc-btn" onclick="calcDigit('1')">1</button>
+          <button class="calc-btn" onclick="calcDigit('2')">2</button>
+          <button class="calc-btn" onclick="calcDigit('3')">3</button>
+          <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
+          <!-- Row 5 -->
+          <button class="calc-btn" onclick="calcDigit('0')" style="grid-column:span 2; text-align:left; padding-left:24px;">0</button>
+          <button class="calc-btn" onclick="calcDot()">.</button>
+          <button class="calc-btn calc-eq" onclick="calcEquals()">=</button>
+        </div>
+      </div>
+
+      <!-- Savings Allocation Panel -->
+      <div class="card" style="flex:1; min-width:260px;">
+        <div class="sav-panel-title">
+          <span style="color:var(--green-text); font-size:16px;">₱</span>
+          Savings Allocation
+          <span style="font-size:11px; color:var(--text3); font-weight:400;">Track what makes up your savings</span>
+        </div>
+
+        <div id="savingsItemsContainer"></div>
+        <button class="add-btn" onclick="addSavingsItem()">+ Add item</button>
+
+        <!-- Totals & match -->
+        <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:7px;">
+            <span style="color:var(--text3);">Items total</span>
+            <span style="font-family:'DM Mono',monospace; font-weight:500;" id="savingsItemsTotal">₱0.00</span>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-top:7px;">
+            <span style="color:var(--text3);">Savings balance</span>
+            <span style="font-family:'DM Mono',monospace; color:var(--text2);" id="savingsBalanceRef">₱0.00</span>
+          </div>
+          <div id="savingsMatchIndicator" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- Quick-set button -->
+        <button class="add-btn" style="margin-top:8px; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
+          onclick="setSavingsFromItems()" title="Set the Savings balance field to the sum of items above">
+          ↑ Use items total as savings balance
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NET SUMMARY -->
+  <div>
+    <div class="section-title">Net Summary</div>
+    <div class="net-card">
+      <div>
+        <div class="net-label">Remaining Balance</div>
+        <div class="net-value" id="netBalance">₱0.00</div>
+        <div class="net-sub" id="netUSD">≈ $0.00 USD</div>
+        <div style="font-size:12px; color:var(--text3); margin-top:6px;" id="netWarning"></div>
+      </div>
+      <div>
+        <div class="nb-row"><span class="nb-label">Current savings</span><span class="c-green" id="nb1">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">+ Net payroll</span><span class="c-green" id="nb2">₱0.00</span></div>
+        <div class="nb-row" id="nb-bonus-row" style="display:none;"><span class="nb-label" style="color:var(--purple-text);">+ Bonus</span><span style="color:var(--purple-text);" id="nb-bonus">₱0.00</span></div>
+        <div class="divider"></div>
+        <div class="nb-row"><span class="nb-label">− Necessities</span><span class="c-red" id="nb3">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">− SPayLater</span><span class="c-red" id="nb4">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">− TikTok PayLater</span><span class="c-red" id="nb5">₱0.00</span></div>
+        <div class="divider"></div>
+        <div class="nb-row" style="font-size:15px;">
+          <span class="nb-label" style="color:var(--text);">= Net balance</span>
+          <span class="c-green" id="nb6" style="font-size:15px; font-weight:500;">₱0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CREDIT CARD SPLIT PAGE — fully independent of Expenses page
+     own data, own storage, own state
+     ════════════════════════════════════════════════════════════ -->
+<div class="main" id="pageSplitter" style="display:none;">
+
+  <!-- PEOPLE -->
+  <div>
+    <div class="section-title">People</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Add everyone who shares this card. You'll pick who's splitting each store purchase below.
+      </div>
+      <div id="ccPeopleList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="ccNewPersonName" class="nec-cat-input" placeholder="Person's name" style="flex:1"
+          onkeydown="if(event.key==='Enter'){addPerson();}">
+        <button class="add-btn" style="width:auto; flex-shrink:0; padding:0 20px;" onclick="addPerson()">+ Add person</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STORES -->
+  <div>
+    <div class="section-title">Store Purchases</div>
+    <div id="ccStoresList" class="two-col"></div>
+    <button class="add-btn" onclick="addStore()">+ Add store</button>
+  </div>
+
+  <!-- SUMMARY -->
+  <div>
+    <div class="section-title">Summary — Total per Person</div>
+    <div class="card">
+      <div id="ccSummaryList"></div>
+      <div class="divider" style="margin:12px 0;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+        <span style="color:var(--text2); font-weight:500;">Grand total (all stores)</span>
+        <span id="ccGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
+      </div>
+      <div id="ccUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     HANGOUT SPLIT PAGE — fully independent of Expenses & Credit Card Split
+     own data, own storage, own state
+     ════════════════════════════════════════════════════════════ -->
+<div class="main" id="pageHangout" style="display:none;">
+
+  <!-- PEOPLE -->
+  <div>
+    <div class="section-title">People</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Add everyone in your group. Pick who had each drink or dish below — you'll see what each friend owes you back.
+      </div>
+      <div id="hsPeopleList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="hsNewPersonName" class="nec-cat-input" placeholder="Person's name" style="flex:1"
+          onkeydown="if(event.key==='Enter'){addHSPerson();}">
+        <button class="add-btn" style="width:auto; flex-shrink:0; padding:0 20px;" onclick="addHSPerson()">+ Add person</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRINKS -->
+  <div>
+    <div class="section-title">🍹 Drinks</div>
+    <div id="hsDrinksList" class="two-col"></div>
+    <button class="add-btn" onclick="addHSItem('drinks')">+ Add drink</button>
+  </div>
+
+  <!-- FOOD -->
+  <div>
+    <div class="section-title">🍔 Food</div>
+    <div id="hsFoodList" class="two-col"></div>
+    <button class="add-btn" onclick="addHSItem('food')">+ Add food</button>
+  </div>
+
+  <!-- SUMMARY -->
+  <div>
+    <div class="section-title">Summary — Total per Person</div>
+    <div class="card">
+      <div id="hsSummaryList"></div>
+      <div class="divider" style="margin:12px 0;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+        <span style="color:var(--text2); font-weight:500;">Grand total (drinks + food)</span>
+        <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
+      </div>
+      <div id="hsUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+const DAYS_PER_WEEK = 5;
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const BANKS = [
+  { id: 'gcash',     name: 'GCash',        abbr: 'GC', color: '#0070BA' },
+  { id: 'maya',      name: 'Maya',          abbr: 'MY', color: '#04AE5E' },
+  { id: 'rcbc',      name: 'RCBC',          abbr: 'RC', color: '#9B1C2F' },
+  { id: 'unionbank', name: 'UnionBank',     abbr: 'UB', color: '#F5821F' },
+  { id: 'bdo',       name: 'BDO',           abbr: 'BD', color: '#043673' },
+  { id: 'gotyme',    name: 'GoTyme Bank',   abbr: 'GT', color: '#E6007E' },
+  { id: 'maribank',  name: 'MariBank',      abbr: 'MB', color: '#7B2D8B' },
+  { id: 'cash',      name: 'Cash on hand',  abbr: '₱',  color: '#3FB950' },
+  { id: 'custom',    name: 'Other…',        abbr: '··', color: '#6E7681' },
+];
+
+let HOURLY = 3.50;
+let TAX    = 0.15;
+
+function updateRateTax() {
+  HOURLY = parseFloat(document.getElementById('rateInput').value) || 3.50;
+  TAX    = (parseFloat(document.getElementById('taxInput').value) || 15) / 100;
+  // update header badge
+  document.querySelector('.rate-badge').textContent =
+    '$' + HOURLY.toFixed(2) + ' / hr · ' + (TAX * 100) + '% tax';
+  // update tax label in summary
+  document.getElementById('sTaxLabel').textContent = 'Tax ' + (TAX * 100) + '%';
+  // highlight active preset buttons
+  document.getElementById('presetRate350').classList.toggle('active', HOURLY === 3.50);
+  document.getElementById('presetRate400').classList.toggle('active', HOURLY === 4.00);
+  document.getElementById('presetTax10').classList.toggle('active',  TAX === 0.10);
+  document.getElementById('presetTax15').classList.toggle('active',  TAX === 0.15);
+  recalcAll();
+}
+
+function setRate(val) {
+  document.getElementById('rateInput').value = val;
+  updateRateTax();
+  saveData();
+}
+
+function setTax(val) {
+  document.getElementById('taxInput').value = val;
+  updateRateTax();
+  saveData();
+}
+
+let fxRate = 0;
+let countdownSec = 60;
+let countdownTimer = null;
+let fetching = false;
+
+// ─── FX ───────────────────────────────────────────────────────
+const XRATES_URL = 'https://www.x-rates.com/table/?from=PHP&amount=1';
+
+// Scrape USD→PHP from x-rates HTML (1 PHP = X USD, we want inverse)
+function parseXRatesHTML(html) {
+  // Find "US Dollar" row and grab the inverse value (USD per PHP inverted = PHP per USD)
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const rows = doc.querySelectorAll('table tr');
+  for (const row of rows) {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 2) {
+      const label = cells[0].textContent.trim();
+      if (label === 'US Dollar') {
+        // cells[1] = PHP→USD rate (e.g. 0.016478), cells[2] = inverse (USD→PHP, e.g. 60.686)
+        const phpPerUsd = parseFloat(cells[2] ? cells[2].textContent.trim() : '');
+        if (!isNaN(phpPerUsd) && phpPerUsd > 1) return phpPerUsd;
+        // fallback: compute from forward rate
+        const usdPerPhp = parseFloat(cells[1].textContent.trim());
+        if (!isNaN(usdPerPhp) && usdPerPhp > 0) return 1 / usdPerPhp;
+      }
+    }
+  }
+  throw new Error('USD row not found in x-rates HTML');
+}
+
+// x-rates via allorigins proxy (returns JSON with {contents: html})
+async function tryXRatesAllOrigins() {
+  const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(XRATES_URL);
+  const res = await fetch(proxy, { cache: 'no-store' });
+  if (!res.ok) throw new Error('allorigins HTTP ' + res.status);
+  const json = await res.json();
+  if (!json.contents) throw new Error('allorigins: empty contents');
+  return parseXRatesHTML(json.contents);
+}
+
+// x-rates via corsproxy.io (returns raw HTML)
+async function tryXRatesCorsProxy() {
+  const proxy = 'https://corsproxy.io/?' + encodeURIComponent(XRATES_URL);
+  const res = await fetch(proxy, { cache: 'no-store' });
+  if (!res.ok) throw new Error('corsproxy HTTP ' + res.status);
+  const html = await res.text();
+  return parseXRatesHTML(html);
+}
+
+// JSON API fallbacks
+const FX_JSON_SOURCES = [
+  {
+    url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+    parse: d => d.usd && d.usd.php,
+    name: 'currency-api (jsdelivr)'
+  },
+  {
+    url: 'https://open.er-api.com/v6/latest/USD',
+    parse: d => d.rates && d.rates.PHP,
+    name: 'ExchangeRate-API'
+  },
+  {
+    url: 'https://api.frankfurter.app/latest?from=USD&to=PHP',
+    parse: d => d.rates && d.rates.PHP,
+    name: 'Frankfurter'
+  }
+];
+
+async function tryJsonSource(src) {
+  const res = await fetch(src.url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const d = await res.json();
+  const val = src.parse(d);
+  if (!val || isNaN(parseFloat(val))) throw new Error('No PHP rate in response');
+  return parseFloat(val);
+}
+
+async function fetchRate(manual = false) {
+  if (fetching) return;
+  fetching = true;
+  setStatus('loading', 'Fetching…');
+  document.getElementById('refreshIcon').classList.add('spin');
+  document.getElementById('fxUpdated').textContent = 'Updating…';
+  document.getElementById('fxSource').textContent = '';
+
+  let success = false;
+  const attempts = [
+    { fn: tryXRatesAllOrigins,  name: 'x-rates.com (allorigins)' },
+    { fn: tryXRatesCorsProxy,   name: 'x-rates.com (corsproxy)' },
+    ...FX_JSON_SOURCES.map(src => ({ fn: () => tryJsonSource(src), name: src.name }))
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const rate = await attempt.fn();
+      fxRate = rate;
+      document.getElementById('fxRate').textContent = '₱' + rate.toFixed(4);
+      const now = new Date();
+      document.getElementById('fxUpdated').textContent = 'Updated ' + now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      document.getElementById('fxSource').textContent = 'Source: ' + attempt.name;
+      setStatus('live', 'Live');
+      if (manual) showToast('✓ Rate: ₱' + rate.toFixed(4) + ' per $1', false);
+      recalcAll();
+      success = true;
+      break;
+    } catch(e) {
+      console.warn(attempt.name + ' failed:', e.message);
+    }
+  }
+
+  if (!success) {
+    setStatus('error', 'Error');
+    document.getElementById('fxUpdated').textContent = 'All sources failed';
+    document.getElementById('fxSource').textContent = 'Check internet / try again';
+    showToast('⚠ Could not fetch rate', true);
+  }
+
+  fetching = false;
+  document.getElementById('refreshIcon').classList.remove('spin');
+  resetCountdown();
+}
+
+function setStatus(type, text) {
+  const el = document.getElementById('fxStatus');
+  el.className = 'fx-status ' + type;
+  el.textContent = text;
+}
+
+function resetCountdown() {
+  countdownSec = 60;
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    if (countdownSec <= 0) { fetchRate(); return; }
+    document.getElementById('fxCountdown').textContent = 'Refresh in ' + countdownSec + 's';
+  }, 1000);
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────
+function fPHP(n) { return '₱' + n.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fUSD(n) { return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// ─── MODE ─────────────────────────────────────────────────────
+let payMode = 'weekly'; // 'weekly' | 'monthly'
+
+// ─── GLOBAL STATE ─────────────────────────────────────────────
+let savingsItems = [];
+
+// Undo system
+const undoStack = [];
+const MAX_UNDO  = 50;
+let _undoEnabled        = false;
+let _pendingUndoSnapshot = null;
+let _undoDebounce       = null;
+
+function setMode(mode) {
+  payMode = mode;
+  document.getElementById('panelWeekly').style.display  = mode === 'weekly'  ? 'block' : 'none';
+  document.getElementById('panelMonthly').style.display = mode === 'monthly' ? 'block' : 'none';
+  document.getElementById('modeWeekly').classList.toggle('active',  mode === 'weekly');
+  document.getElementById('modeMonthly').classList.toggle('active', mode === 'monthly');
+  document.getElementById('breakdownLabel').textContent = mode === 'weekly' ? 'Weekly breakdown' : 'Daily breakdown';
+  recalcAll();
+  saveData();
+}
+
+// Working days: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4
+// Days off: Friday=5, Saturday=6
+const WORK_DAYS = new Set([0, 1, 2, 3, 4]); // Sun–Thu
+
+function countWorkDays(startStr, endStr) {
+  if (!startStr || !endStr) return 0;
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return 0;
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    if (WORK_DAYS.has(cur.getDay())) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+function renderDayChips(startStr, endStr) {
+  const bar   = document.getElementById('workdaysBar');
+  const chips = document.getElementById('dayChips');
+  const count = document.getElementById('workdaysCount');
+  if (!startStr || !endStr) { bar.style.display = 'none'; return; }
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) { bar.style.display = 'none'; return; }
+
+  bar.style.display = 'block';
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // Build a week-row view (max 42 days shown as chips, rest as count)
+  const totalDays = Math.floor((end - start) / 86400000) + 1;
+  chips.innerHTML = '';
+  const maxShow = Math.min(totalDays, 35);
+  const cur = new Date(start);
+  for (let i = 0; i < maxShow; i++) {
+    const isWork = WORK_DAYS.has(cur.getDay());
+    const chip = document.createElement('span');
+    chip.className = 'day-chip ' + (isWork ? 'work' : 'off');
+    chip.textContent = dayNames[cur.getDay()] + ' ' + (cur.getMonth()+1) + '/' + cur.getDate();
+    chips.appendChild(chip);
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (totalDays > 35) {
+    const more = document.createElement('span');
+    more.className = 'day-chip';
+    more.textContent = '+' + (totalDays - 35) + ' more';
+    chips.appendChild(more);
+  }
+  const wdCount = countWorkDays(startStr, endStr);
+  const offCount = totalDays - wdCount;
+  count.innerHTML = `<span>${wdCount}</span> working days &nbsp;·&nbsp; ${offCount} days off &nbsp;·&nbsp; ${totalDays} total`;
+}
+
+// ─── RECALC ───────────────────────────────────────────────────
+function recalcAll() {
+  let totalDays, totalHours, grossUSD, taxAmt, netUSD, netPHP;
+  let dailyNet, dailyNetPHP, weeklyNet, weeklyNetPHP;
+
+  if (payMode === 'weekly') {
+    const dHours = parseFloat(document.getElementById('dailyHours').value) || 0;
+    const weeks  = parseFloat(document.getElementById('weeksWorked').value) || 0;
+    totalDays  = weeks * DAYS_PER_WEEK;
+    totalHours = dHours * totalDays;
+    grossUSD   = totalHours * HOURLY;
+    taxAmt     = grossUSD * TAX;
+    netUSD     = grossUSD - taxAmt;
+    netPHP     = fxRate > 0 ? netUSD * fxRate : 0;
+
+    weeklyNet    = dHours * DAYS_PER_WEEK * HOURLY * (1 - TAX);
+    weeklyNetPHP = fxRate > 0 ? weeklyNet * fxRate : 0;
+    dailyNet     = dHours * HOURLY * (1 - TAX);
+    dailyNetPHP  = fxRate > 0 ? dailyNet * fxRate : 0;
+
+    document.getElementById('sWeekBreak').textContent = fxRate > 0
+      ? 'Per week: ' + fUSD(weeklyNet) + ' (' + fPHP(weeklyNetPHP) + ')'
+      : 'Per week: ' + fUSD(weeklyNet);
+    document.getElementById('sDailyBreak').textContent = fxRate > 0
+      ? 'Per day: ' + fUSD(dailyNet) + ' (' + fPHP(dailyNetPHP) + ')'
+      : 'Per day: ' + fUSD(dailyNet);
+
+  } else {
+    // Monthly / date-range mode
+    const startStr = document.getElementById('dateStart').value;
+    const endStr   = document.getElementById('dateEnd').value;
+    const dHours   = parseFloat(document.getElementById('dailyHoursM').value) || 0;
+
+    renderDayChips(startStr, endStr);
+
+    totalDays  = countWorkDays(startStr, endStr);
+    totalHours = dHours * totalDays;
+    grossUSD   = totalHours * HOURLY;
+    taxAmt     = grossUSD * TAX;
+    netUSD     = grossUSD - taxAmt;
+    netPHP     = fxRate > 0 ? netUSD * fxRate : 0;
+
+    dailyNet    = dHours * HOURLY * (1 - TAX);
+    dailyNetPHP = fxRate > 0 ? dailyNet * fxRate : 0;
+
+    document.getElementById('sWeekBreak').textContent = fxRate > 0
+      ? 'Per day: ' + fUSD(dailyNet) + ' (' + fPHP(dailyNetPHP) + ')'
+      : 'Per day: ' + fUSD(dailyNet);
+    document.getElementById('sDailyBreak').textContent = totalDays > 0
+      ? totalDays + ' working days (Sun–Thu)'
+      : 'Select a date range';
+  }
+
+  document.getElementById('sDays').textContent      = totalDays;
+  document.getElementById('sTotalHrs').textContent  = totalHours.toFixed(1) + ' hrs';
+  document.getElementById('sGross').textContent     = fUSD(grossUSD);
+  document.getElementById('sTax').textContent       = '-' + fUSD(taxAmt);
+  document.getElementById('sNetUSD').textContent    = fUSD(netUSD);
+  document.getElementById('sNetPHP').textContent    = fxRate > 0 ? fPHP(netPHP) : '₱—';
+
+  // bonus
+  const bonusEnabled = document.getElementById('bonusEnabled').checked;
+  document.getElementById('bonusFields').style.display = bonusEnabled ? 'block' : 'none';
+  document.getElementById('bonusDisabledMsg').style.display = bonusEnabled ? 'none' : 'block';
+  const bonusRow = document.getElementById('nb-bonus-row');
+  let bonusPHP = 0;
+  if (bonusEnabled) {
+    const bonusUSD = parseFloat(document.getElementById('bonusUSD').value) || 0;
+    bonusPHP = fxRate > 0 ? bonusUSD * fxRate : 0;
+    document.getElementById('bonusPHP').textContent = fxRate > 0 ? fPHP(bonusPHP) : '₱—';
+    document.getElementById('bonusRateNote').textContent = fxRate > 0
+      ? '$1 = ₱' + fxRate.toFixed(4)
+      : 'Awaiting exchange rate…';
+    document.getElementById('nb-bonus').textContent = fPHP(bonusPHP);
+    bonusRow.style.display = 'flex';
+  } else {
+    bonusRow.style.display = 'none';
+  }
+
+  const savings = parseFloat(document.getElementById('savingsInput').value) || 0;
+  document.getElementById('savingsPlusPayroll').textContent = fPHP(savings + netPHP + bonusPHP);
+
+  // nec — respect payment day multiplier
+  const startStr2 = document.getElementById('dateStart').value;
+  const endStr2   = document.getElementById('dateEnd').value;
+  let necSum = 0;
+  necData.forEach(row => {
+    const base = parseFloat(row.amt) || 0;
+    const day  = parseInt(row.day)  || 0;
+    const mult = (day >= 1 && day <= 31 && startStr2 && endStr2)
+      ? (countPayDay(day, startStr2, endStr2) || 1)
+      : 1;
+    necSum += base * mult;
+  });
+  document.getElementById('necTotal').textContent = fPHP(necSum);
+
+  // paylater
+  let shopeeSum = 0, tiktokSum = 0;
+  document.querySelectorAll('.pl-amt-shopee').forEach(el => { shopeeSum += parseFloat(el.value) || 0; });
+  document.querySelectorAll('.pl-amt-tiktok').forEach(el => { tiktokSum += parseFloat(el.value) || 0; });
+  document.getElementById('shopeeTotal').textContent = fPHP(shopeeSum);
+  document.getElementById('tiktokTotal').textContent = fPHP(tiktokSum);
+
+  // net summary
+  const total = savings + netPHP + bonusPHP - necSum - shopeeSum - tiktokSum;
+  document.getElementById('nb1').textContent = fPHP(savings);
+  document.getElementById('nb2').textContent = fPHP(netPHP);
+  document.getElementById('nb3').textContent = fPHP(necSum);
+  document.getElementById('nb4').textContent = fPHP(shopeeSum);
+  document.getElementById('nb5').textContent = fPHP(tiktokSum);
+  document.getElementById('nb6').textContent = fPHP(total);
+  document.getElementById('netBalance').textContent = fPHP(total);
+
+  const isNeg = total < 0;
+  document.getElementById('nb6').style.color = isNeg ? 'var(--red-text)' : 'var(--green-text)';
+  document.getElementById('netBalance').style.color = isNeg ? 'var(--red-text)' : 'var(--green-text)';
+  document.getElementById('netWarning').textContent = isNeg ? '⚠ Balance is negative — expenses exceed income + savings.' : '';
+  document.getElementById('netUSD').textContent = fxRate > 0 ? '≈ ' + fUSD(total / fxRate) + ' USD' : '';
+
+  // ─── SALARY BREAKDOWN ────────────────────────────────────────
+  const salHrs = payMode === 'weekly'
+    ? (parseFloat(document.getElementById('dailyHours').value)  || 0)
+    : (parseFloat(document.getElementById('dailyHoursM').value) || 0);
+
+  const perDayUSD   = salHrs * HOURLY * (1 - TAX);
+  const perWeekUSD  = perDayUSD * DAYS_PER_WEEK;
+  const perMonthUSD = perWeekUSD * (52 / 12);  // 4.333 weeks/month
+
+  document.getElementById('salDayUSD').textContent   = fUSD(perDayUSD);
+  document.getElementById('salWeekUSD').textContent  = fUSD(perWeekUSD);
+  document.getElementById('salMonthUSD').textContent = fUSD(perMonthUSD);
+
+  document.getElementById('salDayPHP').textContent   = fxRate > 0 ? fPHP(perDayUSD   * fxRate) : '₱—';
+  document.getElementById('salWeekPHP').textContent  = fxRate > 0 ? fPHP(perWeekUSD  * fxRate) : '₱—';
+  document.getElementById('salMonthPHP').textContent = fxRate > 0 ? fPHP(perMonthUSD * fxRate) : '₱—';
+
+  document.getElementById('salDayNote').textContent = salHrs > 0
+    ? salHrs + ' hrs × $' + HOURLY.toFixed(2) + '/hr − ' + (TAX * 100) + '% tax'
+    : 'Enter your daily hours above';
+
+  updateSavingsSummary();
+}
+
+// ─── UNDO SYSTEM ──────────────────────────────────────────────
+function updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.disabled = undoStack.length === 0;
+}
+
+function saveData() {
+  if (_undoEnabled) {
+    // Capture state BEFORE first save in this keystroke burst
+    if (_pendingUndoSnapshot === null) {
+      try {
+        const raw = localStorage.getItem('va_payroll_data');
+        _pendingUndoSnapshot = raw; // null on very first run = OK
+      } catch(e) {}
+    }
+    clearTimeout(_undoDebounce);
+    _undoDebounce = setTimeout(() => {
+      if (_pendingUndoSnapshot !== null) {
+        undoStack.push(_pendingUndoSnapshot);
+        if (undoStack.length > MAX_UNDO) undoStack.shift();
+        updateUndoBtn();
+      }
+      _pendingUndoSnapshot = null;
+      _undoDebounce = null;
+    }, 600);
+  }
+  _saveDataDirect();
+}
+
+function _saveDataDirect() {
+  try {
+    const data = {
+      payMode: payMode,
+      hourly: document.getElementById('rateInput').value,
+      tax: document.getElementById('taxInput').value,
+      dailyHours: document.getElementById('dailyHours').value,
+      weeksWorked: document.getElementById('weeksWorked').value,
+      dailyHoursM: document.getElementById('dailyHoursM').value,
+      dateStart: document.getElementById('dateStart').value,
+      dateEnd: document.getElementById('dateEnd').value,
+      savings: document.getElementById('savingsInput').value,
+      bonusEnabled: document.getElementById('bonusEnabled').checked,
+      bonusUSD: document.getElementById('bonusUSD').value,
+      necData: necData,
+      plShopee: plData.shopee,
+      plTiktok: plData.tiktok,
+      savingsItems: savingsItems,
+    };
+    localStorage.setItem('va_payroll_data', JSON.stringify(data));
+  } catch(e) { console.warn('Save failed', e); }
+}
+
+function flushUndoDebounce() {
+  clearTimeout(_undoDebounce);
+  _undoDebounce = null;
+  if (_pendingUndoSnapshot !== null) {
+    undoStack.push(_pendingUndoSnapshot);
+    _pendingUndoSnapshot = null;
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    updateUndoBtn();
+  }
+}
+
+function undo() {
+  // Flush any pending debounce so we don't lose the snapshot
+  flushUndoDebounce();
+  if (undoStack.length === 0) return;
+  const raw = undoStack.pop();
+  updateUndoBtn();
+  try {
+    const data = JSON.parse(raw);
+    _undoEnabled = false;
+    restoreState(data);
+    _undoEnabled = true;
+    _saveDataDirect();
+    showToast('↩ Undone');
+  } catch(e) {
+    _undoEnabled = true;
+    showToast('↩ Undo failed', true);
+  }
+}
+
+function restoreState(data) {
+  if (data.payMode) setMode(data.payMode);
+  document.getElementById('rateInput').value    = data.hourly    || '3.50';
+  document.getElementById('taxInput').value     = data.tax       || '15';
+  updateRateTax();
+  document.getElementById('dailyHours').value   = data.dailyHours  || '';
+  document.getElementById('weeksWorked').value  = data.weeksWorked || '';
+  document.getElementById('dailyHoursM').value  = data.dailyHoursM || '';
+  document.getElementById('dateStart').value    = data.dateStart   || '';
+  document.getElementById('dateEnd').value      = data.dateEnd     || '';
+  document.getElementById('savingsInput').value = data.savings     || '';
+  document.getElementById('bonusEnabled').checked = !!data.bonusEnabled;
+  document.getElementById('bonusUSD').value     = data.bonusUSD || '';
+  necData       = Array.isArray(data.necData)   ? data.necData   : [];
+  plData.shopee = Array.isArray(data.plShopee)  ? data.plShopee  : [];
+  plData.tiktok = Array.isArray(data.plTiktok)  ? data.plTiktok  : [];
+  savingsItems  = Array.isArray(data.savingsItems) ? data.savingsItems : [];
+  renderNec();
+  renderPL('shopee');
+  renderPL('tiktok');
+  renderSavingsItems();
+  recalcAll();
+}
+
+// ─── RESET ────────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm('Reset all data to blank?\nThe current state will still be available via Undo.')) return;
+  flushUndoDebounce();
+  // Push current state so it can be restored by undo
+  try {
+    const raw = localStorage.getItem('va_payroll_data');
+    if (raw) {
+      undoStack.push(raw);
+      if (undoStack.length > MAX_UNDO) undoStack.shift();
+      updateUndoBtn();
+    }
+  } catch(e) {}
+
+  _undoEnabled = false;
+
+  document.getElementById('rateInput').value    = '3.50';
+  document.getElementById('taxInput').value     = '15';
+  document.getElementById('dailyHours').value   = '';
+  document.getElementById('weeksWorked').value  = '';
+  document.getElementById('dailyHoursM').value  = '';
+  document.getElementById('dateStart').value    = '';
+  document.getElementById('dateEnd').value      = '';
+  document.getElementById('savingsInput').value = '';
+  document.getElementById('bonusEnabled').checked = false;
+  document.getElementById('bonusUSD').value     = '';
+
+  necData = [
+    {cat:'Grocery',     note:'', amt:'', day:''},
+    {cat:'Electric Bill',note:'', amt:'', day:'10'},
+    {cat:'Water Bill',  note:'', amt:'', day:''},
+    {cat:'Internet',    note:'', amt:'', day:''},
+  ];
+  plData.shopee = [];
+  plData.tiktok = [];
+  savingsItems  = [];
+
+  setMode('weekly');
+  updateRateTax();
+  renderNec();
+  renderPL('shopee');
+  renderPL('tiktok');
+  renderSavingsItems();
+  recalcAll();
+
+  _undoEnabled = true;
+  _saveDataDirect();
+  showToast('✓ All data cleared');
+}
+
+// ─── SAVINGS ALLOCATION ───────────────────────────────────────
+function addSavingsItem() {
+  savingsItems.push({ bankId: 'gcash', label: 'GCash', amt: '' });
+  renderSavingsItems();
+  saveData();
+  setTimeout(() => {
+    const amtInputs = document.querySelectorAll('.sav-item-row .nec-amt-input');
+    if (amtInputs.length) amtInputs[amtInputs.length - 1].focus();
+  }, 40);
+}
+
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function renderSavingsItems() {
+  const container = document.getElementById('savingsItemsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  savingsItems.forEach((item, i) => {
+    const bankId  = item.bankId || 'custom';
+    const bank    = BANKS.find(b => b.id === bankId) || BANKS[BANKS.length - 1];
+    const isCustom = bankId === 'custom';
+    const bankOpts = BANKS.map(b =>
+      `<option value="${b.id}"${b.id === bankId ? ' selected' : ''}>${b.name}</option>`
+    ).join('');
+
+    const div = document.createElement('div');
+    div.className = 'sav-item-row';
+    div.innerHTML = `
+      <div class="bank-select-wrap">
+        <div class="bank-icon" style="background:${bank.color};">${escH(bank.abbr)}</div>
+        <select class="bank-select" onchange="onBankChange(${i}, this.value)">${bankOpts}</select>
+        ${isCustom
+          ? `<input class="bank-custom-label" value="${escH(item.label)}" placeholder="Custom name…"
+               oninput="savingsItems[${i}].label=this.value; saveData()">`
+          : ''}
+        <span class="bank-chevron">▾</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <span style="font-size:12px;color:var(--text3);">₱</span>
+        <input class="nec-amt-input" type="number" value="${item.amt}" placeholder="0.00" min="0" step="0.01"
+          style="width:105px;"
+          oninput="savingsItems[${i}].amt=this.value; updateSavingsSummary(); saveData()">
+      </div>
+      <button class="del-btn" onclick="savingsItems.splice(${i},1); renderSavingsItems(); saveData()">✕</button>
+    `;
+    container.appendChild(div);
+  });
+
+  updateSavingsSummary();
+}
+
+function onBankChange(i, bankId) {
+  const bank = BANKS.find(b => b.id === bankId) || BANKS[BANKS.length - 1];
+  savingsItems[i].bankId = bankId;
+  savingsItems[i].label  = bankId !== 'custom' ? bank.name : '';
+  renderSavingsItems();
+  saveData();
+  // Re-focus amount input for this row after re-render
+  setTimeout(() => {
+    const rows = document.querySelectorAll('.sav-item-row');
+    if (rows[i]) {
+      const amt = rows[i].querySelector('.nec-amt-input');
+      if (bankId !== 'custom' && amt) amt.focus();
+      else {
+        const custom = rows[i].querySelector('.bank-custom-label');
+        if (custom) custom.focus();
+      }
+    }
+  }, 30);
+}
+
+function updateSavingsSummary() {
+  let total = 0;
+  savingsItems.forEach(item => { total += parseFloat(item.amt) || 0; });
+
+  const savings = parseFloat(document.getElementById('savingsInput').value) || 0;
+  const diff    = total - savings;
+  const match   = Math.abs(diff) < 0.005;
+
+  const totalEl = document.getElementById('savingsItemsTotal');
+  if (totalEl) {
+    totalEl.textContent = fPHP(total);
+    totalEl.style.color = match
+      ? 'var(--green-text)'
+      : (total > savings ? 'var(--red-text)' : 'var(--amber-text)');
+  }
+
+  const balRef = document.getElementById('savingsBalanceRef');
+  if (balRef) balRef.textContent = fPHP(savings);
+
+  const ind = document.getElementById('savingsMatchIndicator');
+  if (ind) {
+    if (savingsItems.length === 0) {
+      ind.innerHTML = '<div style="font-size:11px;color:var(--text3);">Add items to break down your savings.</div>';
+    } else if (match) {
+      ind.innerHTML = '<div style="font-size:11px;color:var(--green-text);">✓ Fully allocated — items match savings balance</div>';
+    } else {
+      const overUnder = diff > 0 ? 'over by' : 'short by';
+      const col = diff > 0 ? 'var(--red-text)' : 'var(--amber-text)';
+      ind.innerHTML = `<div style="font-size:11px;color:${col};">⚠ ${overUnder} ${fPHP(Math.abs(diff))}</div>`;
+    }
+  }
+}
+
+function setSavingsFromItems() {
+  let total = 0;
+  savingsItems.forEach(item => { total += parseFloat(item.amt) || 0; });
+  document.getElementById('savingsInput').value = total.toFixed(2);
+  recalcAll();
+  saveData();
+  showToast('✓ Savings balance updated to ' + fPHP(total));
+}
+
+// ─── PERSIST (localStorage) ───────────────────────────────────
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem('va_payroll_data');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.payMode) { payMode = data.payMode; setMode(data.payMode); }
+    if (data.hourly) document.getElementById('rateInput').value = data.hourly;
+    if (data.tax)    document.getElementById('taxInput').value  = data.tax;
+    if (data.hourly || data.tax) updateRateTax();
+    if (data.dailyHours)  document.getElementById('dailyHours').value  = data.dailyHours;
+    if (data.weeksWorked) document.getElementById('weeksWorked').value = data.weeksWorked;
+    if (data.dailyHoursM) document.getElementById('dailyHoursM').value = data.dailyHoursM;
+    if (data.dateStart)   document.getElementById('dateStart').value   = data.dateStart;
+    if (data.dateEnd)     document.getElementById('dateEnd').value     = data.dateEnd;
+    if (data.savings)     document.getElementById('savingsInput').value = data.savings;
+    if (data.bonusEnabled !== undefined) document.getElementById('bonusEnabled').checked = data.bonusEnabled;
+    if (data.bonusUSD)    document.getElementById('bonusUSD').value = data.bonusUSD;
+    if (Array.isArray(data.necData) && data.necData.length) necData = data.necData;
+    if (Array.isArray(data.plShopee)) plData.shopee = data.plShopee;
+    if (Array.isArray(data.plTiktok)) plData.tiktok = data.plTiktok;
+    if (Array.isArray(data.savingsItems)) savingsItems = data.savingsItems;
+  } catch(e) { console.warn('Load failed', e); }
+  _undoEnabled = true; // enable undo tracking after initial load
+}
+
+// ─── NECESSITIES ──────────────────────────────────────────────
+let necData = [
+  {cat:'Grocery',note:'',amt:'',day:''},
+  {cat:'Electric Bill',note:'',amt:'',day:'10'},
+  {cat:'Water Bill',note:'',amt:'',day:''},
+  {cat:'Internet',note:'',amt:'',day:''},
+];
+
+function renderNec() {
+  const tbody = document.getElementById('necBody');
+  tbody.innerHTML = '';
+
+  // Get date range from Monthly mode (used for multiplier)
+  const startStr = document.getElementById('dateStart').value;
+  const endStr   = document.getElementById('dateEnd').value;
+
+  necData.forEach((row, i) => {
+    const day = parseInt(row.day) || 0;
+    const mult = (day >= 1 && day <= 31 && startStr && endStr)
+      ? countPayDay(day, startStr, endStr)
+      : 1;
+    const showBadge = mult > 1;
+    const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; saveData()"></td>
+      <td style="text-align:right">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text3);">₱</span>
+          <input class="nec-amt-input nec-amt" type="number" value="${row.amt}" placeholder="0.00" min="0" step="0.01"
+            oninput="necData[${i}].amt=this.value; updateNecBadge(${i}); recalcAll(); saveData()" style="width:110px;">
+          <span class="nec-mult-badge" id="necBadge-${i}" title="Paid ${mult}× in date range" style="${showBadge ? '' : 'display:none;'}">×${mult}</span>
+        </div>
+        <div id="necEffAmt-${i}" style="font-size:10px;color:var(--teal-text);text-align:right;margin-top:2px;font-family:'DM Mono',monospace;${showBadge ? '' : 'display:none;'}">= ${fPHP(effectiveAmt)}</div>
+      </td>
+      <td style="text-align:center;">
+        <input class="nec-day-input" type="number" value="${row.day}" placeholder="—" min="1" max="31" step="1"
+          title="Day of month this is due (1–31)"
+          oninput="necData[${i}].day=this.value; updateNecBadge(${i}); recalcAll(); saveData()">
+      </td>
+      <td><input class="nec-cat-input" value="${row.note}" placeholder="Note…" oninput="necData[${i}].note=this.value; saveData()" style="font-size:12px;"></td>
+      <td><button class="del-btn" onclick="necData.splice(${i},1); renderNec(); saveData()">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  recalcAll();
+}
+
+// Refreshes just the ×N badge + "= ₱effective" text for ONE necessities row,
+// without rebuilding the table. The day/amount inputs call this on every
+// keystroke instead of renderNec() so they never lose focus while typing
+// (renderNec() destroys and recreates every <input>, which steals focus
+// mid-keystroke — that was the cause of 2-digit days only accepting 1 digit).
+function updateNecBadge(i) {
+  const row = necData[i];
+  if (!row) return;
+  const startStr = document.getElementById('dateStart').value;
+  const endStr   = document.getElementById('dateEnd').value;
+  const day  = parseInt(row.day) || 0;
+  const mult = (day >= 1 && day <= 31 && startStr && endStr)
+    ? countPayDay(day, startStr, endStr)
+    : 1;
+  const showBadge    = mult > 1;
+  const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
+
+  const badgeEl = document.getElementById('necBadge-' + i);
+  const effEl   = document.getElementById('necEffAmt-' + i);
+  if (badgeEl) {
+    badgeEl.style.display = showBadge ? '' : 'none';
+    badgeEl.title = 'Paid ' + mult + '× in date range';
+    badgeEl.textContent = '×' + mult;
+  }
+  if (effEl) {
+    effEl.style.display = showBadge ? '' : 'none';
+    effEl.textContent = '= ' + fPHP(effectiveAmt);
+  }
+}
+
+// Count how many times a given day-of-month falls in [startStr, endStr]
+function countPayDay(day, startStr, endStr) {
+  if (!startStr || !endStr || !day) return 0;
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return 0;
+  let count = 0;
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  // Iterate month by month within the range
+  while (cur <= end) {
+    const yr = cur.getFullYear();
+    const mo = cur.getMonth();
+    const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+    const actualDay = Math.min(day, daysInMonth);
+    const candidate = new Date(yr, mo, actualDay);
+    if (candidate >= start && candidate <= end) count++;
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return count;
+}
+
+function addNec() {
+  necData.push({cat:'',note:'',amt:'',day:''});
+  renderNec();
+  saveData();
+  setTimeout(() => {
+    const all = document.querySelectorAll('.nec-cat-input');
+    if (all.length) all[all.length-2].focus();
+  }, 40);
+}
+
+// ─── PAYLATER ─────────────────────────────────────────────────
+const plData = { shopee: [], tiktok: [] };
+
+function addPLRow(type) {
+  plData[type].push({ month: new Date().getMonth(), amt: '' });
+  renderPL(type);
+  saveData();
+}
+
+function renderPL(type) {
+  const c = document.getElementById(type + 'Rows');
+  c.innerHTML = '';
+  plData[type].forEach((row, i) => {
+    const opts = MONTHS.map((m,mi) => `<option value="${mi}"${mi===row.month?' selected':''}>${m}</option>`).join('');
+    const div = document.createElement('div');
+    div.className = 'pl-row';
+    div.innerHTML = `
+      <select class="month-select" onchange="plData['${type}'][${i}].month=+this.value; recalcAll(); saveData()">${opts}</select>
+      <input class="pl-input pl-amt-${type}" type="number" value="${row.amt}" placeholder="₱ 0.00" min="0" step="0.01"
+        oninput="plData['${type}'][${i}].amt=this.value; recalcAll(); saveData()">
+      <button class="del-btn" onclick="plData['${type}'].splice(${i},1); renderPL('${type}'); saveData()">✕</button>
+    `;
+    c.appendChild(div);
+  });
+  recalcAll();
+}
+
+// ─── CALCULATOR ───────────────────────────────────────────────
+let calcCurrent = '0';
+let calcPrev    = '';
+let calcOper    = null;
+let calcJustEq  = false;
+
+function calcRender() {
+  document.getElementById('calcScreen').textContent = calcCurrent;
+  document.getElementById('calcExpr').textContent   = calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
+  // highlight active op button
+  document.querySelectorAll('.calc-op').forEach(b => b.classList.remove('active-op'));
+  if (calcOper && !calcJustEq) {
+    const sym = {'*':'×', '/':'÷', '+':'+', '-':'−'}[calcOper];
+    document.querySelectorAll('.calc-op').forEach(b => { if (b.textContent === sym) b.classList.add('active-op'); });
+  }
+}
+function calcOperSym(op) { return {'*':'×','/':'÷','+':'+','-':'−'}[op] || op; }
+
+function calcDigit(d) {
+  if (calcJustEq) { calcCurrent = d; calcJustEq = false; }
+  else calcCurrent = (calcCurrent === '0' && d !== '.') ? d : calcCurrent + d;
+  calcRender();
+}
+
+function calcDot() {
+  if (calcJustEq) { calcCurrent = '0.'; calcJustEq = false; calcRender(); return; }
+  if (!calcCurrent.includes('.')) calcCurrent += '.';
+  calcRender();
+}
+
+function calcOp(op) {
+  if (calcOper && !calcJustEq) calcEquals(true); // chain operations
+  calcPrev   = calcCurrent;
+  calcOper   = op;
+  calcJustEq = false;
+  calcCurrent = '0';
+  calcRender();
+}
+
+function calcEquals(chain = false) {
+  if (!calcOper) return;
+  const a = parseFloat(calcPrev)   || 0;
+  const b = parseFloat(calcCurrent)|| 0;
+  let result;
+  if      (calcOper === '+') result = a + b;
+  else if (calcOper === '-') result = a - b;
+  else if (calcOper === '*') result = a * b;
+  else if (calcOper === '/') result = b === 0 ? 'Error' : a / b;
+  const str = result === 'Error' ? 'Error' : +result.toFixed(10) + '';
+  if (!chain) {
+    document.getElementById('calcExpr').textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
+    calcOper   = null;
+    calcPrev   = '';
+    calcJustEq = true;
+  }
+  calcCurrent = str;
+  calcRender();
+}
+
+function calcClear() {
+  calcCurrent = '0'; calcPrev = ''; calcOper = null; calcJustEq = false;
+  calcRender();
+}
+
+function calcToggleSign() {
+  if (calcCurrent === '0' || calcCurrent === 'Error') return;
+  calcCurrent = calcCurrent.startsWith('-') ? calcCurrent.slice(1) : '-' + calcCurrent;
+  calcRender();
+}
+
+function calcPercent() {
+  const v = parseFloat(calcCurrent) || 0;
+  calcCurrent = String(+( v / 100 ).toFixed(10));
+  calcRender();
+}
+
+// keyboard support
+document.addEventListener('keydown', e => {
+  const activeTag = document.activeElement && document.activeElement.tagName;
+  const isTypingElsewhere = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+
+  // Undo: Ctrl/Cmd + Z (only when not focused in a text input to avoid fighting browser undo)
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    if (!isTypingElsewhere) { e.preventDefault(); undo(); }
+    return;
+  }
+
+  // Calculator keyboard shortcuts — skip entirely while typing in any other field,
+  // so numbers/operators typed elsewhere on the page don't also land in the calculator.
+  if (isTypingElsewhere) return;
+
+  if ('0123456789'.includes(e.key)) calcDigit(e.key);
+  else if (e.key === '.') calcDot();
+  else if (e.key === '+') calcOp('+');
+  else if (e.key === '-') calcOp('-');
+  else if (e.key === '*') calcOp('*');
+  else if (e.key === '/') { e.preventDefault(); calcOp('/'); }
+  else if (e.key === 'Enter' || e.key === '=') calcEquals();
+  else if (e.key === 'Escape') calcClear();
+  else if (e.key === 'Backspace') {
+    if (calcCurrent.length > 1) calcCurrent = calcCurrent.slice(0,-1);
+    else calcCurrent = '0';
+    calcRender();
+  }
+});
+
+// ─── TOAST ────────────────────────────────────────────────────
+function showToast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' err' : '') + ' show';
+  setTimeout(() => { t.classList.remove('show'); }, 3500);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CREDIT CARD SPLITTER — completely independent of the Expenses page.
+// Own data model, own localStorage key, own render/save/load.
+// Nothing here reads from or writes to necData, savingsItems, fxRate, etc.
+// ════════════════════════════════════════════════════════════════
+
+let ccPeople     = [];   // [{ id, name }]
+let ccStores     = [];   // [{ name, amt, people:[personId,...] }]
+let ccPersonSeq  = 1;
+
+// ─── PEOPLE ───────────────────────────────────────────────────
+function addPerson() {
+  const input = document.getElementById('ccNewPersonName');
+  const name  = input.value.trim();
+  if (!name) return;
+  ccPeople.push({ id: ccPersonSeq++, name: name });
+  input.value = '';
+  renderCCPeople();
+  renderCCStores();   // every store needs a new chip for this person
+  saveCC();
+  input.focus();
+}
+
+function removePerson(id) {
+  ccPeople = ccPeople.filter(p => p.id !== id);
+  ccStores.forEach(s => { s.people = s.people.filter(pid => pid !== id); });
+  renderCCPeople();
+  renderCCStores();
+  updateCCSummary();
+  saveCC();
+}
+
+function renderCCPeople() {
+  const c = document.getElementById('ccPeopleList');
+  if (ccPeople.length === 0) {
+    c.innerHTML = '<span style="font-size:12px; color:var(--text3);">No one added yet — add names above.</span>';
+    return;
+  }
+  c.innerHTML = ccPeople.map(p => `
+    <div class="person-tag">
+      ${escH(p.name)}
+      <button class="del-btn" style="padding:2px 6px; font-size:13px;" onclick="removePerson(${p.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ─── STORES ───────────────────────────────────────────────────
+function addStore() {
+  ccStores.push({ name: '', amt: '', people: [] });
+  renderCCStores();
+  saveCC();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#ccStoresList .nec-cat-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 40);
+}
+
+function removeStore(i) {
+  ccStores.splice(i, 1);
+  renderCCStores();
+  updateCCSummary();
+  saveCC();
+}
+
+function toggleSplit(i, personId) {
+  const store = ccStores[i];
+  if (!store) return;
+  const idx = store.people.indexOf(personId);
+  if (idx === -1) store.people.push(personId);
+  else store.people.splice(idx, 1);
+
+  const chip = document.getElementById('ccChip-' + i + '-' + personId);
+  if (chip) chip.classList.toggle('active', store.people.includes(personId));
+
+  updateStoreEach(i);
+  updateCCSummary();
+  saveCC();
+}
+
+function updateStoreEach(i) {
+  const store = ccStores[i];
+  if (!store) return;
+  const amt   = parseFloat(store.amt) || 0;
+  const n     = store.people.length;
+  const each  = n > 0 ? amt / n : 0;
+  const eachEl  = document.getElementById('ccEach-' + i);
+  const countEl = document.getElementById('ccCount-' + i);
+  if (eachEl)  eachEl.textContent  = n > 0 ? fPHP(each) + ' each' : '—';
+  if (countEl) countEl.textContent = n === 0
+    ? 'No one selected yet'
+    : (n + (n === 1 ? ' person' : ' people') + ' sharing');
+}
+
+function renderCCStores() {
+  const container = document.getElementById('ccStoresList');
+  container.innerHTML = '';
+
+  if (ccStores.length === 0) {
+    container.innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; color:var(--text3); font-size:13px;">No store purchases yet — click "+ Add store" below to begin.</div>';
+    return;
+  }
+
+  ccStores.forEach((store, i) => {
+    const amt = parseFloat(store.amt) || 0;
+    const n   = store.people.length;
+    const each = n > 0 ? amt / n : 0;
+
+    const chipsHtml = ccPeople.length === 0
+      ? '<span style="font-size:12px; color:var(--text3);">Add people above to enable splitting.</span>'
+      : ccPeople.map(p => `
+          <button type="button" class="split-chip${store.people.includes(p.id) ? ' active' : ''}"
+            id="ccChip-${i}-${p.id}" onclick="toggleSplit(${i}, ${p.id})">${escH(p.name)}</button>
+        `).join('');
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;">
+        <div class="input-block" style="flex:1; min-width:160px;">
+          <label class="input-label">Store / Item</label>
+          <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(store.name)}" placeholder="e.g. SM Supermarket"
+            oninput="ccStores[${i}].name=this.value; saveCC()">
+        </div>
+        <div class="input-block" style="width:150px; flex-shrink:0;">
+          <label class="input-label">Amount (₱)</label>
+          <div class="input-row">
+            <div class="input-prefix">₱</div>
+            <input class="big-input" type="number" min="0" step="0.01" value="${store.amt}" placeholder="0.00"
+              oninput="ccStores[${i}].amt=this.value; updateStoreEach(${i}); updateCCSummary(); saveCC()">
+          </div>
+        </div>
+        <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeStore(${i})" title="Remove this store">✕</button>
+      </div>
+
+      <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Split with</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${chipsHtml}</div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); gap:10px; flex-wrap:wrap;">
+        <span id="ccCount-${i}" style="font-size:12px; color:var(--text3);">${n===0 ? 'No one selected yet' : (n+(n===1?' person':' people')+' sharing')}</span>
+        <span id="ccEach-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? fPHP(each)+' each' : '—'}</span>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ─── SUMMARY ──────────────────────────────────────────────────
+function updateCCSummary() {
+  const totals = {};
+  ccPeople.forEach(p => { totals[p.id] = 0; });
+  let grand = 0;
+  let unassigned = 0;
+
+  ccStores.forEach(store => {
+    const amt = parseFloat(store.amt) || 0;
+    grand += amt;
+    const n = store.people.length;
+    if (n > 0) {
+      const each = amt / n;
+      store.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
+    } else {
+      unassigned += amt;
+    }
+  });
+
+  const listEl = document.getElementById('ccSummaryList');
+  if (ccPeople.length === 0) {
+    listEl.innerHTML = '<div style="font-size:12px; color:var(--text3);">Add people above to see totals.</div>';
+  } else {
+    listEl.innerHTML = ccPeople.map(p => `
+      <div class="nb-row">
+        <span class="nb-label">${escH(p.name)}</span>
+        <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(totals[p.id] || 0)}</span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('ccGrandTotal').textContent = fPHP(grand);
+
+  const noteEl = document.getElementById('ccUnassignedNote');
+  noteEl.textContent = unassigned > 0.005
+    ? '⚠ ' + fPHP(unassigned) + ' not yet split — select at least one person for each store above.'
+    : '';
+}
+
+// ─── CC PERSIST (separate storage key, independent of expenses) ─
+function saveCC() {
+  try {
+    localStorage.setItem('va_cc_split_data', JSON.stringify({
+      people: ccPeople,
+      stores: ccStores,
+      personSeq: ccPersonSeq,
+    }));
+  } catch(e) { console.warn('CC save failed', e); }
+}
+
+function loadCC() {
+  try {
+    const raw = localStorage.getItem('va_cc_split_data');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.people)) ccPeople = data.people;
+    if (Array.isArray(data.stores)) ccStores = data.stores;
+    if (typeof data.personSeq === 'number') ccPersonSeq = data.personSeq;
+  } catch(e) { console.warn('CC load failed', e); }
+}
+
+// ════════════════════════════════════════════════════════════════
+// HANGOUT SPLIT — independent of Expenses AND Credit Card Split.
+// Two categories (drinks, food), own people list, own storage key.
+// ════════════════════════════════════════════════════════════════
+
+let hsPeople    = [];                  // [{ id, name }]
+let hsPersonSeq = 1;
+let hsItems     = { drinks: [], food: [] }; // each: [{ name, amt, people:[personId,...] }]
+
+const HS_CONTAINERS = { drinks: 'hsDrinksList', food: 'hsFoodList' };
+
+// ─── PEOPLE ───────────────────────────────────────────────────
+function addHSPerson() {
+  const input = document.getElementById('hsNewPersonName');
+  const name  = input.value.trim();
+  if (!name) return;
+  hsPeople.push({ id: hsPersonSeq++, name: name });
+  input.value = '';
+  renderHSPeople();
+  renderHSItems('drinks');  // every item needs a new chip for this person
+  renderHSItems('food');
+  saveHS();
+  input.focus();
+}
+
+function removeHSPerson(id) {
+  hsPeople = hsPeople.filter(p => p.id !== id);
+  hsItems.drinks.forEach(it => { it.people = it.people.filter(pid => pid !== id); });
+  hsItems.food.forEach(it   => { it.people = it.people.filter(pid => pid !== id); });
+  renderHSPeople();
+  renderHSItems('drinks');
+  renderHSItems('food');
+  updateHSSummary();
+  saveHS();
+}
+
+function renderHSPeople() {
+  const c = document.getElementById('hsPeopleList');
+  if (hsPeople.length === 0) {
+    c.innerHTML = '<span style="font-size:12px; color:var(--text3);">No one added yet — add names above.</span>';
+    return;
+  }
+  c.innerHTML = hsPeople.map(p => `
+    <div class="person-tag">
+      ${escH(p.name)}
+      <button class="del-btn" style="padding:2px 6px; font-size:13px;" onclick="removeHSPerson(${p.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ─── ITEMS (drinks / food) ────────────────────────────────────
+function addHSItem(cat) {
+  hsItems[cat].push({ name: '', amt: '', people: [] });
+  renderHSItems(cat);
+  saveHS();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#' + HS_CONTAINERS[cat] + ' .nec-cat-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 40);
+}
+
+function removeHSItem(cat, i) {
+  hsItems[cat].splice(i, 1);
+  renderHSItems(cat);
+  updateHSSummary();
+  saveHS();
+}
+
+function toggleHSSplit(cat, i, personId) {
+  const item = hsItems[cat][i];
+  if (!item) return;
+  const idx = item.people.indexOf(personId);
+  if (idx === -1) item.people.push(personId);
+  else item.people.splice(idx, 1);
+
+  const chip = document.getElementById('hsChip-' + cat + '-' + i + '-' + personId);
+  if (chip) chip.classList.toggle('active', item.people.includes(personId));
+
+  updateHSItemEach(cat, i);
+  updateHSSummary();
+  saveHS();
+}
+
+function updateHSItemEach(cat, i) {
+  const item = hsItems[cat][i];
+  if (!item) return;
+  const amt  = parseFloat(item.amt) || 0;
+  const n    = item.people.length;
+  const each = n > 0 ? amt / n : 0;
+  const eachEl  = document.getElementById('hsEach-' + cat + '-' + i);
+  const countEl = document.getElementById('hsCount-' + cat + '-' + i);
+  if (eachEl)  eachEl.textContent  = n > 0 ? fPHP(each) + ' each' : '—';
+  if (countEl) countEl.textContent = n === 0
+    ? 'No one selected yet'
+    : (n + (n === 1 ? ' person' : ' people') + ' sharing');
+}
+
+function renderHSItems(cat) {
+  const container = document.getElementById(HS_CONTAINERS[cat]);
+  container.innerHTML = '';
+
+  if (hsItems[cat].length === 0) {
+    const noun = cat === 'drinks' ? 'drinks' : 'food items';
+    const verb = cat === 'drinks' ? 'drink'  : 'food';
+    container.innerHTML = `<div class="card" style="grid-column:1/-1; text-align:center; color:var(--text3); font-size:13px;">No ${noun} yet — click "+ Add ${verb}" below.</div>`;
+    return;
+  }
+
+  const fieldLabel  = cat === 'drinks' ? 'Drink' : 'Food item';
+  const placeholder = cat === 'drinks' ? 'e.g. Margarita, Beer, Iced Tea' : 'e.g. Sisig, Fries, Pizza';
+
+  hsItems[cat].forEach((item, i) => {
+    const amt  = parseFloat(item.amt) || 0;
+    const n    = item.people.length;
+    const each = n > 0 ? amt / n : 0;
+
+    const chipsHtml = hsPeople.length === 0
+      ? '<span style="font-size:12px; color:var(--text3);">Add people above to enable splitting.</span>'
+      : hsPeople.map(p => `
+          <button type="button" class="split-chip${item.people.includes(p.id) ? ' active' : ''}"
+            id="hsChip-${cat}-${i}-${p.id}" onclick="toggleHSSplit('${cat}', ${i}, ${p.id})">${escH(p.name)}</button>
+        `).join('');
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;">
+        <div class="input-block" style="flex:1; min-width:160px;">
+          <label class="input-label">${fieldLabel}</label>
+          <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(item.name)}" placeholder="${placeholder}"
+            oninput="hsItems.${cat}[${i}].name=this.value; saveHS()">
+        </div>
+        <div class="input-block" style="width:150px; flex-shrink:0;">
+          <label class="input-label">Amount (₱)</label>
+          <div class="input-row">
+            <div class="input-prefix">₱</div>
+            <input class="big-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
+              oninput="hsItems.${cat}[${i}].amt=this.value; updateHSItemEach('${cat}', ${i}); updateHSSummary(); saveHS()">
+          </div>
+        </div>
+        <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeHSItem('${cat}', ${i})" title="Remove this item">✕</button>
+      </div>
+
+      <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Who had this</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${chipsHtml}</div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); gap:10px; flex-wrap:wrap;">
+        <span id="hsCount-${cat}-${i}" style="font-size:12px; color:var(--text3);">${n===0 ? 'No one selected yet' : (n+(n===1?' person':' people')+' sharing')}</span>
+        <span id="hsEach-${cat}-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? fPHP(each)+' each' : '—'}</span>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ─── SUMMARY (combines drinks + food) ─────────────────────────
+function updateHSSummary() {
+  const totals = {};
+  hsPeople.forEach(p => { totals[p.id] = 0; });
+  let grand = 0;
+  let unassigned = 0;
+
+  ['drinks', 'food'].forEach(cat => {
+    hsItems[cat].forEach(item => {
+      const amt = parseFloat(item.amt) || 0;
+      grand += amt;
+      const n = item.people.length;
+      if (n > 0) {
+        const each = amt / n;
+        item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
+      } else {
+        unassigned += amt;
+      }
+    });
+  });
+
+  const listEl = document.getElementById('hsSummaryList');
+  if (hsPeople.length === 0) {
+    listEl.innerHTML = '<div style="font-size:12px; color:var(--text3);">Add people above to see totals.</div>';
+  } else {
+    listEl.innerHTML = hsPeople.map(p => `
+      <div class="nb-row">
+        <span class="nb-label">${escH(p.name)}</span>
+        <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(totals[p.id] || 0)}</span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('hsGrandTotal').textContent = fPHP(grand);
+
+  const noteEl = document.getElementById('hsUnassignedNote');
+  noteEl.textContent = unassigned > 0.005
+    ? '⚠ ' + fPHP(unassigned) + ' not yet split — select at least one person for each item above.'
+    : '';
+}
+
+// ─── HS PERSIST (separate storage key, independent of other pages) ─
+function saveHS() {
+  try {
+    localStorage.setItem('va_hangout_split_data', JSON.stringify({
+      people: hsPeople,
+      drinks: hsItems.drinks,
+      food:   hsItems.food,
+      personSeq: hsPersonSeq,
+    }));
+  } catch(e) { console.warn('HS save failed', e); }
+}
+
+function loadHS() {
+  try {
+    const raw = localStorage.getItem('va_hangout_split_data');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.people)) hsPeople = data.people;
+    if (Array.isArray(data.drinks)) hsItems.drinks = data.drinks;
+    if (Array.isArray(data.food))   hsItems.food   = data.food;
+    if (typeof data.personSeq === 'number') hsPersonSeq = data.personSeq;
+  } catch(e) { console.warn('HS load failed', e); }
+}
+
+// ─── PAGE SWITCHING ───────────────────────────────────────────
+function switchPage(page) {
+  document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
+  document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
+  document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
+  document.getElementById('fxBar').style.display          = page === 'expenses' ? 'flex' : 'none';
+  document.getElementById('expenseControls').style.display = page === 'expenses' ? 'flex' : 'none';
+  document.getElementById('tabExpenses').classList.toggle('active', page === 'expenses');
+  document.getElementById('tabSplitter').classList.toggle('active', page === 'splitter');
+  document.getElementById('tabHangout').classList.toggle('active', page === 'hangout');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+loadData();
+renderNec();
+renderPL('shopee');
+renderPL('tiktok');
+renderSavingsItems();
+fetchRate(false);
+
+loadCC();
+renderCCPeople();
+renderCCStores();
+updateCCSummary();
+
+loadHS();
+renderHSPeople();
+renderHSItems('drinks');
+renderHSItems('food');
+updateHSSummary();
+
+// ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
+// Registering requires a secure context (https:// or localhost) — this
+// silently does nothing on file:// or content:// origins, which is fine,
+// the app still works fully, it just won't be installable from there.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('Service worker registration failed (expected on file:// origins):', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
