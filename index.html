@@ -742,6 +742,14 @@
     <button class="action-btn danger" onclick="resetAll()" title="Clear all fields to blank">✕ Reset All</button>
     <div class="rate-badge">$3.50 / hr &nbsp;·&nbsp; 15% tax</div>
   </div>
+  <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="ccControls">
+    <button class="action-btn" id="ccUndoBtn" onclick="ccUndo()" disabled title="Undo last CC Split change">↩ Undo</button>
+    <button class="action-btn danger" onclick="resetCC()" title="Clear all CC Split data">✕ Reset</button>
+  </div>
+  <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="hsControls">
+    <button class="action-btn" id="hsUndoBtn" onclick="hsUndo()" disabled title="Undo last Hangout Split change">↩ Undo</button>
+    <button class="action-btn danger" onclick="resetHS()" title="Clear all Hangout Split data">✕ Reset</button>
+  </div>
 </header>
 
 <!-- PAGE NAV -->
@@ -2595,14 +2603,89 @@ function updateCCSummary() {
 }
 
 // ─── CC PERSIST (separate storage key, independent of expenses) ─
+// ─── CC UNDO SYSTEM ───────────────────────────────────────────
+const ccUndoStack = [];
+const CC_MAX_UNDO = 30;
+let _ccPendingSnapshot = null;
+let _ccUndoDebounce    = null;
+
+function updateCCUndoBtn() {
+  const btn = document.getElementById('ccUndoBtn');
+  if (btn) btn.disabled = ccUndoStack.length === 0;
+}
+
 function saveCC() {
+  // Capture the state BEFORE this burst of changes for undo
+  if (_ccPendingSnapshot === null) {
+    try { _ccPendingSnapshot = localStorage.getItem('va_cc_split_data'); } catch(e) {}
+  }
+  clearTimeout(_ccUndoDebounce);
+  _ccUndoDebounce = setTimeout(() => {
+    if (_ccPendingSnapshot !== null) {
+      ccUndoStack.push(_ccPendingSnapshot);
+      if (ccUndoStack.length > CC_MAX_UNDO) ccUndoStack.shift();
+      updateCCUndoBtn();
+    }
+    _ccPendingSnapshot = null;
+    _ccUndoDebounce    = null;
+  }, 600);
+
   try {
     localStorage.setItem('va_cc_split_data', JSON.stringify({
-      people: ccPeople,
-      stores: ccStores,
-      personSeq: ccPersonSeq,
+      people: ccPeople, stores: ccStores, personSeq: ccPersonSeq,
     }));
   } catch(e) { console.warn('CC save failed', e); }
+}
+
+function ccFlushUndo() {
+  clearTimeout(_ccUndoDebounce);
+  _ccUndoDebounce = null;
+  if (_ccPendingSnapshot !== null) {
+    ccUndoStack.push(_ccPendingSnapshot);
+    _ccPendingSnapshot = null;
+    if (ccUndoStack.length > CC_MAX_UNDO) ccUndoStack.shift();
+    updateCCUndoBtn();
+  }
+}
+
+function ccUndo() {
+  ccFlushUndo();
+  if (ccUndoStack.length === 0) return;
+  const raw = ccUndoStack.pop();
+  updateCCUndoBtn();
+  try {
+    const data = raw ? JSON.parse(raw) : {};
+    ccPeople    = Array.isArray(data.people) ? data.people : [];
+    ccStores    = Array.isArray(data.stores) ? data.stores : [];
+    ccPersonSeq = typeof data.personSeq === 'number' ? data.personSeq : 1;
+    renderCCPeople();
+    renderCCStores();
+    updateCCSummary();
+    try { localStorage.setItem('va_cc_split_data', raw || '{}'); } catch(e) {}
+    showToast('↩ CC Split undone');
+  } catch(e) { showToast('↩ Undo failed', true); }
+}
+
+function resetCC() {
+  if (!confirm('Clear all Credit Card Split data?\nThe current state will still be available via Undo.')) return;
+  // Kill any pending debounce and push current saved state to undo
+  clearTimeout(_ccUndoDebounce);
+  _ccUndoDebounce = null;
+  _ccPendingSnapshot = null;
+  try {
+    const raw = localStorage.getItem('va_cc_split_data');
+    if (raw) {
+      ccUndoStack.push(raw);
+      if (ccUndoStack.length > CC_MAX_UNDO) ccUndoStack.shift();
+      updateCCUndoBtn();
+    }
+  } catch(e) {}
+  ccPeople = []; ccStores = []; ccPersonSeq = 1;
+  renderCCPeople();
+  renderCCStores();
+  updateCCSummary();
+  try { localStorage.removeItem('va_cc_split_data'); } catch(e) {}
+  showToast('✓ CC Split cleared');
 }
 
 function loadCC() {
@@ -2813,15 +2896,92 @@ function updateHSSummary() {
 }
 
 // ─── HS PERSIST (separate storage key, independent of other pages) ─
+// ─── HS UNDO SYSTEM ───────────────────────────────────────────
+const hsUndoStack = [];
+const HS_MAX_UNDO = 30;
+let _hsPendingSnapshot = null;
+let _hsUndoDebounce    = null;
+
+function updateHSUndoBtn() {
+  const btn = document.getElementById('hsUndoBtn');
+  if (btn) btn.disabled = hsUndoStack.length === 0;
+}
+
 function saveHS() {
+  // Capture the state BEFORE this burst of changes for undo
+  if (_hsPendingSnapshot === null) {
+    try { _hsPendingSnapshot = localStorage.getItem('va_hangout_split_data'); } catch(e) {}
+  }
+  clearTimeout(_hsUndoDebounce);
+  _hsUndoDebounce = setTimeout(() => {
+    if (_hsPendingSnapshot !== null) {
+      hsUndoStack.push(_hsPendingSnapshot);
+      if (hsUndoStack.length > HS_MAX_UNDO) hsUndoStack.shift();
+      updateHSUndoBtn();
+    }
+    _hsPendingSnapshot = null;
+    _hsUndoDebounce    = null;
+  }, 600);
+
   try {
     localStorage.setItem('va_hangout_split_data', JSON.stringify({
-      people: hsPeople,
-      drinks: hsItems.drinks,
-      food:   hsItems.food,
-      personSeq: hsPersonSeq,
+      people: hsPeople, drinks: hsItems.drinks, food: hsItems.food, personSeq: hsPersonSeq,
     }));
   } catch(e) { console.warn('HS save failed', e); }
+}
+
+function hsFlushUndo() {
+  clearTimeout(_hsUndoDebounce);
+  _hsUndoDebounce = null;
+  if (_hsPendingSnapshot !== null) {
+    hsUndoStack.push(_hsPendingSnapshot);
+    _hsPendingSnapshot = null;
+    if (hsUndoStack.length > HS_MAX_UNDO) hsUndoStack.shift();
+    updateHSUndoBtn();
+  }
+}
+
+function hsUndo() {
+  hsFlushUndo();
+  if (hsUndoStack.length === 0) return;
+  const raw = hsUndoStack.pop();
+  updateHSUndoBtn();
+  try {
+    const data = raw ? JSON.parse(raw) : {};
+    hsPeople       = Array.isArray(data.people) ? data.people : [];
+    hsItems.drinks = Array.isArray(data.drinks) ? data.drinks : [];
+    hsItems.food   = Array.isArray(data.food)   ? data.food   : [];
+    hsPersonSeq    = typeof data.personSeq === 'number' ? data.personSeq : 1;
+    renderHSPeople();
+    renderHSItems('drinks');
+    renderHSItems('food');
+    updateHSSummary();
+    try { localStorage.setItem('va_hangout_split_data', raw || '{}'); } catch(e) {}
+    showToast('↩ Hangout Split undone');
+  } catch(e) { showToast('↩ Undo failed', true); }
+}
+
+function resetHS() {
+  if (!confirm('Clear all Hangout Split data?\nThe current state will still be available via Undo.')) return;
+  // Kill any pending debounce and push current saved state to undo
+  clearTimeout(_hsUndoDebounce);
+  _hsUndoDebounce = null;
+  _hsPendingSnapshot = null;
+  try {
+    const raw = localStorage.getItem('va_hangout_split_data');
+    if (raw) {
+      hsUndoStack.push(raw);
+      if (hsUndoStack.length > HS_MAX_UNDO) hsUndoStack.shift();
+      updateHSUndoBtn();
+    }
+  } catch(e) {}
+  hsPeople = []; hsItems.drinks = []; hsItems.food = []; hsPersonSeq = 1;
+  renderHSPeople();
+  renderHSItems('drinks');
+  renderHSItems('food');
+  updateHSSummary();
+  try { localStorage.removeItem('va_hangout_split_data'); } catch(e) {}
+  showToast('✓ Hangout Split cleared');
 }
 
 function loadHS() {
@@ -2841,8 +3001,10 @@ function switchPage(page) {
   document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
   document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
   document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
-  document.getElementById('fxBar').style.display          = page === 'expenses' ? 'flex' : 'none';
+  document.getElementById('fxBar').style.display           = page === 'expenses' ? 'flex' : 'none';
   document.getElementById('expenseControls').style.display = page === 'expenses' ? 'flex' : 'none';
+  document.getElementById('ccControls').style.display      = page === 'splitter' ? 'flex' : 'none';
+  document.getElementById('hsControls').style.display      = page === 'hangout'  ? 'flex' : 'none';
   document.getElementById('tabExpenses').classList.toggle('active', page === 'expenses');
   document.getElementById('tabSplitter').classList.toggle('active', page === 'splitter');
   document.getElementById('tabHangout').classList.toggle('active', page === 'hangout');
