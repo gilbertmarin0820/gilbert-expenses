@@ -731,6 +731,99 @@
     .card          { padding: 12px; }
     .mode-btn      { padding: 9px 8px; font-size: 13px; }
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     NEW FEATURES: Goals · OTE · Subscriptions · Installments
+                   Personal Debt · Chart · Calendar
+     ═══════════════════════════════════════════════════════════ */
+
+  /* ONE-TIME EXPENSES */
+  .ote-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  @media (max-width: 700px) { .ote-row { flex-wrap: wrap; } }
+
+  /* SUBSCRIPTIONS */
+  .sub-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+
+  /* PERSONAL DEBT TYPE TOGGLE */
+  .debt-type-toggle {
+    display: flex; border-radius: var(--radius-sm); overflow: hidden;
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .debt-type-btn {
+    background: none; border: none; font-size: 12px;
+    font-family: 'Outfit', sans-serif; padding: 6px 10px;
+    cursor: pointer; transition: all 0.15s; color: var(--text2);
+  }
+  .debt-type-btn.lent.active { background: var(--green-dim); color: var(--green-text); }
+  .debt-type-btn.owe.active  { background: var(--red-dim);   color: var(--red-text);   }
+  .debt-type-btn:not(.active):hover { background: var(--surface3); color: var(--text); }
+  .debt-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+
+  /* SAVINGS GOALS */
+  .goal-block {
+    margin-bottom: 14px; padding: 14px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  /* INSTALLMENTS */
+  .inst-block {
+    margin-bottom: 12px; padding: 12px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  /* INCOME vs EXPENSES CHART */
+  .chart-canvas-wrap { position: relative; flex: 0 0 220px; max-width: 220px; }
+  #incomeExpenseChart { display: block; width: 100% !important; }
+  @media (max-width: 700px) {
+    .chart-canvas-wrap { flex: 0 0 100%; max-width: 100%; }
+    #incomeExpenseChart { max-width: 240px; margin: 0 auto; }
+  }
+
+  /* PAYDAY CALENDAR */
+  .cal-nav {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .cal-nav-btn {
+    background: none; border: 1px solid var(--border2); color: var(--text2);
+    font-size: 16px; padding: 4px 14px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: all 0.15s; min-height: 34px;
+  }
+  .cal-nav-btn:hover { border-color: var(--teal); color: var(--teal-text); }
+  .cal-month-label {
+    font-family: 'DM Serif Display', serif; font-size: 18px;
+    color: var(--text); flex: 1;
+  }
+  .cal-head-row, .cal-days-row {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+  }
+  .cal-head-row { margin-bottom: 3px; }
+  .cal-head {
+    font-size: 10px; font-weight: 500; text-align: center;
+    color: var(--text3); padding: 4px 0;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .cal-day {
+    aspect-ratio: 1; border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-family: 'DM Mono', monospace;
+    font-size: 12px; color: var(--text3);
+    background: var(--surface2); position: relative;
+  }
+  .cal-day.empty { background: none; }
+  .cal-day.today { border: 1px solid var(--blue); color: var(--blue-text); }
+  .cal-day.pay-corp { background: var(--teal-dim); color: var(--teal-text); border: 1px solid var(--teal); }
+  .cal-day.pay-va   { background: var(--blue-dim); color: var(--blue-text); border: 1px solid var(--blue); }
+  .cal-day.pay-both { background: var(--purple-dim); color: var(--purple-text); border: 1px solid var(--purple); }
+  .cal-day.weekend  { opacity: 0.38; }
+  .cal-pip { font-size: 6px; margin-top: 1px; line-height: 1; }
+  .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+  .cal-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+  .cal-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .va-days-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .va-day-block { display: flex; flex-direction: column; gap: 4px; }
+  .va-day-block label { font-size: 11px; color: var(--text3); }
 </style>
 </head>
 <body>
@@ -750,6 +843,10 @@
     <button class="action-btn" id="hsUndoBtn" onclick="hsUndo()" disabled title="Undo last Hangout Split change">↩ Undo</button>
     <button class="action-btn danger" onclick="resetHS()" title="Clear all Hangout Split data">✕ Reset</button>
   </div>
+  <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="planControls">
+    <button class="action-btn" id="planUndoBtn" onclick="planUndo()" disabled title="Undo last Plan change">↩ Undo</button>
+    <button class="action-btn danger" onclick="resetPlan()" title="Clear all Plan data">✕ Reset All</button>
+  </div>
 </header>
 
 <!-- PAGE NAV -->
@@ -762,6 +859,9 @@
   </button>
   <button class="page-tab" id="tabHangout" onclick="switchPage('hangout')">
     <span class="tab-icon">🍻</span><span class="tab-label">Hangout</span>
+  </button>
+  <button class="page-tab" id="tabPlan" onclick="switchPage('plan')">
+    <span class="tab-icon">📊</span><span class="tab-label">Plan</span>
   </button>
 </nav>
 
@@ -1124,6 +1224,22 @@
     </div>
   </div>
 
+  <!-- ONE-TIME EXPENSES -->
+  <div>
+    <div class="section-title">One-time Expenses</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Quick-log purchases — shoes, Grab rides, weekend food haul. Automatically deducted from your net balance.
+      </div>
+      <div id="oteContainer"></div>
+      <button class="add-btn" onclick="addOTE()">+ Add expense</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:var(--text2);">Total one-time expenses</span>
+        <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="oteTotal">₱0.00</span>
+      </div>
+    </div>
+  </div>
+
   <!-- CALCULATOR + SAVINGS ALLOCATION -->
   <div>
     <div class="section-title">Calculator &amp; Savings Allocation</div>
@@ -1221,11 +1337,27 @@
         <div class="nb-row"><span class="nb-label">− Necessities</span><span class="c-red" id="nb3">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">− SPayLater</span><span class="c-red" id="nb4">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">− TikTok PayLater</span><span class="c-red" id="nb5">₱0.00</span></div>
+        <div class="nb-row" id="nb-subs-row" style="display:none;"><span class="nb-label">− Subscriptions</span><span class="c-red" id="nb-subs">₱0.00</span></div>
+        <div class="nb-row" id="nb-insts-row" style="display:none;"><span class="nb-label">− Installments</span><span class="c-red" id="nb-insts">₱0.00</span></div>
+        <div class="nb-row" id="nb-ote-row" style="display:none;"><span class="nb-label">− One-time</span><span class="c-red" id="nb-ote">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;">
           <span class="nb-label" style="color:var(--text);">= Net balance</span>
           <span class="c-green" id="nb6" style="font-size:15px; font-weight:500;">₱0.00</span>
         </div>
+      </div>
+    </div>
+  </div>
+  <!-- INCOME VS EXPENSES CHART -->
+  <div>
+    <div class="section-title">Income vs Expenses</div>
+    <div class="card" style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
+      <div class="chart-canvas-wrap">
+        <canvas id="incomeExpenseChart" width="220" height="220"></canvas>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <div style="font-size:11px; color:var(--text3); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.8px;">Breakdown</div>
+        <div id="chartLegend" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
     </div>
   </div>
@@ -1329,8 +1461,147 @@
 
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ════════════════════════════════════════════════════════════
+     PLAN PAGE — Savings Goals · Subscriptions · Installments
+                 Personal Debt · Payday Calendar
+     ════════════════════════════════════════════════════════════ -->
+<div class="main" id="pagePlan" style="display:none;">
 
+  <!-- SAVINGS GOALS -->
+  <div>
+    <div class="section-title">Savings Goals</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Set targets for travel, emergency fund, gadget — whatever you're working toward. Track your progress with visual bars.
+      </div>
+      <div id="goalsContainer"></div>
+      <button class="add-btn" onclick="addGoal()">+ Add goal</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label">Total saved across goals</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="goalsTotalSaved">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">Total target</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="goalsTotalTarget">₱0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTIONS -->
+  <div>
+    <div class="section-title">Subscriptions</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Netflix, Spotify, YouTube Premium, iCloud — auto-charges that are easy to forget. Monthly totals feed into your Net Summary.
+      </div>
+      <div id="subsContainer"></div>
+      <button class="add-btn" onclick="addSub()">+ Add subscription</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:var(--text2);">Monthly subscriptions total</span>
+        <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="subsTotal">₱0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTALLMENTS -->
+  <div>
+    <div class="section-title">Installments</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        0% installment plans for your phone, appliance, or gadget. Track remaining months so nothing catches you off guard. Monthly total feeds into Net Summary.
+      </div>
+      <div id="instsContainer"></div>
+      <button class="add-btn" onclick="addInst()">+ Add installment</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row">
+          <span class="nb-label">Monthly installments</span>
+          <span class="c-red" style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500;" id="instsMonthly">₱0.00</span>
+        </div>
+        <div class="nb-row">
+          <span class="nb-label" style="color:var(--text3);">Total remaining balance</span>
+          <span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="instsTotal">₱0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSONAL DEBTS -->
+  <div>
+    <div class="section-title">Personal Debts</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Track informal money — "Carlo owes me ₱1,500" or "I owe Mama ₱3,000". Outside of apps but still affects your real balance.
+      </div>
+      <div id="debtsContainer"></div>
+      <button class="add-btn" onclick="addDebt()">+ Add entry</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label c-green">Total others owe you</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="debtsLent">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label c-red">Total you owe others</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="debtsOwe">₱0.00</span></div>
+        <div class="divider"></div>
+        <div class="nb-row"><span class="nb-label" id="debtsNetLabel">Net position</span><span style="font-family:'DM Mono',monospace; font-weight:500;" id="debtsNet">₱0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYDAY CALENDAR -->
+  <div>
+    <div class="section-title">Payday Calendar</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        All your upcoming paydays at a glance — corporate 15th/30th and VA payment windows highlighted on the calendar.
+      </div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+        <div class="cal-month-label" id="calMonthLabel"></div>
+        <button class="cal-nav-btn" onclick="calNext()">›</button>
+      </div>
+      <div class="cal-head-row">
+        <div class="cal-head">Sun</div>
+        <div class="cal-head">Mon</div>
+        <div class="cal-head">Tue</div>
+        <div class="cal-head">Wed</div>
+        <div class="cal-head">Thu</div>
+        <div class="cal-head">Fri</div>
+        <div class="cal-head">Sat</div>
+      </div>
+      <div class="cal-days-row" id="calDaysGrid"></div>
+      <div class="cal-legend">
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background:var(--teal-dim); border:1px solid var(--teal);"></div>Corporate (15th/30th)
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background:var(--blue-dim); border:1px solid var(--blue);"></div>VA payday
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background:var(--purple-dim); border:1px solid var(--purple);"></div>Both
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background:var(--surface2); border:1px solid var(--blue);"></div>Today
+        </div>
+      </div>
+      <div style="margin-top:16px; padding:14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">VA Payday Days</div>
+        <div style="font-size:12px; color:var(--text3); margin-bottom:10px;">Enter the day-of-month your VA client typically sends payment. Up to 3 windows.</div>
+        <div class="va-days-row">
+          <div class="va-day-block">
+            <label>VA Day 1</label>
+            <input type="number" class="nec-day-input" id="vaPayDay1" min="1" max="31" placeholder="e.g. 1"
+              oninput="renderCalendar(); savePlanData()" style="width:64px;">
+          </div>
+          <div class="va-day-block">
+            <label>VA Day 2</label>
+            <input type="number" class="nec-day-input" id="vaPayDay2" min="1" max="31" placeholder="e.g. 16"
+              oninput="renderCalendar(); savePlanData()" style="width:64px;">
+          </div>
+          <div class="va-day-block">
+            <label>VA Day 3</label>
+            <input type="number" class="nec-day-input" id="vaPayDay3" min="1" max="31" placeholder="—"
+              oninput="renderCalendar(); savePlanData()" style="width:64px;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
 
 <script>
 const DAYS_PER_WEEK = 5;
@@ -1809,8 +2080,20 @@ function recalcAll() {
   document.getElementById('shopeeTotal').textContent = fPHP(shopeeSum);
   document.getElementById('tiktokTotal').textContent = fPHP(tiktokSum);
 
+  // plan page totals (subscriptions, installments, one-time expenses)
+  const subsSum  = getSubsSum();
+  const instsSum = getInstsMonthlySum();
+  const oteSum   = getOTESum();
+
+  const subsRow  = document.getElementById('nb-subs-row');
+  const instsRow = document.getElementById('nb-insts-row');
+  const oteRow   = document.getElementById('nb-ote-row');
+  if (subsRow)  { subsRow.style.display  = subsSum  > 0 ? 'flex' : 'none'; document.getElementById('nb-subs').textContent  = fPHP(subsSum);  }
+  if (instsRow) { instsRow.style.display = instsSum > 0 ? 'flex' : 'none'; document.getElementById('nb-insts').textContent = fPHP(instsSum); }
+  if (oteRow)   { oteRow.style.display   = oteSum   > 0 ? 'flex' : 'none'; document.getElementById('nb-ote').textContent   = fPHP(oteSum);   }
+
   // net summary
-  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum;
+  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - subsSum - instsSum - oteSum;
   document.getElementById('nb1').textContent = fPHP(savings);
   document.getElementById('nb2').textContent = fPHP(netPHP);
   document.getElementById('nb3').textContent = fPHP(necSum);
@@ -1847,6 +2130,7 @@ function recalcAll() {
     : 'Enter your daily hours above';
 
   updateSavingsSummary();
+  drawChart();
 }
 
 // ─── UNDO SYSTEM ──────────────────────────────────────────────
@@ -2996,18 +3280,678 @@ function loadHS() {
   } catch(e) { console.warn('HS load failed', e); }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PLAN PAGE — Goals · One-Time Expenses · Subscriptions
+//              Installments · Personal Debt · Chart · Calendar
+// ═══════════════════════════════════════════════════════════════
+
+// ─── SHARED PLAN DATA ─────────────────────────────────────────
+let savingsGoals    = [];   // [{id, name, target, saved}]
+let oneTimeExpenses = [];   // [{id, name, amt}]
+let subscriptions   = [];   // [{id, name, amt, billingDay}]
+let installments    = [];   // [{id, name, monthlyAmt, remaining}]
+let personalDebts   = [];   // [{id, type:'lent'|'owe', person, amt}]
+let calYear = 0, calMonth = 0;
+let planSeq = 1;
+function planId() { return planSeq++; }
+
+// ─── ONE-TIME EXPENSES ────────────────────────────────────────
+function addOTE() {
+  oneTimeExpenses.push({ id: planId(), name: '', amt: '' });
+  renderOTE();
+  savePlanData();
+}
+
+function removeOTE(id) {
+  oneTimeExpenses = oneTimeExpenses.filter(e => e.id !== id);
+  renderOTE();
+  recalcAll();
+  savePlanData();
+}
+
+function renderOTE() {
+  const c = document.getElementById('oteContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  oneTimeExpenses.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'ote-row';
+    div.innerHTML = `
+      <input class="nec-cat-input" value="${escH(e.name)}" placeholder="What was it? (e.g. Grab rides)" style="flex:1; min-width:120px;"
+        oninput="oneTimeExpenses[${i}].name=this.value; savePlanData()">
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:12px; color:var(--text3);">₱</span>
+        <input class="nec-amt-input" type="number" value="${e.amt}" placeholder="0.00" min="0" step="0.01"
+          style="width:110px;"
+          oninput="oneTimeExpenses[${i}].amt=this.value; updateOTETotal(); recalcAll(); savePlanData()">
+      </div>
+      <button class="del-btn" onclick="removeOTE(${e.id})">✕</button>
+    `;
+    c.appendChild(div);
+  });
+  updateOTETotal();
+}
+
+function getOTESum() {
+  return oneTimeExpenses.reduce((s, e) => s + (parseFloat(e.amt) || 0), 0);
+}
+
+function updateOTETotal() {
+  const el = document.getElementById('oteTotal');
+  if (el) el.textContent = fPHP(getOTESum());
+}
+
+// ─── SAVINGS GOALS ────────────────────────────────────────────
+function addGoal() {
+  savingsGoals.push({ id: planId(), name: '', target: '', saved: '' });
+  renderGoals();
+  savePlanData();
+}
+
+function removeGoal(id) {
+  savingsGoals = savingsGoals.filter(g => g.id !== id);
+  renderGoals();
+  savePlanData();
+}
+
+function renderGoals() {
+  const c = document.getElementById('goalsContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  savingsGoals.forEach((g, i) => {
+    const target = parseFloat(g.target) || 0;
+    const saved  = parseFloat(g.saved)  || 0;
+    const pct    = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
+    const pctStr = target > 0 ? pct.toFixed(0) + '%' : '—';
+    const barColor = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
+
+    const div = document.createElement('div');
+    div.className = 'goal-block';
+    div.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input class="nec-cat-input" value="${escH(g.name)}" placeholder="Goal name (e.g. Travel Fund, Emergency Fund)" style="flex:1;"
+          oninput="savingsGoals[${i}].name=this.value; savePlanData()">
+        <button class="del-btn" onclick="removeGoal(${g.id})">✕</button>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:120px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Target (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${g.target}" placeholder="50,000" min="0" step="0.01" style="flex:1;"
+              oninput="savingsGoals[${i}].target=this.value; renderGoals(); savePlanData()">
+          </div>
+        </div>
+        <div style="flex:1; min-width:120px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Saved so far (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${g.saved}" placeholder="0" min="0" step="0.01" style="flex:1;"
+              oninput="savingsGoals[${i}].saved=this.value; renderGoals(); savePlanData()">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="flex:1; height:10px; background:var(--surface3); border-radius:5px; overflow:hidden;">
+          <div style="height:100%; width:${pct.toFixed(1)}%; background:${barColor}; border-radius:5px; transition:width 0.4s;"></div>
+        </div>
+        <span style="font-family:'DM Mono',monospace; font-size:13px; color:${barColor}; min-width:42px; text-align:right; font-weight:500;">${pctStr}</span>
+      </div>
+      ${target > 0 ? `<div style="font-size:11px; color:var(--text3); margin-top:6px;">${fPHP(saved)} of ${fPHP(target)}${saved >= target ? ' &nbsp;<span style="color:var(--green-text);">✓ Goal reached!</span>' : ''}</div>` : ''}
+    `;
+    c.appendChild(div);
+  });
+
+  let totalSaved = 0, totalTarget = 0;
+  savingsGoals.forEach(g => {
+    totalSaved  += parseFloat(g.saved)  || 0;
+    totalTarget += parseFloat(g.target) || 0;
+  });
+  const ts = document.getElementById('goalsTotalSaved');
+  const tt = document.getElementById('goalsTotalTarget');
+  if (ts) ts.textContent = fPHP(totalSaved);
+  if (tt) tt.textContent = fPHP(totalTarget);
+}
+
+// ─── SUBSCRIPTIONS ────────────────────────────────────────────
+function addSub() {
+  subscriptions.push({ id: planId(), name: '', amt: '', billingDay: '' });
+  renderSubs();
+  savePlanData();
+}
+
+function removeSub(id) {
+  subscriptions = subscriptions.filter(s => s.id !== id);
+  renderSubs();
+  recalcAll();
+  savePlanData();
+}
+
+function renderSubs() {
+  const c = document.getElementById('subsContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  subscriptions.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'sub-row';
+    div.innerHTML = `
+      <input class="nec-cat-input" value="${escH(s.name)}" placeholder="e.g. Netflix, Spotify, iCloud" style="flex:1; min-width:130px;"
+        oninput="subscriptions[${i}].name=this.value; savePlanData()">
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:12px; color:var(--text3);">₱/mo</span>
+        <input class="nec-amt-input" type="number" value="${s.amt}" placeholder="0.00" min="0" step="0.01"
+          style="width:100px;"
+          oninput="subscriptions[${i}].amt=this.value; updateSubsTotal(); recalcAll(); savePlanData()">
+      </div>
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:11px; color:var(--text3); white-space:nowrap;">Bill day</span>
+        <input type="number" class="nec-day-input" value="${s.billingDay}" min="1" max="31" placeholder="—"
+          oninput="subscriptions[${i}].billingDay=this.value; savePlanData()">
+      </div>
+      <button class="del-btn" onclick="removeSub(${s.id})">✕</button>
+    `;
+    c.appendChild(div);
+  });
+  updateSubsTotal();
+}
+
+function getSubsSum() {
+  return subscriptions.reduce((s, sub) => s + (parseFloat(sub.amt) || 0), 0);
+}
+
+function updateSubsTotal() {
+  const el = document.getElementById('subsTotal');
+  if (el) el.textContent = fPHP(getSubsSum());
+}
+
+// ─── INSTALLMENTS ─────────────────────────────────────────────
+function addInst() {
+  installments.push({ id: planId(), name: '', monthlyAmt: '', remaining: '' });
+  renderInsts();
+  savePlanData();
+}
+
+function removeInst(id) {
+  installments = installments.filter(inst => inst.id !== id);
+  renderInsts();
+  recalcAll();
+  savePlanData();
+}
+
+function renderInsts() {
+  const c = document.getElementById('instsContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  installments.forEach((inst, i) => {
+    const monthly   = parseFloat(inst.monthlyAmt) || 0;
+    const remaining = parseInt(inst.remaining)    || 0;
+    const totalRem  = monthly * remaining;
+
+    const div = document.createElement('div');
+    div.className = 'inst-block';
+    div.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input class="nec-cat-input" value="${escH(inst.name)}" placeholder="e.g. iPhone 15 Pro, Samsung TV" style="flex:1;"
+          oninput="installments[${i}].name=this.value; savePlanData()">
+        <button class="del-btn" onclick="removeInst(${inst.id})">✕</button>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+        <div style="flex:1; min-width:130px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Monthly amount (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${inst.monthlyAmt}" placeholder="0.00" min="0" step="0.01" style="flex:1;"
+              oninput="installments[${i}].monthlyAmt=this.value; renderInsts(); updateInstsTotal(); recalcAll(); savePlanData()">
+          </div>
+        </div>
+        <div style="min-width:110px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining months</div>
+          <input class="nec-day-input" type="number" value="${inst.remaining}" min="0" step="1" placeholder="0" style="width:80px;"
+            oninput="installments[${i}].remaining=this.value; renderInsts(); updateInstsTotal(); recalcAll(); savePlanData()">
+        </div>
+        ${totalRem > 0 ? `
+        <div style="flex-shrink:0;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining balance</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; color:var(--amber-text); font-weight:500;">${fPHP(totalRem)}</div>
+        </div>` : ''}
+      </div>
+    `;
+    c.appendChild(div);
+  });
+  updateInstsTotal();
+}
+
+function getInstsMonthlySum() {
+  return installments.reduce((s, inst) => {
+    const mo = parseFloat(inst.monthlyAmt) || 0;
+    const re = parseInt(inst.remaining)    || 0;
+    return s + (re > 0 ? mo : 0);
+  }, 0);
+}
+
+function updateInstsTotal() {
+  let monthly = 0, totalRem = 0;
+  installments.forEach(inst => {
+    const mo = parseFloat(inst.monthlyAmt) || 0;
+    const re = parseInt(inst.remaining)    || 0;
+    if (re > 0) monthly += mo;
+    totalRem += mo * re;
+  });
+  const em = document.getElementById('instsMonthly');
+  const et = document.getElementById('instsTotal');
+  if (em) em.textContent = fPHP(monthly);
+  if (et) et.textContent = fPHP(totalRem);
+}
+
+// ─── PERSONAL DEBTS ───────────────────────────────────────────
+function addDebt() {
+  personalDebts.push({ id: planId(), type: 'lent', person: '', amt: '' });
+  renderDebts();
+  savePlanData();
+}
+
+function removeDebt(id) {
+  personalDebts = personalDebts.filter(d => d.id !== id);
+  renderDebts();
+  savePlanData();
+}
+
+function toggleDebtType(id, type) {
+  const d = personalDebts.find(d => d.id === id);
+  if (d) { d.type = type; renderDebts(); savePlanData(); }
+}
+
+function renderDebts() {
+  const c = document.getElementById('debtsContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  personalDebts.forEach((d, i) => {
+    const div = document.createElement('div');
+    div.className = 'debt-row';
+    div.innerHTML = `
+      <div class="debt-type-toggle" style="flex-shrink:0;">
+        <button class="debt-type-btn lent${d.type === 'lent' ? ' active' : ''}" onclick="toggleDebtType(${d.id},'lent')">Lent</button>
+        <button class="debt-type-btn owe${d.type === 'owe' ? ' active' : ''}" onclick="toggleDebtType(${d.id},'owe')">Owe</button>
+      </div>
+      <input class="nec-cat-input" value="${escH(d.person)}" placeholder="${d.type === 'lent' ? 'Who owes you?' : 'Who do you owe?'}" style="flex:1; min-width:100px;"
+        oninput="personalDebts[${i}].person=this.value; savePlanData()">
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:12px; color:var(--text3);">₱</span>
+        <input class="nec-amt-input" type="number" value="${d.amt}" placeholder="0.00" min="0" step="0.01" style="width:100px;"
+          oninput="personalDebts[${i}].amt=this.value; updateDebtsSummary(); savePlanData()">
+      </div>
+      <button class="del-btn" onclick="removeDebt(${d.id})">✕</button>
+    `;
+    c.appendChild(div);
+  });
+  updateDebtsSummary();
+}
+
+function updateDebtsSummary() {
+  let lent = 0, owe = 0;
+  personalDebts.forEach(d => {
+    const a = parseFloat(d.amt) || 0;
+    if (d.type === 'lent') lent += a; else owe += a;
+  });
+  const net = lent - owe;
+  const el = document.getElementById('debtsLent');
+  const eo = document.getElementById('debtsOwe');
+  const en = document.getElementById('debtsNet');
+  const lb = document.getElementById('debtsNetLabel');
+  if (el) el.textContent = fPHP(lent);
+  if (eo) eo.textContent = fPHP(owe);
+  if (en) {
+    en.textContent = fPHP(Math.abs(net));
+    en.style.color = net >= 0 ? 'var(--green-text)' : 'var(--red-text)';
+  }
+  if (lb) lb.textContent = net >= 0 ? 'Net position (in your favor)' : 'Net position (you owe more)';
+}
+
+// ─── INCOME VS EXPENSES CHART ─────────────────────────────────
+function drawChart() {
+  const canvas = document.getElementById('incomeExpenseChart');
+  if (!canvas || !canvas.getContext) return;
+
+  // Read values from live DOM (already computed by recalcAll)
+  function readNB(id) {
+    const el = document.getElementById(id);
+    return el ? (parseFloat((el.textContent || '').replace(/[₱,]/g, '')) || 0) : 0;
+  }
+  const savings = readNB('nb1');
+  const payroll = readNB('nb2');
+  const corp    = readNB('nb-corp');
+  const bonus   = readNB('nb-bonus');
+  const nec     = readNB('nb3');
+  const shopee  = readNB('nb4');
+  const tiktok  = readNB('nb5');
+  const subs    = getSubsSum();
+  const insts   = getInstsMonthlySum();
+  const ote     = getOTESum();
+
+  const segments = [
+    { label: 'Savings',       value: savings, color: '#3FB950', income: true  },
+    { label: 'VA Payroll',    value: payroll, color: '#388bfd', income: true  },
+    { label: 'Corporate',     value: corp,    color: '#0d9488', income: true  },
+    { label: 'Bonus',         value: bonus,   color: '#8b5cf6', income: true  },
+    { label: 'Necessities',   value: nec,     color: '#f85149', income: false },
+    { label: 'SPayLater',     value: shopee,  color: '#ff5722', income: false },
+    { label: 'TikTok',        value: tiktok,  color: '#555',    income: false },
+    { label: 'Subscriptions', value: subs,    color: '#d29922', income: false },
+    { label: 'Installments',  value: insts,   color: '#e3b341', income: false },
+    { label: 'One-time',      value: ote,     color: '#ff7b72', income: false },
+  ].filter(s => s.value > 0.005);
+
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+
+  // Size canvas to its rendered width (responsive)
+  const W = canvas.offsetWidth > 0 ? canvas.offsetWidth : 220;
+  canvas.width  = W;
+  canvas.height = W;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, W);
+
+  if (total === 0) {
+    ctx.fillStyle = '#6e7681';
+    ctx.font = '13px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Add data on the Expenses page', W / 2, W / 2);
+    document.getElementById('chartLegend').innerHTML = '<div style="font-size:12px;color:var(--text3);">No data yet — fill in the Expenses page.</div>';
+    return;
+  }
+
+  const cx = W / 2, cy = W / 2;
+  const outerR = W / 2 - 6;
+  const innerR = outerR * 0.52;
+  let angle = -Math.PI / 2;
+
+  segments.forEach(seg => {
+    const slice = (seg.value / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    angle += slice;
+  });
+
+  // Donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
+  ctx.fillStyle = '#161b22';
+  ctx.fill();
+
+  // Center labels
+  const fs = Math.max(11, Math.round(W * 0.075));
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = `600 ${fs}px DM Mono, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(fPHP(total), cx, cy - Math.round(W * 0.035));
+  ctx.font = `${Math.round(W * 0.055)}px Outfit, sans-serif`;
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('total', cx, cy + Math.round(W * 0.065));
+
+  // Legend
+  const legendEl = document.getElementById('chartLegend');
+  if (legendEl) {
+    legendEl.innerHTML = segments.map(s => `
+      <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
+        <div style="width:12px; height:12px; border-radius:3px; background:${s.color}; flex-shrink:0;"></div>
+        <span style="color:var(--text2); flex:1;">${s.label}</span>
+        <span style="font-family:'DM Mono',monospace; font-size:11px; color:var(--text3);">${fPHP(s.value)}</span>
+        <span style="font-family:'DM Mono',monospace; font-size:11px; color:var(--text3); min-width:40px; text-align:right;">${(s.value/total*100).toFixed(1)}%</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ─── PAYDAY CALENDAR ──────────────────────────────────────────
+const CAL_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function calInit() {
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendar();
+}
+
+function calPrev() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function calNext() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const grid  = document.getElementById('calDaysGrid');
+  const label = document.getElementById('calMonthLabel');
+  if (!grid || !label) return;
+
+  label.textContent = CAL_MONTH_NAMES[calMonth] + ' ' + calYear;
+
+  const today    = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayY   = today.getFullYear();
+  const todayM   = today.getMonth();
+  const todayD   = today.getDate();
+
+  const lastDay  = new Date(calYear, calMonth + 1, 0).getDate();
+  const corpDays = new Set([15, Math.min(30, lastDay)]);
+
+  const vaDays = new Set();
+  ['vaPayDay1', 'vaPayDay2', 'vaPayDay3'].forEach(id => {
+    const el = document.getElementById(id);
+    const v  = el ? parseInt(el.value) : 0;
+    if (v >= 1 && v <= lastDay) vaDays.add(v);
+  });
+
+  const firstDow = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  grid.innerHTML = '';
+
+  // Empty leading cells
+  for (let i = 0; i < firstDow; i++) {
+    const d = document.createElement('div');
+    d.className = 'cal-day empty';
+    grid.appendChild(d);
+  }
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dow       = (firstDow + day - 1) % 7;
+    const isWeekend = dow === 0 || dow === 6;
+    const isToday   = calYear === todayY && calMonth === todayM && day === todayD;
+    const isCorp    = corpDays.has(day);
+    const isVA      = vaDays.has(day);
+
+    const d = document.createElement('div');
+    d.className = 'cal-day';
+    if (isWeekend) d.classList.add('weekend');
+    if (isToday)   d.classList.add('today');
+    if (isCorp && isVA) d.classList.add('pay-both');
+    else if (isCorp)    d.classList.add('pay-corp');
+    else if (isVA)      d.classList.add('pay-va');
+
+    const pips = [];
+    if (isCorp) pips.push('<span style="color:var(--teal-text)">●</span>');
+    if (isVA)   pips.push('<span style="color:var(--blue-text)">●</span>');
+
+    d.innerHTML = `<span>${day}</span>${pips.length ? `<div class="cal-pip">${pips.join('')}</div>` : ''}`;
+    grid.appendChild(d);
+  }
+}
+
+// ─── PLAN UNDO SYSTEM ─────────────────────────────────────────
+const planUndoStack = [];
+const PLAN_MAX_UNDO = 30;
+let _planPendingSnapshot = null;
+let _planUndoDebounce    = null;
+
+function updatePlanUndoBtn() {
+  const btn = document.getElementById('planUndoBtn');
+  if (btn) btn.disabled = planUndoStack.length === 0;
+}
+
+function planFlushUndo() {
+  clearTimeout(_planUndoDebounce);
+  _planUndoDebounce = null;
+  if (_planPendingSnapshot !== null) {
+    planUndoStack.push(_planPendingSnapshot);
+    _planPendingSnapshot = null;
+    if (planUndoStack.length > PLAN_MAX_UNDO) planUndoStack.shift();
+    updatePlanUndoBtn();
+  }
+}
+
+function savePlanData() {
+  // Snapshot the state BEFORE this burst of changes
+  if (_planPendingSnapshot === null) {
+    try { _planPendingSnapshot = localStorage.getItem('va_plan_data'); } catch(e) {}
+  }
+  clearTimeout(_planUndoDebounce);
+  _planUndoDebounce = setTimeout(() => {
+    if (_planPendingSnapshot !== null) {
+      planUndoStack.push(_planPendingSnapshot);
+      if (planUndoStack.length > PLAN_MAX_UNDO) planUndoStack.shift();
+      updatePlanUndoBtn();
+    }
+    _planPendingSnapshot = null;
+    _planUndoDebounce    = null;
+  }, 600);
+
+  try {
+    localStorage.setItem('va_plan_data', JSON.stringify({
+      savingsGoals, oneTimeExpenses, subscriptions, installments, personalDebts, planSeq,
+      vaPayDay1: (document.getElementById('vaPayDay1') || {}).value || '',
+      vaPayDay2: (document.getElementById('vaPayDay2') || {}).value || '',
+      vaPayDay3: (document.getElementById('vaPayDay3') || {}).value || '',
+    }));
+  } catch(e) { console.warn('Plan save failed', e); }
+}
+
+function planUndo() {
+  planFlushUndo();
+  if (planUndoStack.length === 0) return;
+  const raw = planUndoStack.pop();
+  updatePlanUndoBtn();
+  try {
+    const d = raw ? JSON.parse(raw) : {};
+    if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
+    if (Array.isArray(d.oneTimeExpenses)) oneTimeExpenses = d.oneTimeExpenses;
+    if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
+    if (Array.isArray(d.installments))    installments    = d.installments;
+    if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
+    if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
+    const v1 = document.getElementById('vaPayDay1');
+    const v2 = document.getElementById('vaPayDay2');
+    const v3 = document.getElementById('vaPayDay3');
+    if (v1) v1.value = d.vaPayDay1 || '';
+    if (v2) v2.value = d.vaPayDay2 || '';
+    if (v3) v3.value = d.vaPayDay3 || '';
+    // Re-render all Plan sections
+    renderGoals();
+    renderOTE();
+    renderSubs();
+    renderInsts();
+    renderDebts();
+    renderCalendar();
+    recalcAll();
+    try { localStorage.setItem('va_plan_data', raw || '{}'); } catch(e) {}
+    showToast('↩ Plan undone');
+  } catch(e) { showToast('↩ Undo failed', true); }
+}
+
+function resetPlan() {
+  if (!confirm('Clear all Plan data?\nThe current state will still be available via Undo.')) return;
+  planFlushUndo();
+  // Push current saved state so it can be restored
+  try {
+    const raw = localStorage.getItem('va_plan_data');
+    if (raw) {
+      planUndoStack.push(raw);
+      if (planUndoStack.length > PLAN_MAX_UNDO) planUndoStack.shift();
+      updatePlanUndoBtn();
+    }
+  } catch(e) {}
+
+  savingsGoals    = [];
+  oneTimeExpenses = [];
+  subscriptions   = [];
+  installments    = [];
+  personalDebts   = [];
+  planSeq         = 1;
+  const v1 = document.getElementById('vaPayDay1');
+  const v2 = document.getElementById('vaPayDay2');
+  const v3 = document.getElementById('vaPayDay3');
+  if (v1) v1.value = '';
+  if (v2) v2.value = '';
+  if (v3) v3.value = '';
+
+  renderGoals();
+  renderOTE();
+  renderSubs();
+  renderInsts();
+  renderDebts();
+  renderCalendar();
+  recalcAll();
+  try { localStorage.removeItem('va_plan_data'); } catch(e) {}
+  showToast('✓ Plan data cleared');
+}
+
+function loadPlanData() {
+  try {
+    const raw = localStorage.getItem('va_plan_data');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
+    if (Array.isArray(d.oneTimeExpenses)) oneTimeExpenses = d.oneTimeExpenses;
+    if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
+    if (Array.isArray(d.installments))    installments    = d.installments;
+    if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
+    if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
+    const v1 = document.getElementById('vaPayDay1');
+    const v2 = document.getElementById('vaPayDay2');
+    const v3 = document.getElementById('vaPayDay3');
+    if (v1 && d.vaPayDay1) v1.value = d.vaPayDay1;
+    if (v2 && d.vaPayDay2) v2.value = d.vaPayDay2;
+    if (v3 && d.vaPayDay3) v3.value = d.vaPayDay3;
+  } catch(e) { console.warn('Plan load failed', e); }
+}
+
 // ─── PAGE SWITCHING ───────────────────────────────────────────
 function switchPage(page) {
   document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
   document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
   document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
+  document.getElementById('pagePlan').style.display     = page === 'plan'     ? 'grid' : 'none';
   document.getElementById('fxBar').style.display           = page === 'expenses' ? 'flex' : 'none';
   document.getElementById('expenseControls').style.display = page === 'expenses' ? 'flex' : 'none';
   document.getElementById('ccControls').style.display      = page === 'splitter' ? 'flex' : 'none';
   document.getElementById('hsControls').style.display      = page === 'hangout'  ? 'flex' : 'none';
+  document.getElementById('planControls').style.display    = page === 'plan'     ? 'flex' : 'none';
   document.getElementById('tabExpenses').classList.toggle('active', page === 'expenses');
   document.getElementById('tabSplitter').classList.toggle('active', page === 'splitter');
   document.getElementById('tabHangout').classList.toggle('active', page === 'hangout');
+  document.getElementById('tabPlan').classList.toggle('active', page === 'plan');
+  if (page === 'plan') {
+    renderGoals();
+    renderSubs();
+    renderInsts();
+    renderDebts();
+    if (!calYear) calInit();
+    else renderCalendar();
+  }
+  if (page === 'expenses') {
+    setTimeout(drawChart, 60);
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────
@@ -3028,6 +3972,11 @@ renderHSPeople();
 renderHSItems('drinks');
 renderHSItems('food');
 updateHSSummary();
+
+loadPlanData();
+renderOTE();          // one-time expenses live on Expenses page
+setTimeout(drawChart, 200);
+calInit();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
 // Registering requires a secure context (https:// or localhost) — this
