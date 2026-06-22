@@ -1765,7 +1765,7 @@ function recalcAll() {
         !hasRange   ? '—' :
         cutoffs > 0 ? cutoffs + (cutoffs === 1 ? ' cutoff' : ' cutoffs') : '0 cutoffs';
       document.getElementById('corpRangeTotal').textContent =
-        (hasRange && cutoffs > 0 && corpPerCutoff > 0) ? fPHP(corpContrib) : '&#8369;&#8212;';
+        (hasRange && cutoffs > 0 && corpPerCutoff > 0) ? fPHP(corpContrib) : '₱—';
     }
 
     // nb row: only show when a range total is actually contributing
