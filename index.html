@@ -1013,6 +1013,31 @@
     </div>
   </div>
 
+  <!-- SALARY BREAKDOWN -->
+  <div>
+    <div class="section-title">Salary Breakdown</div>
+    <div class="sal-grid">
+      <div class="sal-card day">
+        <div class="sal-period">Per Day</div>
+        <div class="sal-usd" id="salDayUSD">$0.00</div>
+        <div class="sal-php" id="salDayPHP">₱—</div>
+        <div class="sal-note" id="salDayNote">Enter your daily hours above</div>
+      </div>
+      <div class="sal-card week">
+        <div class="sal-period">Per Week</div>
+        <div class="sal-usd" id="salWeekUSD">$0.00</div>
+        <div class="sal-php" id="salWeekPHP">₱—</div>
+        <div class="sal-note">5 working days / week</div>
+      </div>
+      <div class="sal-card month">
+        <div class="sal-period">Per Month</div>
+        <div class="sal-usd" id="salMonthUSD">$0.00</div>
+        <div class="sal-php" id="salMonthPHP">₱—</div>
+        <div class="sal-note">≈ 21.67 working days / month</div>
+      </div>
+    </div>
+  </div>
+
   <!-- CORPORATE SALARY (2nd job — fixed semi-monthly pay) -->
   <div>
     <div class="section-title">Corporate Salary</div>
@@ -1087,31 +1112,6 @@
       </div>
       <div id="corpDisabledMsg" style="font-size:12px; color:var(--text3); padding:4px 0;">
         Enable the checkbox above to track your corporate salary alongside your hourly pay.
-      </div>
-    </div>
-  </div>
-
-  <!-- SALARY BREAKDOWN -->
-  <div>
-    <div class="section-title">Salary Breakdown</div>
-    <div class="sal-grid">
-      <div class="sal-card day">
-        <div class="sal-period">Per Day</div>
-        <div class="sal-usd" id="salDayUSD">$0.00</div>
-        <div class="sal-php" id="salDayPHP">₱—</div>
-        <div class="sal-note" id="salDayNote">Enter your daily hours above</div>
-      </div>
-      <div class="sal-card week">
-        <div class="sal-period">Per Week</div>
-        <div class="sal-usd" id="salWeekUSD">$0.00</div>
-        <div class="sal-php" id="salWeekPHP">₱—</div>
-        <div class="sal-note">5 working days / week</div>
-      </div>
-      <div class="sal-card month">
-        <div class="sal-period">Per Month</div>
-        <div class="sal-usd" id="salMonthUSD">$0.00</div>
-        <div class="sal-php" id="salMonthPHP">₱—</div>
-        <div class="sal-note">≈ 21.67 working days / month</div>
       </div>
     </div>
   </div>
@@ -1544,7 +1544,7 @@
     <div class="section-title">Payday Calendar</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        All your upcoming paydays at a glance — corporate 15th/30th and VA payment windows highlighted on the calendar.
+        All your upcoming paydays at a glance — corporate 15th/30th and VA Thursdays highlighted on the calendar.
       </div>
       <div class="cal-nav">
         <button class="cal-nav-btn" onclick="calPrev()">‹</button>
@@ -1576,23 +1576,12 @@
         </div>
       </div>
       <div style="margin-top:16px; padding:14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">VA Payday Days</div>
-        <div style="font-size:12px; color:var(--text3); margin-bottom:10px;">Enter the day-of-month your VA client typically sends payment. Up to 3 windows.</div>
-        <div class="va-days-row">
-          <div class="va-day-block">
-            <label>VA Day 1</label>
-            <input type="number" class="nec-day-input" id="vaPayDay1" min="1" max="31" placeholder="e.g. 1"
-              oninput="renderCalendar(); savePlanData()" style="width:64px;">
-          </div>
-          <div class="va-day-block">
-            <label>VA Day 2</label>
-            <input type="number" class="nec-day-input" id="vaPayDay2" min="1" max="31" placeholder="e.g. 16"
-              oninput="renderCalendar(); savePlanData()" style="width:64px;">
-          </div>
-          <div class="va-day-block">
-            <label>VA Day 3</label>
-            <input type="number" class="nec-day-input" id="vaPayDay3" min="1" max="31" placeholder="—"
-              oninput="renderCalendar(); savePlanData()" style="width:64px;">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">VA Payday</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:22px; line-height:1;">🗓</span>
+          <div>
+            <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--blue-text);">Every Thursday</div>
+            <div style="font-size:11px; color:var(--text3); margin-top:3px;">All Thursdays are automatically highlighted as VA paydays on the calendar above.</div>
           </div>
         </div>
       </div>
@@ -1812,7 +1801,7 @@ function setMode(mode) {
   document.getElementById('panelMonthly').style.display = mode === 'monthly' ? 'block' : 'none';
   document.getElementById('modeWeekly').classList.toggle('active',  mode === 'weekly');
   document.getElementById('modeMonthly').classList.toggle('active', mode === 'monthly');
-  document.getElementById('breakdownLabel').textContent = mode === 'weekly' ? 'Weekly breakdown' : 'Daily breakdown';
+  document.getElementById('breakdownLabel').textContent = mode === 'weekly' ? 'Weekly breakdown' : 'Thursday payday';
   recalcAll();
   saveData();
 }
@@ -1830,6 +1819,20 @@ function countWorkDays(startStr, endStr) {
   const cur = new Date(start);
   while (cur <= end) {
     if (WORK_DAYS.has(cur.getDay())) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+function countThursdaysInRange(startStr, endStr) {
+  if (!startStr || !endStr) return 0;
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return 0;
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    if (cur.getDay() === 4) count++; // 4 = Thursday
     cur.setDate(cur.getDate() + 1);
   }
   return count;
@@ -1972,17 +1975,30 @@ function recalcAll() {
     grossUSD   = totalHours * HOURLY;
     taxAmt     = grossUSD * TAX;
     netUSD     = grossUSD - taxAmt;
-    netPHP     = fxRate > 0 ? netUSD * fxRate : 0;
+
+    // VA payday = every Thursday — compute per-week net
+    const weeklyNet    = dHours * DAYS_PER_WEEK * HOURLY * (1 - TAX);
+    const weeklyNetPHP = fxRate > 0 ? weeklyNet * fxRate : 0;
+    const thursdayCount = countThursdaysInRange(startStr, endStr);
+
+    // netPHP = actual paydays received (Thursdays × weekly pay)
+    netPHP = (thursdayCount > 0 && fxRate > 0) ? thursdayCount * weeklyNetPHP : 0;
 
     dailyNet    = dHours * HOURLY * (1 - TAX);
     dailyNetPHP = fxRate > 0 ? dailyNet * fxRate : 0;
 
-    document.getElementById('sWeekBreak').textContent = fxRate > 0
-      ? 'Per day: ' + fUSD(dailyNet) + ' (' + fPHP(dailyNetPHP) + ')'
-      : 'Per day: ' + fUSD(dailyNet);
-    document.getElementById('sDailyBreak').textContent = totalDays > 0
-      ? totalDays + ' working days (Sun–Thu)'
-      : 'Select a date range';
+    if (thursdayCount > 0) {
+      document.getElementById('sWeekBreak').textContent = fxRate > 0
+        ? 'Per payday: ' + fUSD(weeklyNet) + ' (' + fPHP(weeklyNetPHP) + ')'
+        : 'Per payday: ' + fUSD(weeklyNet);
+      document.getElementById('sDailyBreak').textContent =
+        thursdayCount + ' Thursday payday' + (thursdayCount === 1 ? '' : 's') + ' in range';
+    } else {
+      document.getElementById('sWeekBreak').textContent = startStr && endStr ? 'No Thursday paydays in range' : '—';
+      document.getElementById('sDailyBreak').textContent = totalDays > 0
+        ? totalDays + ' working days (Sun–Thu)'
+        : 'Select a date range';
+    }
   }
 
   document.getElementById('sDays').textContent      = totalDays;
@@ -3748,12 +3764,11 @@ function renderCalendar() {
   const lastDay  = new Date(calYear, calMonth + 1, 0).getDate();
   const corpDays = new Set([15, Math.min(30, lastDay)]);
 
+  // VA is paid every Thursday (day-of-week 4)
   const vaDays = new Set();
-  ['vaPayDay1', 'vaPayDay2', 'vaPayDay3'].forEach(id => {
-    const el = document.getElementById(id);
-    const v  = el ? parseInt(el.value) : 0;
-    if (v >= 1 && v <= lastDay) vaDays.add(v);
-  });
+  for (let day = 1; day <= lastDay; day++) {
+    if (new Date(calYear, calMonth, day).getDay() === 4) vaDays.add(day);
+  }
 
   const firstDow = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
   grid.innerHTML = '';
@@ -3830,9 +3845,6 @@ function savePlanData() {
   try {
     localStorage.setItem('va_plan_data', JSON.stringify({
       savingsGoals, oneTimeExpenses, subscriptions, installments, personalDebts, planSeq,
-      vaPayDay1: (document.getElementById('vaPayDay1') || {}).value || '',
-      vaPayDay2: (document.getElementById('vaPayDay2') || {}).value || '',
-      vaPayDay3: (document.getElementById('vaPayDay3') || {}).value || '',
     }));
   } catch(e) { console.warn('Plan save failed', e); }
 }
@@ -3850,12 +3862,6 @@ function planUndo() {
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
-    const v1 = document.getElementById('vaPayDay1');
-    const v2 = document.getElementById('vaPayDay2');
-    const v3 = document.getElementById('vaPayDay3');
-    if (v1) v1.value = d.vaPayDay1 || '';
-    if (v2) v2.value = d.vaPayDay2 || '';
-    if (v3) v3.value = d.vaPayDay3 || '';
     // Re-render all Plan sections
     renderGoals();
     renderOTE();
@@ -3888,12 +3894,6 @@ function resetPlan() {
   installments    = [];
   personalDebts   = [];
   planSeq         = 1;
-  const v1 = document.getElementById('vaPayDay1');
-  const v2 = document.getElementById('vaPayDay2');
-  const v3 = document.getElementById('vaPayDay3');
-  if (v1) v1.value = '';
-  if (v2) v2.value = '';
-  if (v3) v3.value = '';
 
   renderGoals();
   renderOTE();
@@ -3917,12 +3917,6 @@ function loadPlanData() {
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
-    const v1 = document.getElementById('vaPayDay1');
-    const v2 = document.getElementById('vaPayDay2');
-    const v3 = document.getElementById('vaPayDay3');
-    if (v1 && d.vaPayDay1) v1.value = d.vaPayDay1;
-    if (v2 && d.vaPayDay2) v2.value = d.vaPayDay2;
-    if (v3 && d.vaPayDay3) v3.value = d.vaPayDay3;
   } catch(e) { console.warn('Plan load failed', e); }
 }
 
