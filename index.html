@@ -824,6 +824,43 @@
   .va-days-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .va-day-block { display: flex; flex-direction: column; gap: 4px; }
   .va-day-block label { font-size: 11px; color: var(--text3); }
+
+  /* ── FINANCIAL HEALTH STATS ───────────────────────────────── */
+  .stat-tile {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stat-tile-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--text3); margin-bottom: 2px;
+  }
+  .stat-tile-value {
+    font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500;
+  }
+  .stat-tile-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .mini-chart-wrap { width: 110px; height: 110px; flex-shrink: 0; }
+
+  /* ── CURRENCY CONVERTER ───────────────────────────────────── */
+  .conv-dir-toggle {
+    display: flex; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; width: fit-content; margin-bottom: 16px;
+  }
+  .conv-dir-btn {
+    background: none; border: none; color: var(--text2);
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    padding: 7px 16px; cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .conv-dir-btn.active { background: var(--amber-dim); color: var(--amber-text); box-shadow: inset 0 0 0 1px var(--amber); }
+  .conv-dir-btn:not(.active):hover { background: var(--surface3); color: var(--text); }
+
+  /* ── OTE + CONVERTER 2-COL ───────────────────────────────── */
+  .ote-converter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .ote-converter-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1195,6 +1232,46 @@
           </div>
         </div>
       </div>
+
+      <!-- FINANCIAL HEALTH DASHBOARD -->
+      <div style="margin-top:16px;">
+        <div class="section-title">Financial Health</div>
+        <div class="card" style="padding:16px;">
+          <!-- Mini donut chart + legend -->
+          <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:14px;">
+            <div class="mini-chart-wrap">
+              <canvas id="miniIncomeChart" width="110" height="110"></canvas>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:10px; color:var(--text3); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.8px;">Breakdown</div>
+              <div id="miniChartLegend" style="display:flex; flex-direction:column; gap:5px;"></div>
+            </div>
+          </div>
+          <!-- 4 stat tiles -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="stat-tile">
+              <div class="stat-tile-label">💰 Savings Rate</div>
+              <div class="stat-tile-value c-green" id="statSavingsRate">—</div>
+              <div class="stat-tile-sub" id="statSavingsRateSub">Enter income above</div>
+            </div>
+            <div class="stat-tile">
+              <div class="stat-tile-label">🛡️ Emergency Fund</div>
+              <div class="stat-tile-value c-blue" id="statEmergencyFund">—</div>
+              <div class="stat-tile-sub" id="statEmergencyFundSub">months of coverage</div>
+            </div>
+            <div class="stat-tile">
+              <div class="stat-tile-label">📅 Next Payday</div>
+              <div class="stat-tile-value c-teal" id="statNextPayday">—</div>
+              <div class="stat-tile-sub" id="statNextPaydaySub">VA: next Thursday</div>
+            </div>
+            <div class="stat-tile">
+              <div class="stat-tile-label">📉 Monthly Obligations</div>
+              <div class="stat-tile-value c-red" id="statObligations">—</div>
+              <div class="stat-tile-sub" id="statObligationsSub">No obligations logged</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1224,18 +1301,52 @@
     </div>
   </div>
 
-  <!-- ONE-TIME EXPENSES -->
-  <div>
-    <div class="section-title">One-time Expenses</div>
-    <div class="card">
-      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        Quick-log purchases — shoes, Grab rides, weekend food haul. Automatically deducted from your net balance.
+  <!-- ONE-TIME EXPENSES + CURRENCY CONVERTER -->
+  <div class="ote-converter-grid">
+    <div>
+      <div class="section-title">One-time Expenses</div>
+      <div class="card">
+        <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+          Quick-log purchases — shoes, Grab rides, weekend food haul. Automatically deducted from your net balance.
+        </div>
+        <div id="oteContainer"></div>
+        <button class="add-btn" onclick="addOTE()">+ Add expense</button>
+        <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--text2);">Total one-time expenses</span>
+          <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="oteTotal">₱0.00</span>
+        </div>
       </div>
-      <div id="oteContainer"></div>
-      <button class="add-btn" onclick="addOTE()">+ Add expense</button>
-      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:13px; color:var(--text2);">Total one-time expenses</span>
-        <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="oteTotal">₱0.00</span>
+    </div>
+
+    <!-- CURRENCY CONVERTER -->
+    <div>
+      <div class="section-title">Currency Converter</div>
+      <div class="card">
+        <!-- Direction toggle -->
+        <div class="conv-dir-toggle">
+          <button class="conv-dir-btn active" id="convDirUSD" onclick="setConvDir('usd')">$ USD → ₱ PHP</button>
+          <button class="conv-dir-btn" id="convDirPHP" onclick="setConvDir('php')">₱ PHP → $ USD</button>
+        </div>
+        <!-- Input -->
+        <div class="input-block" style="margin-bottom:14px;">
+          <label class="input-label" id="convInputLabel">Amount (USD $)</label>
+          <div class="input-row" style="border-color:var(--amber);" id="convInputRow">
+            <div class="input-prefix" style="color:var(--amber-text);" id="convInputPrefix">$ USD</div>
+            <input class="big-input" type="number" id="convInput" placeholder="0.00" min="0" step="0.01"
+              inputmode="decimal" oninput="convertCurrency()" style="color:var(--amber-text);">
+          </div>
+        </div>
+        <!-- Result -->
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="convResultLabel">Result in PHP</div>
+          <div style="font-family:'DM Mono',monospace; font-size:26px; font-weight:500; color:var(--amber-text);" id="convResult">₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:6px; font-family:'DM Mono',monospace;" id="convRateNote">—</div>
+        </div>
+        <!-- Quick amounts -->
+        <div>
+          <div style="font-size:11px; color:var(--text3); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.7px;">Quick amounts</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="convQuickBtns"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1743,6 +1854,7 @@ async function fetchRate(manual = false) {
       setStatus('live', 'Live');
       if (manual) showToast('✓ Rate: ₱' + rate.toFixed(4) + ' per $1', false);
       recalcAll();
+      convertCurrency();
       success = true;
       break;
     } catch(e) {
@@ -2147,6 +2259,8 @@ function recalcAll() {
 
   updateSavingsSummary();
   drawChart();
+  updateHealthStats();
+  convertCurrency();
 }
 
 // ─── UNDO SYSTEM ──────────────────────────────────────────────
@@ -3673,6 +3787,7 @@ function drawChart() {
     ctx.textBaseline = 'middle';
     ctx.fillText('Add data on the Expenses page', W / 2, W / 2);
     document.getElementById('chartLegend').innerHTML = '<div style="font-size:12px;color:var(--text3);">No data yet — fill in the Expenses page.</div>';
+    drawMiniChart(segments, total);
     return;
   }
 
@@ -3724,6 +3839,296 @@ function drawChart() {
       </div>
     `).join('');
   }
+
+  drawMiniChart(segments, total);
+}
+
+// ─── MINI DONUT CHART (Financial Health widget) ────────────────
+function drawMiniChart(segments, total) {
+  const canvas = document.getElementById('miniIncomeChart');
+  if (!canvas || !canvas.getContext) return;
+
+  // If called without args, rebuild segments from DOM
+  if (!segments) {
+    function readNB(id) {
+      const el = document.getElementById(id);
+      return el ? (parseFloat((el.textContent || '').replace(/[₱,]/g, '')) || 0) : 0;
+    }
+    const savings = readNB('nb1'), payroll = readNB('nb2'),
+          corp = readNB('nb-corp'), bonus = readNB('nb-bonus'),
+          nec = readNB('nb3'), shopee = readNB('nb4'), tiktok = readNB('nb5'),
+          subs = getSubsSum(), insts = getInstsMonthlySum(), ote = getOTESum();
+    segments = [
+      { label: 'Savings',     value: savings, color: '#3FB950' },
+      { label: 'VA Payroll',  value: payroll, color: '#388bfd' },
+      { label: 'Corporate',   value: corp,    color: '#0d9488' },
+      { label: 'Bonus',       value: bonus,   color: '#8b5cf6' },
+      { label: 'Necessities', value: nec,     color: '#f85149' },
+      { label: 'SPayLater',   value: shopee,  color: '#ff5722' },
+      { label: 'TikTok',      value: tiktok,  color: '#555'    },
+      { label: 'Subs',        value: subs,    color: '#d29922' },
+      { label: 'Installments',value: insts,   color: '#e3b341' },
+      { label: 'One-time',    value: ote,     color: '#ff7b72' },
+    ].filter(s => s.value > 0.005);
+    total = segments.reduce((s, seg) => s + seg.value, 0);
+  }
+
+  const W = 110;
+  canvas.width = canvas.height = W;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, W);
+
+  const legendEl = document.getElementById('miniChartLegend');
+
+  if (!total || total < 0.005) {
+    ctx.fillStyle = '#6e7681';
+    ctx.font = '10px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No data', W / 2, W / 2 - 6);
+    ctx.fillText('yet', W / 2, W / 2 + 6);
+    if (legendEl) legendEl.innerHTML = '<div style="font-size:11px;color:var(--text3);">Enter data to see breakdown.</div>';
+    return;
+  }
+
+  const cx = W / 2, cy = W / 2;
+  const outerR = W / 2 - 4;
+  const innerR = outerR * 0.52;
+  let angle = -Math.PI / 2;
+
+  segments.forEach(seg => {
+    const slice = (seg.value / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = '#161b22';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    angle += slice;
+  });
+
+  // Donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
+  ctx.fillStyle = '#161b22';
+  ctx.fill();
+
+  // Center label
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '9px Outfit, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('total', cx, cy);
+
+  // Compact legend (max 7 items to avoid overflow)
+  if (legendEl) {
+    const shown = segments.slice(0, 7);
+    const rest  = segments.length - shown.length;
+    legendEl.innerHTML = shown.map(s => `
+      <div style="display:flex; align-items:center; gap:5px; font-size:11px;">
+        <div style="width:8px; height:8px; border-radius:2px; background:${s.color}; flex-shrink:0;"></div>
+        <span style="color:var(--text2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.label}</span>
+        <span style="font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); flex-shrink:0;">${(s.value / total * 100).toFixed(0)}%</span>
+      </div>
+    `).join('') + (rest > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">+${rest} more</div>` : '');
+  }
+}
+
+// ─── FINANCIAL HEALTH STAT TILES ──────────────────────────────
+function updateHealthStats() {
+  function readNB(id) {
+    const el = document.getElementById(id);
+    return el ? (parseFloat((el.textContent || '').replace(/[₱,$]/g, '')) || 0) : 0;
+  }
+
+  const savings  = readNB('nb1');
+  const payroll  = readNB('nb2');
+  const corp     = readNB('nb-corp');
+  const bonus    = readNB('nb-bonus');
+  const nec      = readNB('nb3');
+  const shopee   = readNB('nb4');
+  const tiktok   = readNB('nb5');
+  const subs     = getSubsSum();
+  const insts    = getInstsMonthlySum();
+  const ote      = getOTESum();
+
+  const totalIncome      = savings + payroll + corp + bonus;
+  const totalExpenses    = nec + shopee + tiktok + subs + insts + ote;
+  const totalObligations = nec + shopee + tiktok + subs + insts;
+
+  // 1. Savings Rate — % of total inflow that isn't consumed
+  const srEl  = document.getElementById('statSavingsRate');
+  const srSub = document.getElementById('statSavingsRateSub');
+  if (srEl) {
+    if (totalIncome > 0) {
+      const remaining = totalIncome - totalExpenses;
+      const rate = Math.max(0, (remaining / totalIncome) * 100);
+      srEl.textContent = rate.toFixed(1) + '%';
+      srEl.style.color = rate >= 30 ? 'var(--green-text)' : rate >= 10 ? 'var(--amber-text)' : 'var(--red-text)';
+      if (srSub) srSub.textContent = fPHP(Math.max(0, remaining)) + ' unspent';
+    } else {
+      srEl.textContent = '—';
+      srEl.style.color = 'var(--text2)';
+      if (srSub) srSub.textContent = 'Enter income above';
+    }
+  }
+
+  // 2. Emergency Fund — how many months savings covers monthly burn
+  const efEl  = document.getElementById('statEmergencyFund');
+  const efSub = document.getElementById('statEmergencyFundSub');
+  if (efEl) {
+    const monthlyBurn = nec + shopee + tiktok + subs + insts;
+    if (savings > 0 && monthlyBurn > 0) {
+      const months = savings / monthlyBurn;
+      efEl.textContent = months.toFixed(1) + ' mo';
+      efEl.style.color = months >= 6 ? 'var(--green-text)' : months >= 3 ? 'var(--amber-text)' : 'var(--red-text)';
+      if (efSub) efSub.textContent = fPHP(monthlyBurn) + '/mo burn';
+    } else if (savings <= 0) {
+      efEl.textContent = '—';
+      efEl.style.color = 'var(--text2)';
+      if (efSub) efSub.textContent = 'Enter savings balance';
+    } else {
+      efEl.textContent = '∞';
+      efEl.style.color = 'var(--green-text)';
+      if (efSub) efSub.textContent = 'No recurring bills';
+    }
+  }
+
+  // 3. Next Payday — nearest of VA Thursday or Corp payday
+  const npEl  = document.getElementById('statNextPayday');
+  const npSub = document.getElementById('statNextPaydaySub');
+  if (npEl) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay();
+    // Days until next Thursday (4); 0 if today IS Thursday
+    const daysToVA = (4 - dayOfWeek + 7) % 7;
+    const vaDate = new Date(today); vaDate.setDate(vaDate.getDate() + daysToVA);
+    const vaLabel = 'VA · ' + MONTH_NAMES[vaDate.getMonth()] + ' ' + vaDate.getDate();
+
+    const corpEnabled = document.getElementById('corpEnabled') && document.getElementById('corpEnabled').checked;
+    const corpPayday  = getNextCorpPayday();
+
+    let daysLeft, payLabel;
+    if (corpEnabled && corpPayday.daysLeft < daysToVA) {
+      daysLeft = corpPayday.daysLeft;
+      payLabel = 'Corp · ' + formatCorpPayday(corpPayday.date);
+    } else if (corpEnabled && corpPayday.daysLeft === daysToVA) {
+      daysLeft = daysToVA;
+      payLabel = 'Both pay!';
+    } else {
+      daysLeft = daysToVA;
+      payLabel = vaLabel;
+    }
+
+    if (daysLeft === 0) {
+      npEl.textContent = 'Today! 🎉';
+      npEl.style.color = 'var(--green-text)';
+    } else if (daysLeft === 1) {
+      npEl.textContent = '1 day';
+      npEl.style.color = 'var(--teal-text)';
+    } else {
+      npEl.textContent = daysLeft + ' days';
+      npEl.style.color = daysLeft <= 3 ? 'var(--green-text)' : 'var(--teal-text)';
+    }
+    if (npSub) npSub.textContent = payLabel;
+  }
+
+  // 4. Monthly Obligations (recurring, excluding one-time)
+  const obEl  = document.getElementById('statObligations');
+  const obSub = document.getElementById('statObligationsSub');
+  if (obEl) {
+    if (totalObligations > 0) {
+      obEl.textContent = fPHP(totalObligations);
+      obEl.style.color = 'var(--red-text)';
+      const parts = [];
+      if (nec > 0)              parts.push('bills');
+      if (shopee + tiktok > 0)  parts.push('debt');
+      if (subs > 0)             parts.push('subs');
+      if (insts > 0)            parts.push('inst');
+      if (obSub) obSub.textContent = parts.join(' + ');
+    } else {
+      obEl.textContent = '—';
+      obEl.style.color = 'var(--text2)';
+      if (obSub) obSub.textContent = 'No obligations logged';
+    }
+  }
+}
+
+// ─── CURRENCY CONVERTER ───────────────────────────────────────
+let convDir = 'usd'; // 'usd' → PHP, 'php' → USD
+
+function setConvDir(dir) {
+  convDir = dir;
+  const usdBtn = document.getElementById('convDirUSD');
+  const phpBtn = document.getElementById('convDirPHP');
+  if (usdBtn) usdBtn.classList.toggle('active', dir === 'usd');
+  if (phpBtn) phpBtn.classList.toggle('active', dir === 'php');
+
+  const inputLabel  = document.getElementById('convInputLabel');
+  const inputPrefix = document.getElementById('convInputPrefix');
+  const inputRow    = document.getElementById('convInputRow');
+  const resultLabel = document.getElementById('convResultLabel');
+  const input       = document.getElementById('convInput');
+
+  if (dir === 'usd') {
+    if (inputLabel)  inputLabel.textContent  = 'Amount (USD $)';
+    if (inputPrefix) inputPrefix.textContent = '$ USD';
+    if (inputPrefix) inputPrefix.style.color = 'var(--amber-text)';
+    if (inputRow)    inputRow.style.borderColor = 'var(--amber)';
+    if (input)       input.style.color = 'var(--amber-text)';
+    if (resultLabel) resultLabel.textContent = 'Result in PHP';
+  } else {
+    if (inputLabel)  inputLabel.textContent  = 'Amount (PHP ₱)';
+    if (inputPrefix) inputPrefix.textContent = '₱ PHP';
+    if (inputPrefix) inputPrefix.style.color = 'var(--teal-text)';
+    if (inputRow)    inputRow.style.borderColor = 'var(--teal)';
+    if (input)       input.style.color = 'var(--teal-text)';
+    if (resultLabel) resultLabel.textContent = 'Result in USD';
+  }
+  updateConvQuickBtns();
+  convertCurrency();
+}
+
+function convertCurrency() {
+  const input    = parseFloat(document.getElementById('convInput').value) || 0;
+  const resultEl = document.getElementById('convResult');
+  const rateEl   = document.getElementById('convRateNote');
+  if (!resultEl) return;
+
+  if (fxRate <= 0) {
+    resultEl.textContent = '—';
+    if (rateEl) rateEl.textContent = 'Exchange rate loading…';
+    return;
+  }
+
+  if (convDir === 'usd') {
+    const php = input * fxRate;
+    resultEl.textContent = input > 0 ? fPHP(php) : '₱—';
+    resultEl.style.color = 'var(--amber-text)';
+    if (rateEl) rateEl.textContent = '$1 = ₱' + fxRate.toFixed(4);
+  } else {
+    const usd = input / fxRate;
+    resultEl.textContent = input > 0 ? fUSD(usd) : '$—';
+    resultEl.style.color = 'var(--teal-text)';
+    if (rateEl) rateEl.textContent = '₱1 = $' + (1 / fxRate).toFixed(6);
+  }
+}
+
+function updateConvQuickBtns() {
+  const container = document.getElementById('convQuickBtns');
+  if (!container) return;
+  const amounts = convDir === 'usd'
+    ? [1, 5, 10, 25, 50, 100]
+    : [100, 500, 1000, 2000, 5000, 10000];
+  const prefix = convDir === 'usd' ? '$' : '₱';
+  container.innerHTML = amounts.map(a => `
+    <button class="preset-btn" onclick="document.getElementById('convInput').value=${a}; convertCurrency();">
+      ${prefix}${a.toLocaleString()}
+    </button>
+  `).join('');
 }
 
 // ─── PAYDAY CALENDAR ──────────────────────────────────────────
@@ -3971,6 +4376,7 @@ loadPlanData();
 renderOTE();          // one-time expenses live on Expenses page
 setTimeout(drawChart, 200);
 calInit();
+updateConvQuickBtns();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
 // Registering requires a secure context (https:// or localhost) — this
