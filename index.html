@@ -419,6 +419,58 @@
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
   }
 
+  /* ── CORP SUB-CALCULATORS (contributions, 13th month, tax) ─── */
+  .corp-sub-section {
+    margin-top: 12px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .corp-sub-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text3); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .contrib-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .contrib-table th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text3); text-align: right; padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .contrib-table th:first-child,
+  .contrib-table th:nth-child(2) { text-align: left; }
+  .contrib-table td {
+    padding: 7px 8px; border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace; font-size: 12px; text-align: right;
+    color: var(--text2);
+  }
+  .contrib-table td:first-child {
+    text-align: left; color: var(--text);
+    font-family: 'Outfit', sans-serif; font-size: 13px;
+  }
+  .contrib-table td:nth-child(2) {
+    text-align: left; font-size: 10px; color: var(--text3);
+    font-family: 'Outfit', sans-serif;
+  }
+  .contrib-table tfoot td {
+    border-bottom: none; border-top: 1px solid var(--border2);
+    font-weight: 500; color: var(--text); font-size: 12px;
+  }
+  .contrib-table .ee-col  { color: var(--teal-text); }
+  .contrib-table .er-col  { color: var(--text3); }
+  .corp-calc-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; padding: 3px 0;
+  }
+  .corp-calc-row.divider-above { padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--border); }
+  .corp-calc-row.total { font-size: 13px; font-weight: 500; }
+  .tax-bracket-badge {
+    display: inline-block; font-family: 'DM Mono', monospace; font-size: 10px;
+    background: var(--amber-dim); color: var(--amber-text);
+    border: 1px solid var(--amber); border-radius: 20px;
+    padding: 2px 8px; margin-left: 4px;
+  }
+
   /* NET SUMMARY */
   .net-card {
     background: var(--surface);
@@ -861,6 +913,40 @@
   /* ── OTE + CONVERTER 2-COL ───────────────────────────────── */
   .ote-converter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 700px) { .ote-converter-grid { grid-template-columns: 1fr; } }
+
+  /* ── MULTI-CURRENCY CONVERTER ────────────────────────────── */
+  .conv-currency-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236e7681'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .conv-currency-select:focus { outline: none; border-color: var(--amber); }
+  .conv-swap-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-size: 18px;
+    width: 38px; height: 38px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-top: 20px;
+  }
+  .conv-swap-btn:hover { border-color: var(--amber); color: var(--amber-text); transform: rotate(180deg); }
 </style>
 </head>
 <body>
@@ -1146,6 +1232,86 @@
           </div>
         </div>
 
+        <!-- ── 1. GOVERNMENT CONTRIBUTIONS ───────────────── -->
+        <div class="corp-sub-section">
+          <div class="corp-sub-title">📋 Gov't Contributions <span style="font-size:9px; letter-spacing:0; text-transform:none; color:var(--text3);">(SSS · PhilHealth · Pag-IBIG)</span></div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;">
+            <table class="contrib-table">
+              <thead>
+                <tr>
+                  <th>Fund</th>
+                  <th>Basis</th>
+                  <th class="ee-col">You Pay</th>
+                  <th class="er-col">Employer</th>
+                </tr>
+              </thead>
+              <tbody id="govtContribRows">
+                <tr><td colspan="4" style="text-align:center; color:var(--text3); padding:12px;">Enter salary above</td></tr>
+              </tbody>
+              <tfoot id="govtContribFoot"></tfoot>
+            </table>
+          </div>
+          <div id="govtContribNetNote" style="font-size:11px; color:var(--text3); margin-top:7px; font-family:'DM Mono',monospace; padding:0 2px;"></div>
+        </div>
+
+        <!-- ── 2. 13TH MONTH PAY ──────────────────────────── -->
+        <div class="corp-sub-section">
+          <div class="corp-sub-title">🎁 13th Month Pay Estimator</div>
+          <div class="input-block" style="margin-bottom:10px;">
+            <label class="input-label">Months worked this year</label>
+            <div class="input-row" style="border-color:var(--teal);">
+              <div class="input-prefix" style="color:var(--teal-text);">months</div>
+              <input class="big-input" type="number" id="corp13thMonths" placeholder="12"
+                min="1" max="12" step="1" value="12" inputmode="numeric"
+                oninput="recalcAll(); saveData()" style="color:var(--teal-text);">
+            </div>
+          </div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px;">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Estimated 13th Month Pay</div>
+            <div style="font-family:'DM Mono',monospace; font-size:22px; font-weight:500; color:var(--teal-text);" id="corp13thAmount">₱—</div>
+            <div style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.5;" id="corp13thNote">
+              Tax-exempt up to ₱90,000 (combined with other benefits) · Released on or before Dec 24
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 3. BIR WITHHOLDING TAX ─────────────────────── -->
+        <div class="corp-sub-section">
+          <div class="corp-sub-title">
+            📊 BIR Withholding Tax
+            <span style="font-size:9px; letter-spacing:0; text-transform:none; color:var(--text3);">(TRAIN Law 2023+)</span>
+          </div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; display:flex; flex-direction:column; gap:0;">
+            <div class="corp-calc-row">
+              <span style="color:var(--text3);">Gross monthly salary</span>
+              <span style="font-family:'DM Mono',monospace; color:var(--text2);" id="corpTaxGross">₱—</span>
+            </div>
+            <div class="corp-calc-row">
+              <span style="color:var(--text3);">Less: mandatory contributions</span>
+              <span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="corpTaxContribs">—</span>
+            </div>
+            <div class="corp-calc-row divider-above">
+              <span style="color:var(--text2);">Taxable compensation income</span>
+              <span style="font-family:'DM Mono',monospace; color:var(--text);" id="corpTaxable">₱—</span>
+            </div>
+            <div class="corp-calc-row" style="margin-top:2px;">
+              <span style="color:var(--text3);">Tax bracket</span>
+              <span id="corpTaxBracket">—</span>
+            </div>
+            <div class="corp-calc-row divider-above total">
+              <span style="color:var(--text);">Monthly withholding tax</span>
+              <span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="corpTaxMonthly">₱—</span>
+            </div>
+            <div class="corp-calc-row">
+              <span style="color:var(--text3);">Estimated annual tax due</span>
+              <span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="corpTaxAnnual">₱—</span>
+            </div>
+            <div style="font-size:10px; color:var(--text3); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); line-height:1.5;" id="corpTaxNote">
+              Enter salary above to compute
+            </div>
+          </div>
+        </div>
+
       </div>
       <div id="corpDisabledMsg" style="font-size:12px; color:var(--text3); padding:4px 0;">
         Enable the checkbox above to track your corporate salary alongside your hourly pay.
@@ -1322,14 +1488,43 @@
     <div>
       <div class="section-title">Currency Converter</div>
       <div class="card">
-        <!-- Direction toggle -->
-        <div class="conv-dir-toggle">
-          <button class="conv-dir-btn active" id="convDirUSD" onclick="setConvDir('usd')">$ USD → ₱ PHP</button>
-          <button class="conv-dir-btn" id="convDirPHP" onclick="setConvDir('php')">₱ PHP → $ USD</button>
+        <!-- Currency selectors -->
+        <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:14px;">
+          <div style="flex:1; min-width:0;">
+            <div class="input-label" style="margin-bottom:5px;">From</div>
+            <select id="convFrom" class="conv-currency-select" onchange="updateConverter()">
+              <option value="USD" selected>$ USD – US Dollar</option>
+              <option value="PHP">₱ PHP – Philippine Peso</option>
+              <option value="JPY">¥ JPY – Japanese Yen</option>
+              <option value="CNY">¥ CNY – Chinese Yuan</option>
+              <option value="VND">₫ VND – Vietnamese Dong</option>
+              <option value="GBP">£ GBP – British Pound</option>
+              <option value="EUR">€ EUR – Euro</option>
+              <option value="SGD">S$ SGD – Singapore Dollar</option>
+              <option value="KRW">₩ KRW – South Korean Won</option>
+              <option value="AUD">A$ AUD – Australian Dollar</option>
+            </select>
+          </div>
+          <button class="conv-swap-btn" onclick="swapConvCurrencies()" title="Swap currencies">⇄</button>
+          <div style="flex:1; min-width:0;">
+            <div class="input-label" style="margin-bottom:5px;">To</div>
+            <select id="convTo" class="conv-currency-select" onchange="updateConverter()">
+              <option value="USD">$ USD – US Dollar</option>
+              <option value="PHP" selected>₱ PHP – Philippine Peso</option>
+              <option value="JPY">¥ JPY – Japanese Yen</option>
+              <option value="CNY">¥ CNY – Chinese Yuan</option>
+              <option value="VND">₫ VND – Vietnamese Dong</option>
+              <option value="GBP">£ GBP – British Pound</option>
+              <option value="EUR">€ EUR – Euro</option>
+              <option value="SGD">S$ SGD – Singapore Dollar</option>
+              <option value="KRW">₩ KRW – South Korean Won</option>
+              <option value="AUD">A$ AUD – Australian Dollar</option>
+            </select>
+          </div>
         </div>
         <!-- Input -->
         <div class="input-block" style="margin-bottom:14px;">
-          <label class="input-label" id="convInputLabel">Amount (USD $)</label>
+          <label class="input-label" id="convInputLabel">Amount (USD)</label>
           <div class="input-row" style="border-color:var(--amber);" id="convInputRow">
             <div class="input-prefix" style="color:var(--amber-text);" id="convInputPrefix">$ USD</div>
             <input class="big-input" type="number" id="convInput" placeholder="0.00" min="0" step="0.01"
@@ -1338,7 +1533,7 @@
         </div>
         <!-- Result -->
         <div style="padding:14px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:14px;">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="convResultLabel">Result in PHP</div>
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="convResultLabel">Result (PHP)</div>
           <div style="font-family:'DM Mono',monospace; font-size:26px; font-weight:500; color:var(--amber-text);" id="convResult">₱—</div>
           <div style="font-size:11px; color:var(--text3); margin-top:6px; font-family:'DM Mono',monospace;" id="convRateNote">—</div>
         </div>
@@ -1759,26 +1954,39 @@ let fetching = false;
 const XRATES_URL = 'https://www.x-rates.com/table/?from=PHP&amount=1';
 
 // Scrape USD→PHP from x-rates HTML (1 PHP = X USD, we want inverse)
+// Also extracts other currencies to populate fxRates
 function parseXRatesHTML(html) {
-  // Find "US Dollar" row and grab the inverse value (USD per PHP inverted = PHP per USD)
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const rows = doc.querySelectorAll('table tr');
+  // Map x-rates row labels → our currency codes
+  const LABEL_MAP = {
+    'US Dollar': 'USD', 'Japanese Yen': 'JPY', 'Chinese Yuan Renminbi': 'CNY',
+    'Chinese Yuan': 'CNY', 'Vietnamese Dong': 'VND', 'British Pound': 'GBP',
+    'Euro': 'EUR', 'Singapore Dollar': 'SGD', 'South Korean Won': 'KRW',
+    'Australian Dollar': 'AUD'
+  };
+  const phpRates = {}; // 1 PHP = X [currency] (col 1)
   for (const row of rows) {
     const cells = row.querySelectorAll('td');
     if (cells.length >= 2) {
       const label = cells[0].textContent.trim();
-      if (label === 'US Dollar') {
-        // cells[1] = PHP→USD rate (e.g. 0.016478), cells[2] = inverse (USD→PHP, e.g. 60.686)
-        const phpPerUsd = parseFloat(cells[2] ? cells[2].textContent.trim() : '');
-        if (!isNaN(phpPerUsd) && phpPerUsd > 1) return phpPerUsd;
-        // fallback: compute from forward rate
-        const usdPerPhp = parseFloat(cells[1].textContent.trim());
-        if (!isNaN(usdPerPhp) && usdPerPhp > 0) return 1 / usdPerPhp;
+      const code = LABEL_MAP[label];
+      if (code) {
+        const rate = parseFloat(cells[1].textContent.trim());
+        if (!isNaN(rate) && rate > 0) phpRates[code] = rate;
       }
     }
   }
-  throw new Error('USD row not found in x-rates HTML');
+  const phpToUsd = phpRates['USD'];
+  if (!phpToUsd || isNaN(phpToUsd)) throw new Error('USD row not found in x-rates HTML');
+  const phpPerUsd = 1 / phpToUsd;
+  // Populate fxRates (all relative to USD)
+  fxRates = { USD: 1, PHP: phpPerUsd };
+  for (const [code, rate] of Object.entries(phpRates)) {
+    if (code !== 'USD') fxRates[code] = rate * phpPerUsd; // X per PHP * PHP per USD = X per USD
+  }
+  return phpPerUsd;
 }
 
 // x-rates via allorigins proxy (returns JSON with {contents: html})
@@ -1801,20 +2009,41 @@ async function tryXRatesCorsProxy() {
 }
 
 // JSON API fallbacks
+const FX_ALL_CODES = ['PHP','JPY','CNY','VND','GBP','EUR','SGD','KRW','AUD'];
+
 const FX_JSON_SOURCES = [
   {
     url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
     parse: d => d.usd && d.usd.php,
+    parseAll: d => {
+      if (!d.usd) return null;
+      const keyMap = { PHP:'php', JPY:'jpy', CNY:'cny', VND:'vnd', GBP:'gbp', EUR:'eur', SGD:'sgd', KRW:'krw', AUD:'aud' };
+      const r = { USD: 1 };
+      for (const [code, key] of Object.entries(keyMap)) if (d.usd[key]) r[code] = parseFloat(d.usd[key]);
+      return r;
+    },
     name: 'currency-api (jsdelivr)'
   },
   {
     url: 'https://open.er-api.com/v6/latest/USD',
     parse: d => d.rates && d.rates.PHP,
+    parseAll: d => {
+      if (!d.rates) return null;
+      const r = { USD: 1 };
+      for (const c of FX_ALL_CODES) if (d.rates[c]) r[c] = parseFloat(d.rates[c]);
+      return r;
+    },
     name: 'ExchangeRate-API'
   },
   {
-    url: 'https://api.frankfurter.app/latest?from=USD&to=PHP',
+    url: 'https://api.frankfurter.app/latest?from=USD&to=PHP,JPY,CNY,GBP,EUR,SGD,KRW,AUD',
     parse: d => d.rates && d.rates.PHP,
+    parseAll: d => {
+      if (!d.rates) return null;
+      const r = { USD: 1 };
+      for (const [c, v] of Object.entries(d.rates)) r[c] = parseFloat(v);
+      return r;
+    },
     name: 'Frankfurter'
   }
 ];
@@ -1825,6 +2054,11 @@ async function tryJsonSource(src) {
   const d = await res.json();
   const val = src.parse(d);
   if (!val || isNaN(parseFloat(val))) throw new Error('No PHP rate in response');
+  // Populate fxRates with all currencies if the source supports it
+  if (src.parseAll) {
+    const allRates = src.parseAll(d);
+    if (allRates) Object.assign(fxRates, allRates);
+  }
   return parseFloat(val);
 }
 
@@ -1847,6 +2081,7 @@ async function fetchRate(manual = false) {
     try {
       const rate = await attempt.fn();
       fxRate = rate;
+      fxRates.PHP = rate; // keep fxRates in sync
       document.getElementById('fxRate').textContent = '₱' + rate.toFixed(4);
       const now = new Date();
       document.getElementById('fxUpdated').textContent = 'Updated ' + now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -2153,6 +2388,7 @@ function recalcAll() {
   if (corpEnabled) {
     const corpPerCutoff = parseFloat(document.getElementById('corpSalaryInput').value) || 0;
     document.getElementById('corpMonthlyTotal').textContent = fPHP(corpPerCutoff * 2);
+    renderCorpContribs(corpPerCutoff * 2);
 
     const { date: nextDate, daysLeft } = getNextCorpPayday();
     document.getElementById('corpNextPayday').textContent = formatCorpPayday(nextDate);
@@ -2309,6 +2545,7 @@ function _saveDataDirect() {
       bonusUSD: document.getElementById('bonusUSD').value,
       corpEnabled: document.getElementById('corpEnabled').checked,
       corpSalary: document.getElementById('corpSalaryInput').value,
+      corp13thMonths: document.getElementById('corp13thMonths').value,
       corpDREnabled: document.getElementById('corpDREnabled').checked,
       corpDRStart: document.getElementById('corpDRStart').value,
       corpDREnd: document.getElementById('corpDREnd').value,
@@ -2366,6 +2603,7 @@ function restoreState(data) {
   document.getElementById('bonusUSD').value     = data.bonusUSD || '';
   document.getElementById('corpEnabled').checked = !!data.corpEnabled;
   document.getElementById('corpSalaryInput').value = data.corpSalary || '';
+  document.getElementById('corp13thMonths').value = data.corp13thMonths || '12';
   document.getElementById('corpDREnabled').checked = !!data.corpDREnabled;
   document.getElementById('corpDRStart').value = data.corpDRStart || '';
   document.getElementById('corpDREnd').value   = data.corpDREnd   || '';
@@ -2408,6 +2646,7 @@ function resetAll() {
   document.getElementById('bonusUSD').value     = '';
   document.getElementById('corpEnabled').checked = false;
   document.getElementById('corpSalaryInput').value = '';
+  document.getElementById('corp13thMonths').value = '12';
   document.getElementById('corpDREnabled').checked = false;
   document.getElementById('corpDRStart').value = '';
   document.getElementById('corpDREnd').value   = '';
@@ -2572,6 +2811,7 @@ function loadData() {
     if (data.bonusUSD)    document.getElementById('bonusUSD').value = data.bonusUSD;
     if (data.corpEnabled !== undefined) document.getElementById('corpEnabled').checked = data.corpEnabled;
     if (data.corpSalary)  document.getElementById('corpSalaryInput').value = data.corpSalary;
+    if (data.corp13thMonths) document.getElementById('corp13thMonths').value = data.corp13thMonths;
     if (Array.isArray(data.necData) && data.necData.length) necData = data.necData;
     if (Array.isArray(data.plShopee)) plData.shopee = data.plShopee;
     if (Array.isArray(data.plTiktok)) plData.tiktok = data.plTiktok;
@@ -4057,39 +4297,215 @@ function updateHealthStats() {
   }
 }
 
-// ─── CURRENCY CONVERTER ───────────────────────────────────────
-let convDir = 'usd'; // 'usd' → PHP, 'php' → USD
+// ─── GOVERNMENT CONTRIBUTIONS · 13TH MONTH · BIR TAX ─────────
 
-function setConvDir(dir) {
-  convDir = dir;
-  const usdBtn = document.getElementById('convDirUSD');
-  const phpBtn = document.getElementById('convDirPHP');
-  if (usdBtn) usdBtn.classList.toggle('active', dir === 'usd');
-  if (phpBtn) phpBtn.classList.toggle('active', dir === 'php');
+// SSS 2024: 14% of MSC (EE 4.5% + ER 9.5%), MSC ₱4k–₱30k in ₱500 steps
+function getSSSMSC(monthlySalary) {
+  if (monthlySalary < 4250) return 4000;
+  if (monthlySalary >= 29750) return 30000;
+  return Math.round(monthlySalary / 500) * 500;
+}
+function computeSSS(monthlyGross) {
+  const msc     = getSSSMSC(monthlyGross);
+  const eeShare = msc * 0.045;                   // 4.5% employee
+  const erShare = msc * 0.095;                   // 9.5% employer
+  const ec      = msc < 14750 ? 10 : 30;         // EC fund (employer only)
+  return { msc, eeShare, erShare, ec, erTotal: erShare + ec };
+}
+
+// PhilHealth 2024: 5% of basic salary, ₱500 min / ₱5,000 max, split 50/50
+function computePhilHealth(monthlyBasic) {
+  const raw     = monthlyBasic * 0.05;
+  const premium = Math.max(500, Math.min(5000, raw));
+  return { premium, eeShare: premium / 2, erShare: premium / 2 };
+}
+
+// Pag-IBIG: 2% of salary (capped at ₱5,000 compensation ceiling)
+// Employees ≤₱1,500: employee pays 1%
+function computePagIBIG(monthlyGross) {
+  const comp   = Math.min(monthlyGross, 5000);
+  const eeRate = monthlyGross <= 1500 ? 0.01 : 0.02;
+  return { eeShare: comp * eeRate, erShare: comp * 0.02 };
+}
+
+// BIR TRAIN Law 2023+ monthly withholding tax table
+function computeBIRTax(taxableMonthly) {
+  if (taxableMonthly <= 20833)  return { tax: 0, rate: 0, label: '0%' };
+  if (taxableMonthly <= 33333)  return { tax: (taxableMonthly - 20833) * 0.20,              rate: 20, label: '20%' };
+  if (taxableMonthly <= 66667)  return { tax: 2500 + (taxableMonthly - 33333) * 0.25,        rate: 25, label: '25%' };
+  if (taxableMonthly <= 166667) return { tax: 10833.33 + (taxableMonthly - 66667) * 0.30,    rate: 30, label: '30%' };
+  if (taxableMonthly <= 666667) return { tax: 40833.33 + (taxableMonthly - 166667) * 0.32,   rate: 32, label: '32%' };
+  return                               { tax: 200833.33 + (taxableMonthly - 666667) * 0.35,  rate: 35, label: '35%' };
+}
+
+function renderCorpContribs(monthlyGross) {
+  if (!(monthlyGross > 0)) {
+    const tbody = document.getElementById('govtContribRows');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text3); padding:12px;">Enter salary above</td></tr>';
+    const tfoot = document.getElementById('govtContribFoot');
+    if (tfoot) tfoot.innerHTML = '';
+    const netNote = document.getElementById('govtContribNetNote');
+    if (netNote) netNote.textContent = '';
+    const a13 = document.getElementById('corp13thAmount');
+    if (a13) a13.textContent = '₱—';
+    ['corpTaxGross','corpTaxContribs','corpTaxable','corpTaxBracket','corpTaxMonthly','corpTaxAnnual'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    return;
+  }
+
+  // ── 1. Compute contributions ──────────────────────────────
+  const sss     = computeSSS(monthlyGross);
+  const ph      = computePhilHealth(monthlyGross);
+  const pib     = computePagIBIG(monthlyGross);
+  const totalEE = sss.eeShare + ph.eeShare + pib.eeShare;
+  const totalER = sss.erTotal + ph.erShare  + pib.erShare;
+
+  // Contribution table body
+  const tbody = document.getElementById('govtContribRows');
+  if (tbody) {
+    tbody.innerHTML = [
+      { label: 'SSS',       basis: `MSC ₱${sss.msc.toLocaleString()}`,   ee: sss.eeShare,  er: sss.erTotal },
+      { label: 'PhilHealth',basis: '5% of basic',                          ee: ph.eeShare,   er: ph.erShare  },
+      { label: 'Pag-IBIG',  basis: '2% (max ₱5k base)',                    ee: pib.eeShare,  er: pib.erShare },
+    ].map(r => `<tr>
+      <td>${r.label}</td>
+      <td>${r.basis}</td>
+      <td class="ee-col">${fPHP(r.ee)}</td>
+      <td class="er-col">${fPHP(r.er)}</td>
+    </tr>`).join('');
+  }
+
+  // Contribution table footer (totals)
+  const tfoot = document.getElementById('govtContribFoot');
+  if (tfoot) {
+    tfoot.innerHTML = `<tr>
+      <td colspan="2" style="text-align:left; color:var(--text3);">Monthly total</td>
+      <td class="ee-col">${fPHP(totalEE)}</td>
+      <td class="er-col">${fPHP(totalER)}</td>
+    </tr>`;
+  }
+
+  // Net-after-deductions note
+  const netNote = document.getElementById('govtContribNetNote');
+  if (netNote) {
+    netNote.textContent = `Your net after these deductions: ${fPHP(monthlyGross - totalEE)} / month`;
+  }
+
+  // ── 2. 13th Month Pay ─────────────────────────────────────
+  const monthsEl = document.getElementById('corp13thMonths');
+  const months   = Math.max(1, Math.min(12, parseInt(monthsEl?.value) || 12));
+  const pay13th  = (monthlyGross * months) / 12;
+  const a13 = document.getElementById('corp13thAmount');
+  const n13 = document.getElementById('corp13thNote');
+  if (a13) a13.textContent = fPHP(pay13th);
+  if (n13) {
+    const taxable13 = Math.max(0, pay13th - 90000);
+    const taxNote   = pay13th <= 90000
+      ? 'Fully tax-exempt (within ₱90,000 limit)'
+      : `₱${taxable13.toLocaleString('en-PH',{maximumFractionDigits:2})} above exemption is taxable`;
+    n13.textContent = `${months} of 12 months worked · ${taxNote} · Released on or before Dec 24`;
+  }
+
+  // ── 3. BIR Withholding Tax ────────────────────────────────
+  const taxableMonthly  = monthlyGross - totalEE;
+  const { tax: mTax, label: bracketLabel } = computeBIRTax(taxableMonthly);
+  const effectiveRate   = monthlyGross > 0 ? (mTax / monthlyGross * 100).toFixed(2) : '0';
+
+  const el = id => document.getElementById(id);
+  if (el('corpTaxGross'))    el('corpTaxGross').textContent    = fPHP(monthlyGross);
+  if (el('corpTaxContribs')) el('corpTaxContribs').textContent = `− ${fPHP(totalEE)}`;
+  if (el('corpTaxContribs')) el('corpTaxContribs').style.color = 'var(--red-text)';
+  if (el('corpTaxable'))     el('corpTaxable').textContent     = fPHP(taxableMonthly);
+  if (el('corpTaxBracket'))  el('corpTaxBracket').innerHTML    =
+    `<span class="tax-bracket-badge">${bracketLabel} bracket</span>`;
+  if (el('corpTaxMonthly'))  el('corpTaxMonthly').textContent  =
+    mTax > 0 ? fPHP(mTax) : '₱0 — tax-exempt';
+  if (el('corpTaxAnnual'))   el('corpTaxAnnual').textContent   =
+    mTax > 0 ? fPHP(mTax * 12) : '₱0';
+  if (el('corpTaxNote')) {
+    el('corpTaxNote').textContent = mTax === 0
+      ? 'Your taxable income is within the 0% bracket — no income tax withheld.'
+      : `Effective rate: ${effectiveRate}% of gross. Note: freelance VA income may require a separate BIR annual filing (Form 1701).`;
+  }
+}
+
+// ─── CURRENCY CONVERTER ───────────────────────────────────────
+let convFrom = 'USD';
+let convTo   = 'PHP';
+
+// All exchange rates relative to USD (units of currency per 1 USD)
+let fxRates = { USD: 1 };
+
+const CURRENCY_META = {
+  USD: { symbol: '$',   name: 'US Dollar',        quick: [1, 5, 10, 50, 100],                   decimals: 2 },
+  PHP: { symbol: '₱',  name: 'Philippine Peso',   quick: [100, 500, 1000, 5000, 10000],          decimals: 2 },
+  JPY: { symbol: '¥',  name: 'Japanese Yen',      quick: [100, 500, 1000, 5000, 10000],          decimals: 0 },
+  CNY: { symbol: '¥',  name: 'Chinese Yuan',      quick: [10, 50, 100, 500, 1000],               decimals: 2 },
+  VND: { symbol: '₫',  name: 'Vietnamese Dong',   quick: [10000, 50000, 100000, 500000, 1000000],decimals: 0 },
+  GBP: { symbol: '£',  name: 'British Pound',     quick: [1, 5, 10, 50, 100],                   decimals: 2 },
+  EUR: { symbol: '€',  name: 'Euro',              quick: [1, 5, 10, 50, 100],                   decimals: 2 },
+  SGD: { symbol: 'S$', name: 'Singapore Dollar',  quick: [2, 5, 10, 50, 100],                   decimals: 2 },
+  KRW: { symbol: '₩',  name: 'South Korean Won',  quick: [1000, 5000, 10000, 50000, 100000],     decimals: 0 },
+  AUD: { symbol: 'A$', name: 'Australian Dollar', quick: [5, 10, 20, 50, 100],                  decimals: 2 },
+};
+
+function convSymbol(code) { return (CURRENCY_META[code] || {}).symbol || code; }
+
+function convFormat(amount, code) {
+  const meta = CURRENCY_META[code] || { symbol: code, decimals: 2 };
+  const dec = meta.decimals;
+  // Use compact notation for very large numbers (VND, KRW)
+  if (Math.abs(amount) >= 1000000) {
+    return meta.symbol + (amount / 1000000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'M';
+  }
+  return meta.symbol + amount.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function swapConvCurrencies() {
+  const fromEl = document.getElementById('convFrom');
+  const toEl   = document.getElementById('convTo');
+  if (!fromEl || !toEl) return;
+  const tmp = fromEl.value;
+  fromEl.value = toEl.value;
+  toEl.value = tmp;
+  updateConverter();
+}
+
+function updateConverter() {
+  const fromEl = document.getElementById('convFrom');
+  const toEl   = document.getElementById('convTo');
+  if (!fromEl || !toEl) return;
+  convFrom = fromEl.value;
+  convTo   = toEl.value;
 
   const inputLabel  = document.getElementById('convInputLabel');
   const inputPrefix = document.getElementById('convInputPrefix');
   const inputRow    = document.getElementById('convInputRow');
-  const resultLabel = document.getElementById('convResultLabel');
   const input       = document.getElementById('convInput');
+  const resultLabel = document.getElementById('convResultLabel');
 
-  if (dir === 'usd') {
-    if (inputLabel)  inputLabel.textContent  = 'Amount (USD $)';
-    if (inputPrefix) inputPrefix.textContent = '$ USD';
-    if (inputPrefix) inputPrefix.style.color = 'var(--amber-text)';
-    if (inputRow)    inputRow.style.borderColor = 'var(--amber)';
-    if (input)       input.style.color = 'var(--amber-text)';
-    if (resultLabel) resultLabel.textContent = 'Result in PHP';
-  } else {
-    if (inputLabel)  inputLabel.textContent  = 'Amount (PHP ₱)';
-    if (inputPrefix) inputPrefix.textContent = '₱ PHP';
-    if (inputPrefix) inputPrefix.style.color = 'var(--teal-text)';
-    if (inputRow)    inputRow.style.borderColor = 'var(--teal)';
-    if (input)       input.style.color = 'var(--teal-text)';
-    if (resultLabel) resultLabel.textContent = 'Result in USD';
-  }
+  const fromMeta = CURRENCY_META[convFrom] || { symbol: convFrom };
+
+  if (inputLabel)  inputLabel.textContent  = `Amount (${convFrom})`;
+  if (inputPrefix) inputPrefix.textContent = `${fromMeta.symbol} ${convFrom}`;
+  if (inputPrefix) inputPrefix.style.color = 'var(--amber-text)';
+  if (inputRow)    inputRow.style.borderColor = 'var(--amber)';
+  if (input)       input.style.color = 'var(--amber-text)';
+  if (resultLabel) resultLabel.textContent = `Result (${convTo})`;
+
   updateConvQuickBtns();
   convertCurrency();
+}
+
+// Legacy alias kept for any older call sites
+function setConvDir(dir) {
+  const fromEl = document.getElementById('convFrom');
+  const toEl   = document.getElementById('convTo');
+  if (fromEl) fromEl.value = dir === 'usd' ? 'USD' : 'PHP';
+  if (toEl)   toEl.value   = dir === 'usd' ? 'PHP' : 'USD';
+  updateConverter();
 }
 
 function convertCurrency() {
@@ -4098,35 +4514,35 @@ function convertCurrency() {
   const rateEl   = document.getElementById('convRateNote');
   if (!resultEl) return;
 
-  if (fxRate <= 0) {
+  const fromRate = fxRates[convFrom];
+  const toRate   = fxRates[convTo];
+
+  if (!fromRate || !toRate || fromRate <= 0) {
     resultEl.textContent = '—';
     if (rateEl) rateEl.textContent = 'Exchange rate loading…';
     return;
   }
 
-  if (convDir === 'usd') {
-    const php = input * fxRate;
-    resultEl.textContent = input > 0 ? fPHP(php) : '₱—';
-    resultEl.style.color = 'var(--amber-text)';
-    if (rateEl) rateEl.textContent = '$1 = ₱' + fxRate.toFixed(4);
-  } else {
-    const usd = input / fxRate;
-    resultEl.textContent = input > 0 ? fUSD(usd) : '$—';
-    resultEl.style.color = 'var(--teal-text)';
-    if (rateEl) rateEl.textContent = '₱1 = $' + (1 / fxRate).toFixed(6);
-  }
+  // Cross-rate: amount → USD → target
+  const crossRate = toRate / fromRate;
+  const result    = input * crossRate;
+
+  resultEl.textContent = input > 0 ? convFormat(result, convTo) : `${convSymbol(convTo)}—`;
+  resultEl.style.color = 'var(--amber-text)';
+
+  // Rate note: 1 FROM = X TO
+  if (rateEl) rateEl.textContent = `1 ${convFrom} = ${convFormat(crossRate, convTo)}`;
 }
 
 function updateConvQuickBtns() {
   const container = document.getElementById('convQuickBtns');
   if (!container) return;
-  const amounts = convDir === 'usd'
-    ? [1, 5, 10, 25, 50, 100]
-    : [100, 500, 1000, 2000, 5000, 10000];
-  const prefix = convDir === 'usd' ? '$' : '₱';
+  const meta    = CURRENCY_META[convFrom] || {};
+  const amounts = meta.quick || [1, 10, 100];
+  const sym     = convSymbol(convFrom);
   container.innerHTML = amounts.map(a => `
     <button class="preset-btn" onclick="document.getElementById('convInput').value=${a}; convertCurrency();">
-      ${prefix}${a.toLocaleString()}
+      ${sym}${a.toLocaleString()}
     </button>
   `).join('');
 }
@@ -4376,7 +4792,7 @@ loadPlanData();
 renderOTE();          // one-time expenses live on Expenses page
 setTimeout(drawChart, 200);
 calInit();
-updateConvQuickBtns();
+updateConverter();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
 // Registering requires a secure context (https:// or localhost) — this
