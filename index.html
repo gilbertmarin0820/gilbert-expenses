@@ -2102,11 +2102,58 @@ async function fetchRate(manual = false) {
     document.getElementById('fxUpdated').textContent = 'All sources failed';
     document.getElementById('fxSource').textContent = 'Check internet / try again';
     showToast('⚠ Could not fetch rate', true);
+  } else {
+    // Back-fill any currencies the primary source didn't include (e.g. VND is absent
+    // from x-rates.com's default PHP table, so it never gets set when that source wins)
+    fetchMissingRates();
   }
 
   fetching = false;
   document.getElementById('refreshIcon').classList.remove('spin');
   resetCountdown();
+}
+
+// Fetch any currencies that the winning primary source didn't populate.
+// Runs silently after fetchRate() — only hits the network when slots are empty.
+async function fetchMissingRates() {
+  const KEY_MAP = { VND:'vnd', JPY:'jpy', CNY:'cny', KRW:'krw', PHP:'php', EUR:'eur', GBP:'gbp', SGD:'sgd', AUD:'aud' };
+  const missing = Object.keys(KEY_MAP).filter(c => !fxRates[c] || fxRates[c] <= 0);
+  if (missing.length === 0) return;
+
+  // Primary back-fill: fawazahmed0 (free, no key, supports VND + all others)
+  try {
+    const res = await fetch(
+      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+      { cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (!d.usd) throw new Error('Unexpected response shape');
+    let filled = 0;
+    for (const code of missing) {
+      const key = KEY_MAP[code];
+      if (key && d.usd[key]) { fxRates[code] = parseFloat(d.usd[key]); filled++; }
+    }
+    if (filled > 0) convertCurrency();
+    return;
+  } catch(e) {
+    console.warn('fetchMissingRates (fawazahmed0) failed:', e.message);
+  }
+
+  // Secondary back-fill: open.er-api (free, no key, supports VND)
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (!d.rates) throw new Error('No rates field');
+    let filled = 0;
+    for (const code of missing) {
+      if (d.rates[code]) { fxRates[code] = parseFloat(d.rates[code]); filled++; }
+    }
+    if (filled > 0) convertCurrency();
+  } catch(e) {
+    console.warn('fetchMissingRates (open.er-api) failed:', e.message);
+  }
 }
 
 function setStatus(type, text) {
