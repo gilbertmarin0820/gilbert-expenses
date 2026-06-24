@@ -2188,6 +2188,10 @@ const MAX_UNDO  = 50;
 let _undoEnabled        = false;
 let _pendingUndoSnapshot = null;
 let _undoDebounce       = null;
+// Loading guard — prevents saveData() from firing while loadData() is restoring
+// the DOM, which would overwrite localStorage with empty values before inputs
+// are set (the root cause of data being lost on reopen).
+let _isLoading = false;
 
 function setMode(mode) {
   payMode = mode;
@@ -2577,6 +2581,7 @@ function saveData() {
 }
 
 function _saveDataDirect() {
+  if (_isLoading) return; // Don't overwrite localStorage while restoring DOM
   try {
     const data = {
       payMode: payMode,
@@ -2840,11 +2845,13 @@ function setSavingsFromItems() {
 // ─── PERSIST (localStorage) ───────────────────────────────────
 
 function loadData() {
+  _isLoading = true; // Prevent saveData() from firing while we restore the DOM
   try {
     const raw = localStorage.getItem('va_payroll_data');
-    if (!raw) return;
+    if (!raw) { _isLoading = false; _undoEnabled = true; return; }
     const data = JSON.parse(raw);
-    if (data.payMode) { payMode = data.payMode; setMode(data.payMode); }
+    // Restore all DOM inputs BEFORE calling setMode, so the saveData() that
+    // setMode triggers writes correct values (not empty defaults) to localStorage.
     if (data.hourly) document.getElementById('rateInput').value = data.hourly;
     if (data.tax)    document.getElementById('taxInput').value  = data.tax;
     if (data.hourly || data.tax) updateRateTax();
@@ -2859,11 +2866,19 @@ function loadData() {
     if (data.corpEnabled !== undefined) document.getElementById('corpEnabled').checked = data.corpEnabled;
     if (data.corpSalary)  document.getElementById('corpSalaryInput').value = data.corpSalary;
     if (data.corp13thMonths) document.getElementById('corp13thMonths').value = data.corp13thMonths;
+    // Fix: corpDREnabled / corpDRStart / corpDREnd were saved but never loaded back
+    if (data.corpDREnabled !== undefined) document.getElementById('corpDREnabled').checked = data.corpDREnabled;
+    if (data.corpDRStart) document.getElementById('corpDRStart').value = data.corpDRStart;
+    if (data.corpDREnd)   document.getElementById('corpDREnd').value   = data.corpDREnd;
     if (Array.isArray(data.necData) && data.necData.length) necData = data.necData;
     if (Array.isArray(data.plShopee)) plData.shopee = data.plShopee;
     if (Array.isArray(data.plTiktok)) plData.tiktok = data.plTiktok;
     if (Array.isArray(data.savingsItems)) savingsItems = data.savingsItems;
+    // Call setMode last: now that all inputs are set, the saveData() it
+    // triggers will correctly persist the restored state.
+    if (data.payMode) { payMode = data.payMode; setMode(data.payMode); }
   } catch(e) { console.warn('Load failed', e); }
+  _isLoading = false;
   _undoEnabled = true; // enable undo tracking after initial load
 }
 
