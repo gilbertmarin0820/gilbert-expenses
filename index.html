@@ -2203,6 +2203,39 @@ let countdownSec = 60;
 let countdownTimer = null;
 let fetching = false;
 
+// ─── SPEND LOG STATE (hoisted) ─────────────────────────────────
+// Declared here — well above the init block — so that recalcAll()
+// can safely call getSpendSum() during the very first renderNec()
+// call without hitting a Temporal Dead Zone ReferenceError.
+const SPEND_CATS = [
+  { id: 'food',      emoji: '🍔', label: 'Food'      },
+  { id: 'drink',     emoji: '☕', label: 'Drinks'    },
+  { id: 'transport', emoji: '🚗', label: 'Transport' },
+  { id: 'shop',      emoji: '🛍️', label: 'Shopping'  },
+  { id: 'health',    emoji: '💊', label: 'Health'    },
+  { id: 'gaming',    emoji: '🎮', label: 'Gaming'    },
+  { id: 'other',     emoji: '📦', label: 'Other'     },
+];
+let spendLog   = [];
+let spendSeq   = 1;
+let activeScat = 'food';
+
+// ─── QUICK BALANCE SYNC STATE (hoisted) ────────────────────────
+const QBS_BANKS = [
+  { id: 'gcash',     name: 'GCash',     color: '#0070BA' },
+  { id: 'maya',      name: 'Maya',      color: '#04AE5E' },
+  { id: 'bdo',       name: 'BDO',       color: '#043673' },
+  { id: 'unionbank', name: 'UnionBank', color: '#F5821F' },
+  { id: 'rcbc',      name: 'RCBC',      color: '#9B1C2F' },
+  { id: 'gotyme',    name: 'GoTyme',    color: '#E6007E' },
+  { id: 'maribank',  name: 'MariBank',  color: '#7B2D8B' },
+  { id: 'cash',      name: 'Cash',      color: '#3FB950' },
+];
+let quickBalances = {};
+
+// ─── BILL CHECKLIST STATE (hoisted) ────────────────────────────
+let billChecks = { period: '', checks: {} };
+
 // ─── FX ───────────────────────────────────────────────────────
 const XRATES_URL = 'https://www.x-rates.com/table/?from=PHP&amount=1';
 
@@ -2325,9 +2358,11 @@ async function fetchRate(manual = false) {
 
   let success = false;
   const attempts = [
+    // JSON APIs first — no proxy required, CORS-open, most reliable
+    ...FX_JSON_SOURCES.map(src => ({ fn: () => tryJsonSource(src), name: src.name })),
+    // CORS proxy scrapers as last-resort fallbacks (prone to "Failed to fetch")
     { fn: tryXRatesAllOrigins,  name: 'x-rates.com (allorigins)' },
     { fn: tryXRatesCorsProxy,   name: 'x-rates.com (corsproxy)' },
-    ...FX_JSON_SOURCES.map(src => ({ fn: () => tryJsonSource(src), name: src.name }))
   ];
 
   for (const attempt of attempts) {
@@ -2335,6 +2370,7 @@ async function fetchRate(manual = false) {
       const rate = await attempt.fn();
       fxRate = rate;
       fxRates.PHP = rate; // keep fxRates in sync
+      try { localStorage.setItem('va_fx_rate', JSON.stringify({ rate, time: Date.now() })); } catch(e) {}
       document.getElementById('fxRate').textContent = '₱' + rate.toFixed(4);
       const now = new Date();
       document.getElementById('fxUpdated').textContent = 'Updated ' + now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -2420,9 +2456,34 @@ function resetCountdown() {
   clearInterval(countdownTimer);
   countdownTimer = setInterval(() => {
     countdownSec--;
-    if (countdownSec <= 0) { fetchRate(); return; }
+    if (countdownSec <= 0) { clearInterval(countdownTimer); fetchRate(); return; }
     document.getElementById('fxCountdown').textContent = 'Refresh in ' + countdownSec + 's';
   }, 1000);
+}
+
+// ─── CACHED RATE ───────────────────────────────────────────────
+// Shows the last successfully fetched rate immediately on load while a
+// live fetch runs in the background. Falls back gracefully if no cache exists.
+function loadCachedRate() {
+  try {
+    const raw = localStorage.getItem('va_fx_rate');
+    if (!raw) return;
+    const { rate, time } = JSON.parse(raw);
+    if (!rate || isNaN(rate)) return;
+    const ageHours = (Date.now() - time) / 3600000;
+    // Only use cache if it is less than 24 hours old
+    if (ageHours > 24) return;
+    fxRate = rate;
+    fxRates.PHP = rate;
+    document.getElementById('fxRate').textContent = '₱' + rate.toFixed(4);
+    const ageLabel = ageHours < 1
+      ? Math.round(ageHours * 60) + 'm ago'
+      : Math.round(ageHours) + 'h ago';
+    document.getElementById('fxUpdated').textContent = 'Cached · ' + ageLabel;
+    document.getElementById('fxSource').textContent = 'Fetching live rate…';
+    setStatus('loading', 'Cached');
+    recalcAll();
+  } catch(e) {}
 }
 
 // ─── FORMAT ───────────────────────────────────────────────────
@@ -5426,7 +5487,8 @@ renderNec();
 renderPL('shopee');
 renderPL('tiktok');
 renderSavingsItems();
-fetchRate(false);
+loadCachedRate(); // show last known rate immediately while live fetch runs
+fetchRate(false); // then fetch a fresh live rate in the background
 
 loadCC();
 renderCCPeople();
@@ -5457,17 +5519,7 @@ renderSplitArchive('hsArchiveList', 'hs');
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 1: QUICK BALANCE SYNC
 // ═══════════════════════════════════════════════════════════════
-const QBS_BANKS = [
-  { id: 'gcash',     name: 'GCash',     color: '#0070BA' },
-  { id: 'maya',      name: 'Maya',      color: '#04AE5E' },
-  { id: 'bdo',       name: 'BDO',       color: '#043673' },
-  { id: 'unionbank', name: 'UnionBank', color: '#F5821F' },
-  { id: 'rcbc',      name: 'RCBC',      color: '#9B1C2F' },
-  { id: 'gotyme',    name: 'GoTyme',    color: '#E6007E' },
-  { id: 'maribank',  name: 'MariBank',  color: '#7B2D8B' },
-  { id: 'cash',      name: 'Cash',      color: '#3FB950' },
-];
-let quickBalances = {};
+// (QBS_BANKS and quickBalances declared at top of script)
 
 function renderQBS() {
   const grid = document.getElementById('qbsGrid');
@@ -5502,7 +5554,7 @@ function syncQBSToSavings() {
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 2: BILL PAYMENT CHECKLIST
 // ═══════════════════════════════════════════════════════════════
-let billChecks = { period: '', checks: {} };
+// (billChecks declared at top of script)
 
 function bclPeriod() {
   const n = new Date();
@@ -5665,18 +5717,7 @@ function renderSplitArchive(listId, filterType) {
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 4: DAILY SPEND LOG
 // ═══════════════════════════════════════════════════════════════
-const SPEND_CATS = [
-  { id: 'food',      emoji: '🍔', label: 'Food'      },
-  { id: 'drink',     emoji: '☕', label: 'Drinks'    },
-  { id: 'transport', emoji: '🚗', label: 'Transport' },
-  { id: 'shop',      emoji: '🛍️', label: 'Shopping'  },
-  { id: 'health',    emoji: '💊', label: 'Health'    },
-  { id: 'gaming',    emoji: '🎮', label: 'Gaming'    },
-  { id: 'other',     emoji: '📦', label: 'Other'     },
-];
-let spendLog   = [];
-let spendSeq   = 1;
-let activeScat = 'food';
+// (SPEND_CATS, spendLog, spendSeq, activeScat declared at top of script)
 
 function renderSlogCats() {
   const c = document.getElementById('slogCats');
