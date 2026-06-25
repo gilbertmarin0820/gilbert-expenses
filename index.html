@@ -3774,6 +3774,65 @@ function updateOTETotal() {
 }
 
 // ─── SAVINGS GOALS ────────────────────────────────────────────
+// Updates only the progress bar / percentage / info text for goal[i]
+// without re-rendering the whole list (preserves focus while typing).
+function updateGoalProgress(i) {
+  const g = savingsGoals[i];
+  if (!g) return;
+  const target   = parseFloat(g.target) || 0;
+  const saved    = parseFloat(g.saved)  || 0;
+  const pct      = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
+  const pctStr   = target > 0 ? pct.toFixed(0) + '%' : '—';
+  const barColor = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
+
+  const fill  = document.getElementById('goal-bar-fill-' + i);
+  const pctEl = document.getElementById('goal-pct-text-' + i);
+  const info  = document.getElementById('goal-info-' + i);
+
+  if (fill)  { fill.style.width = pct.toFixed(1) + '%'; fill.style.background = barColor; }
+  if (pctEl) { pctEl.textContent = pctStr; pctEl.style.color = barColor; }
+  if (info) {
+    if (target > 0) {
+      info.style.display = '';
+      info.innerHTML = fPHP(saved) + ' of ' + fPHP(target) +
+        (saved >= target ? ' &nbsp;<span style="color:var(--green-text);">✓ Goal reached!</span>' : '');
+    } else {
+      info.style.display = 'none';
+    }
+  }
+
+  // Also update the totals row
+  let totalSaved = 0, totalTarget = 0;
+  savingsGoals.forEach(g => {
+    totalSaved  += parseFloat(g.saved)  || 0;
+    totalTarget += parseFloat(g.target) || 0;
+  });
+  const ts = document.getElementById('goalsTotalSaved');
+  const tt = document.getElementById('goalsTotalTarget');
+  if (ts) ts.textContent = fPHP(totalSaved);
+  if (tt) tt.textContent = fPHP(totalTarget);
+}
+
+// Updates only the remaining-balance display for installment[i]
+// without re-rendering the whole list (preserves focus while typing).
+function updateInstDisplay(i) {
+  const inst = installments[i];
+  if (!inst) return;
+  const monthly   = parseFloat(inst.monthlyAmt) || 0;
+  const remaining = parseInt(inst.remaining)    || 0;
+  const totalRem  = monthly * remaining;
+  const el = document.getElementById('inst-balance-' + i);
+  if (el) {
+    if (totalRem > 0) {
+      el.style.display = '';
+      const val = el.querySelector('.inst-balance-val');
+      if (val) val.textContent = fPHP(totalRem);
+    } else {
+      el.style.display = 'none';
+    }
+  }
+}
+
 function addGoal() {
   savingsGoals.push({ id: planId(), name: '', target: '', saved: '' });
   renderGoals();
@@ -3811,7 +3870,7 @@ function renderGoals() {
           <div style="display:flex; align-items:center; gap:4px;">
             <span style="font-size:12px; color:var(--text3);">₱</span>
             <input class="nec-amt-input" type="number" value="${g.target}" placeholder="50,000" min="0" step="0.01" style="flex:1;"
-              oninput="savingsGoals[${i}].target=this.value; renderGoals(); savePlanData()">
+              oninput="savingsGoals[${i}].target=this.value; updateGoalProgress(${i}); savePlanData()">
           </div>
         </div>
         <div style="flex:1; min-width:120px;">
@@ -3819,17 +3878,17 @@ function renderGoals() {
           <div style="display:flex; align-items:center; gap:4px;">
             <span style="font-size:12px; color:var(--text3);">₱</span>
             <input class="nec-amt-input" type="number" value="${g.saved}" placeholder="0" min="0" step="0.01" style="flex:1;"
-              oninput="savingsGoals[${i}].saved=this.value; renderGoals(); savePlanData()">
+              oninput="savingsGoals[${i}].saved=this.value; updateGoalProgress(${i}); savePlanData()">
           </div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="flex:1; height:10px; background:var(--surface3); border-radius:5px; overflow:hidden;">
-          <div style="height:100%; width:${pct.toFixed(1)}%; background:${barColor}; border-radius:5px; transition:width 0.4s;"></div>
+          <div id="goal-bar-fill-${i}" style="height:100%; width:${pct.toFixed(1)}%; background:${barColor}; border-radius:5px; transition:width 0.4s;"></div>
         </div>
-        <span style="font-family:'DM Mono',monospace; font-size:13px; color:${barColor}; min-width:42px; text-align:right; font-weight:500;">${pctStr}</span>
+        <span id="goal-pct-text-${i}" style="font-family:'DM Mono',monospace; font-size:13px; color:${barColor}; min-width:42px; text-align:right; font-weight:500;">${pctStr}</span>
       </div>
-      ${target > 0 ? `<div style="font-size:11px; color:var(--text3); margin-top:6px;">${fPHP(saved)} of ${fPHP(target)}${saved >= target ? ' &nbsp;<span style="color:var(--green-text);">✓ Goal reached!</span>' : ''}</div>` : ''}
+      <div id="goal-info-${i}" style="font-size:11px; color:var(--text3); margin-top:6px;${target > 0 ? '' : ' display:none;'}">${target > 0 ? `${fPHP(saved)} of ${fPHP(target)}${saved >= target ? ' &nbsp;<span style="color:var(--green-text);">✓ Goal reached!</span>' : ''}` : ''}</div>
     `;
     c.appendChild(div);
   });
@@ -3933,19 +3992,18 @@ function renderInsts() {
           <div style="display:flex; align-items:center; gap:4px;">
             <span style="font-size:12px; color:var(--text3);">₱</span>
             <input class="nec-amt-input" type="number" value="${inst.monthlyAmt}" placeholder="0.00" min="0" step="0.01" style="flex:1;"
-              oninput="installments[${i}].monthlyAmt=this.value; renderInsts(); updateInstsTotal(); recalcAll(); savePlanData()">
+              oninput="installments[${i}].monthlyAmt=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcAll(); savePlanData()">
           </div>
         </div>
         <div style="min-width:110px;">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining months</div>
           <input class="nec-day-input" type="number" value="${inst.remaining}" min="0" step="1" placeholder="0" style="width:80px;"
-            oninput="installments[${i}].remaining=this.value; renderInsts(); updateInstsTotal(); recalcAll(); savePlanData()">
+            oninput="installments[${i}].remaining=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcAll(); savePlanData()">
         </div>
-        ${totalRem > 0 ? `
-        <div style="flex-shrink:0;">
+        <div id="inst-balance-${i}" style="flex-shrink:0;${totalRem > 0 ? '' : ' display:none;'}">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining balance</div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; color:var(--amber-text); font-weight:500;">${fPHP(totalRem)}</div>
-        </div>` : ''}
+          <div class="inst-balance-val" style="font-family:'DM Mono',monospace; font-size:16px; color:var(--amber-text); font-weight:500;">${fPHP(totalRem)}</div>
+        </div>
       </div>
     `;
     c.appendChild(div);
