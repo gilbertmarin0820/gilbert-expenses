@@ -5596,7 +5596,7 @@ function renderBillChecklist() {
   const items = [];
   necData.forEach((row, i) => {
     if ((parseFloat(row.amt) || 0) > 0 && (row.cat || '').trim())
-      items.push({ key: `nec_${i}_${row.cat}`, label: row.cat.trim(), amt: parseFloat(row.amt)||0, src: 'nec' });
+      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: parseFloat(row.amt)||0, src: 'nec' });
   });
   subscriptions.forEach(sub => {
     if ((parseFloat(sub.amt) || 0) > 0 && (sub.name || '').trim())
