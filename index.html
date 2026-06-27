@@ -322,23 +322,101 @@
   /* CALC table */
   #calcTable .nec-amt-input:focus { border-color: var(--amber); }
 
-  /* CALCULATOR BUTTONS */
+  /* CALCULATOR BUTTONS — scientific layout */
   .calc-btn {
     background: var(--surface3); border: 1px solid var(--border);
-    color: var(--text); font-family: 'DM Mono', monospace; font-size: 18px;
-    padding: 0; height: 56px; border-radius: var(--radius-sm);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 15px;
+    padding: 0; height: 48px; border-radius: var(--radius-sm);
     cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center;
-    user-select: none;
+    user-select: none; white-space: nowrap;
   }
   .calc-btn:hover  { background: var(--surface2); border-color: var(--border2); }
   .calc-btn:active { transform: scale(0.93); }
-  .calc-fn { background: var(--surface2); color: var(--text2); }
+  .calc-fn { background: var(--surface2); color: var(--text2); font-size: 13px; }
   .calc-fn:hover { background: var(--border); color: var(--text); }
+  .calc-sci { background: var(--surface2); color: var(--blue-text); font-size: 12px; border-color: var(--border); }
+  .calc-sci:hover { background: var(--blue-dim); border-color: var(--blue); }
+  .calc-sci.inv-active { background: var(--blue-dim); color: var(--amber-text); border-color: var(--amber); }
   .calc-op { background: var(--amber-dim); color: var(--amber-text); border-color: var(--amber); }
   .calc-op:hover { background: var(--amber); color: var(--bg); }
   .calc-op.active-op { background: var(--amber-text); color: var(--bg); }
   .calc-eq { background: var(--green-dim); color: var(--green-text); border-color: var(--green); }
   .calc-eq:hover { background: var(--green); color: var(--bg); }
+  .calc-deg-toggle {
+    display: flex; background: var(--surface3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; font-family: 'DM Mono', monospace;
+    font-size: 11px; height: 48px; align-items: center;
+  }
+  .calc-deg-btn {
+    flex: 1; background: none; border: none; color: var(--text3); cursor: pointer;
+    padding: 0 6px; font-family: 'DM Mono', monospace; font-size: 11px; height: 100%;
+    transition: all 0.15s;
+  }
+  .calc-deg-btn.active { background: var(--surface2); color: var(--teal-text); }
+
+  /* MONTHLY TRACKER */
+  .trkr-persons-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .trkr-person-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 8px 4px 12px; font-size: 13px; color: var(--text);
+  }
+  .trkr-add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .trkr-select {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px;
+    padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236e7681'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; padding-right: 26px;
+    transition: border-color 0.2s;
+  }
+  .trkr-select:focus { outline: none; border-color: var(--blue); }
+  .trkr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .trkr-table th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3);
+    padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: right;
+  }
+  .trkr-table th:first-child { text-align: left; }
+  .trkr-table td {
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace; font-size: 13px; text-align: right; color: var(--text2);
+  }
+  .trkr-table td:first-child { text-align: left; color: var(--text); font-family: 'Outfit', sans-serif; }
+  .trkr-table tfoot td {
+    border-top: 2px solid var(--border2); border-bottom: none;
+    font-weight: 600; color: var(--text); font-size: 13px;
+  }
+  .trkr-table .trkr-zero { color: var(--text3); }
+  .trkr-table .trkr-pos { color: var(--green-text); }
+  .trkr-table .trkr-total-col { color: var(--amber-text); font-weight: 600; }
+  .trkr-year-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .trkr-year-tab {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text2);
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    padding: 5px 14px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+  }
+  .trkr-year-tab.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue-text); }
+  .trkr-year-tab:not(.active):hover { background: var(--surface3); color: var(--text); }
+  .trkr-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .trkr-summary-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .trkr-summary-name { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3); margin-bottom: 4px; }
+  .trkr-summary-amt { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--green-text); }
+  .trkr-edit-cell {
+    background: none; border: none; font-family: 'DM Mono', monospace; font-size: 13px;
+    color: var(--text2); text-align: right; width: 100%; padding: 0; cursor: pointer;
+    border-radius: 3px; transition: background 0.15s;
+  }
+  .trkr-edit-cell:hover { background: var(--surface3); color: var(--text); }
+  @media (max-width: 700px) {
+    .trkr-table th, .trkr-table td { padding: 6px 7px; font-size: 12px; }
+    .trkr-summary-grid { grid-template-columns: 1fr 1fr; }
+    #trkrFormGrid { grid-template-columns: 1fr 1fr !important; }
+    #trkrFormGrid > *:last-child { grid-column: 1 / -1; }
+  }
 
   /* SALARY BREAKDOWN */
   .sal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -703,8 +781,9 @@
 
     /* ── Calculator / Spend-log grid ─────────────────────── */
     .spend-calc-grid { grid-template-columns: 1fr !important; }
-    .calc-btn      { height: 64px; font-size: 22px; border-radius: 10px; }
-    #calcScreen    { font-size: 28px !important; }
+    .calc-btn      { height: 48px; font-size: 13px; border-radius: 8px; }
+    .calc-fn, .calc-sci { font-size: 11px; }
+    #calcScreen    { font-size: 26px !important; }
 
     /* ── Touch targets ────────────────────────────────────── */
     .add-btn       { min-height: 46px; padding: 10px 14px; font-size: 14px; }
@@ -1127,6 +1206,9 @@
     <button class="action-btn" id="planUndoBtn" onclick="planUndo()" disabled title="Undo last Plan change">↩ Undo</button>
     <button class="action-btn danger" onclick="resetPlan()" title="Clear all Plan data">✕ Reset All</button>
   </div>
+  <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="trackerControls">
+    <button class="action-btn danger" onclick="resetTracker()" title="Clear all tracker data">✕ Reset Tracker</button>
+  </div>
 </header>
 
 <!-- PAGE NAV -->
@@ -1142,6 +1224,9 @@
   </button>
   <button class="page-tab" id="tabPlan" onclick="switchPage('plan')">
     <span class="tab-icon">📊</span><span class="tab-label">Plan</span>
+  </button>
+  <button class="page-tab" id="tabTracker" onclick="switchPage('tracker')">
+    <span class="tab-icon">👥</span><span class="tab-label">Tracker</span>
   </button>
 </nav>
 
@@ -1714,41 +1799,60 @@
     <div class="section-title">Calculator &amp; Currency Converter</div>
     <div class="spend-calc-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:flex-start;">
 
-      <!-- Calculator -->
+      <!-- Scientific Calculator -->
       <div class="card calc-card">
         <div id="calcDisplay" style="
           background:var(--surface2); border:1px solid var(--border);
           border-radius:var(--radius-sm); padding:12px 16px;
-          margin-bottom:12px; text-align:right; min-height:64px;
+          margin-bottom:10px; text-align:right; min-height:64px;
           display:flex; flex-direction:column; justify-content:flex-end; gap:4px;">
           <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); min-height:16px; word-break:break-all;"></div>
-          <div id="calcScreen" style="font-family:'DM Mono',monospace; font-size:32px; font-weight:500; color:var(--text); word-break:break-all;">0</div>
+          <div id="calcScreen" style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all;">0</div>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
-          <!-- Row 1 -->
-          <button class="calc-btn calc-fn" onclick="calcClear()">AC</button>
-          <button class="calc-btn calc-fn" onclick="calcToggleSign()">+/−</button>
+        <!-- 7-column scientific grid -->
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">
+          <!-- Row 0: Deg/Rad toggle + x! + ( + ) + % + AC -->
+          <div class="calc-deg-toggle" style="grid-column:span 2;">
+            <button class="calc-deg-btn active" id="calcDegBtn" onclick="calcSetDeg(true)">Deg</button>
+            <button class="calc-deg-btn" id="calcRadBtn" onclick="calcSetDeg(false)">Rad</button>
+          </div>
+          <button class="calc-btn calc-sci" onclick="calcFactorial()" title="x! factorial">x!</button>
+          <button class="calc-btn calc-sci" onclick="calcParen('(')"> ( </button>
+          <button class="calc-btn calc-sci" onclick="calcParen(')')"> ) </button>
           <button class="calc-btn calc-fn" onclick="calcPercent()">%</button>
-          <button class="calc-btn calc-op" onclick="calcOp('/')">÷</button>
-          <!-- Row 2 -->
+          <button class="calc-btn calc-fn" onclick="calcClear()">AC</button>
+          <!-- Row 1: Inv + sin + ln + 7 + 8 + 9 + ÷ -->
+          <button class="calc-btn calc-sci" id="calcInvBtn" onclick="calcToggleInv()" title="Inverse functions">Inv</button>
+          <button class="calc-btn calc-sci" id="calcSinBtn" onclick="calcTrig('sin')">sin</button>
+          <button class="calc-btn calc-sci" onclick="calcLn()">ln</button>
           <button class="calc-btn" onclick="calcDigit('7')">7</button>
           <button class="calc-btn" onclick="calcDigit('8')">8</button>
           <button class="calc-btn" onclick="calcDigit('9')">9</button>
-          <button class="calc-btn calc-op" onclick="calcOp('*')">×</button>
-          <!-- Row 3 -->
+          <button class="calc-btn calc-op" onclick="calcOp('/')">÷</button>
+          <!-- Row 2: π + cos + log + 4 + 5 + 6 + × -->
+          <button class="calc-btn calc-sci" onclick="calcConst('pi')">π</button>
+          <button class="calc-btn calc-sci" id="calcCosBtn" onclick="calcTrig('cos')">cos</button>
+          <button class="calc-btn calc-sci" onclick="calcLog()">log</button>
           <button class="calc-btn" onclick="calcDigit('4')">4</button>
           <button class="calc-btn" onclick="calcDigit('5')">5</button>
           <button class="calc-btn" onclick="calcDigit('6')">6</button>
-          <button class="calc-btn calc-op" onclick="calcOp('-')">−</button>
-          <!-- Row 4 -->
+          <button class="calc-btn calc-op" onclick="calcOp('*')">×</button>
+          <!-- Row 3: e + tan + √ + 1 + 2 + 3 + − -->
+          <button class="calc-btn calc-sci" onclick="calcConst('e')">e</button>
+          <button class="calc-btn calc-sci" id="calcTanBtn" onclick="calcTrig('tan')">tan</button>
+          <button class="calc-btn calc-sci" onclick="calcSqrt()">√</button>
           <button class="calc-btn" onclick="calcDigit('1')">1</button>
           <button class="calc-btn" onclick="calcDigit('2')">2</button>
           <button class="calc-btn" onclick="calcDigit('3')">3</button>
-          <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
-          <!-- Row 5 -->
-          <button class="calc-btn" onclick="calcDigit('0')" style="grid-column:span 2; text-align:left; padding-left:24px;">0</button>
+          <button class="calc-btn calc-op" onclick="calcOp('-')">−</button>
+          <!-- Row 4: Ans + EXP + xʸ + 0 + . + = + + -->
+          <button class="calc-btn calc-sci" onclick="calcAns()">Ans</button>
+          <button class="calc-btn calc-sci" onclick="calcEXP()" title="×10^">EXP</button>
+          <button class="calc-btn calc-sci" onclick="calcOp('^')" title="x to the power y">xʸ</button>
+          <button class="calc-btn" onclick="calcDigit('0')">0</button>
           <button class="calc-btn" onclick="calcDot()">.</button>
           <button class="calc-btn calc-eq" onclick="calcEquals()">=</button>
+          <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
         </div>
       </div>
 
@@ -2128,6 +2232,103 @@
         <div id="cfSummary" class="cf-summary" style="display:none;"></div>
       </div>
 
+    </div>
+  </div>
+
+</div>
+
+<!-- MONTHLY TRACKER PAGE -->
+<div class="main" id="pageTracker" style="display:none;">
+
+  <!-- PEOPLE MANAGEMENT -->
+  <div>
+    <div class="section-title">People</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Add the names of people you want to track monthly payments for. Each person gets their own column in the tracker.
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+        <input type="text" id="trkrNewPerson" class="nec-cat-input" placeholder="Enter person name…" style="flex:1; min-width:180px;"
+          onkeydown="if(event.key==='Enter') trkrAddPerson()">
+        <button class="add-btn" style="width:auto; padding:0 20px; margin-top:0; border-style:solid; border-color:var(--blue); color:var(--blue-text);" onclick="trkrAddPerson()">+ Add Person</button>
+      </div>
+      <div id="trkrPersonList" style="display:flex; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:12px; color:var(--text3);">No people added yet.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD ENTRY -->
+  <div>
+    <div class="section-title">Add / Edit Entry</div>
+    <div class="card">
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;" class="trkr-add-row" id="trkrFormGrid">
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">Person</div>
+          <select id="trkrSelPerson" class="trkr-select" style="width:100%;">
+            <option value="">— select —</option>
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">Year</div>
+          <select id="trkrSelYear" class="trkr-select" style="width:100%;" onchange="trkrUpdateMonthSelect()">
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">Month</div>
+          <select id="trkrSelMonth" class="trkr-select" style="width:100%;">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </div>
+        <div>
+          <div class="input-label" style="margin-bottom:6px;">Amount (₱)</div>
+          <div class="input-row" style="border-color:var(--green);">
+            <div class="input-prefix" style="color:var(--green-text); min-width:auto; padding:0 10px;">₱</div>
+            <input type="number" id="trkrAmt" class="big-input" placeholder="0.00" min="0" step="0.01"
+              style="font-size:16px; color:var(--green-text);"
+              onkeydown="if(event.key==='Enter') trkrAddEntry()">
+          </div>
+        </div>
+        <button class="add-btn" style="width:auto; padding:0 20px; margin-top:0; border-style:solid; border-color:var(--green); color:var(--green-text); white-space:nowrap; height:42px;" onclick="trkrAddEntry()">+ Add</button>
+      </div>
+      <div id="trkrFormMsg" style="font-size:12px; color:var(--text3); margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- TRACKER TABLE VIEW -->
+  <div>
+    <div class="section-title">Monthly Breakdown</div>
+    <div class="card">
+      <!-- Year selector tabs -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+        <span style="font-size:12px; color:var(--text3);">View year:</span>
+        <div class="trkr-year-tabs" id="trkrYearTabs"></div>
+        <button class="add-btn" style="width:auto; padding:0 14px; margin-top:0; font-size:12px;" onclick="trkrAddYear()">+ Year</button>
+      </div>
+      <!-- Summary cards (total per person for selected year) -->
+      <div class="trkr-summary-grid" id="trkrSummaryCards"></div>
+      <!-- Table -->
+      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table class="trkr-table" id="trkrTable">
+          <thead><tr id="trkrTableHead"></tr></thead>
+          <tbody id="trkrTableBody"></tbody>
+          <tfoot><tr id="trkrTableFoot"></tr></tfoot>
+        </table>
+      </div>
+      <div id="trkrEmptyMsg" style="font-size:13px; color:var(--text3); text-align:center; padding:24px 0; display:none;">
+        No entries for this year yet — add entries above.
+      </div>
     </div>
   </div>
 
@@ -3439,27 +3640,61 @@ function renderPL(type) {
   // (via refreshPLBadges) and from explicit callers that do their own recalcAll.
 }
 
-// ─── CALCULATOR ───────────────────────────────────────────────
+// ─── SCIENTIFIC CALCULATOR ────────────────────────────────────
 let calcCurrent = '0';
 let calcPrev    = '';
 let calcOper    = null;
 let calcJustEq  = false;
+let calcLastAns = 0;
+let calcIsDeg   = true;   // true=degrees, false=radians
+let calcIsInv   = false;  // true=inverse trig mode
+let calcParenDepth = 0;   // simple open-paren counter
+let calcExprStack  = [];  // pending paren expression stack
 
 function calcRender() {
-  document.getElementById('calcScreen').textContent = calcCurrent;
-  document.getElementById('calcExpr').textContent   = calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
-  // highlight active op button
+  const screen = document.getElementById('calcScreen');
+  const expr   = document.getElementById('calcExpr');
+  if (screen) screen.textContent = calcCurrent;
+  if (expr) {
+    expr.textContent = calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
+  }
+  // Highlight active op
   document.querySelectorAll('.calc-op').forEach(b => b.classList.remove('active-op'));
   if (calcOper && !calcJustEq) {
-    const sym = {'*':'×', '/':'÷', '+':'+', '-':'−'}[calcOper];
-    document.querySelectorAll('.calc-op').forEach(b => { if (b.textContent === sym) b.classList.add('active-op'); });
+    const sym = calcOperSym(calcOper);
+    document.querySelectorAll('.calc-op').forEach(b => {
+      if (b.textContent.trim() === sym) b.classList.add('active-op');
+    });
   }
 }
-function calcOperSym(op) { return {'*':'×','/':'÷','+':'+','-':'−'}[op] || op; }
+function calcOperSym(op) {
+  return { '*': '×', '/': '÷', '+': '+', '-': '−', '^': 'xʸ' }[op] || op;
+}
+
+function calcSetDeg(deg) {
+  calcIsDeg = deg;
+  const db = document.getElementById('calcDegBtn');
+  const rb = document.getElementById('calcRadBtn');
+  if (db) db.classList.toggle('active', deg);
+  if (rb) rb.classList.toggle('active', !deg);
+}
+
+function calcToggleInv() {
+  calcIsInv = !calcIsInv;
+  const btn = document.getElementById('calcInvBtn');
+  if (btn) btn.classList.toggle('inv-active', calcIsInv);
+  const sinBtn = document.getElementById('calcSinBtn');
+  const cosBtn = document.getElementById('calcCosBtn');
+  const tanBtn = document.getElementById('calcTanBtn');
+  if (sinBtn) sinBtn.textContent = calcIsInv ? 'sin⁻¹' : 'sin';
+  if (cosBtn) cosBtn.textContent = calcIsInv ? 'cos⁻¹' : 'cos';
+  if (tanBtn) tanBtn.textContent = calcIsInv ? 'tan⁻¹' : 'tan';
+}
 
 function calcDigit(d) {
   if (calcJustEq) { calcCurrent = d; calcJustEq = false; }
   else calcCurrent = (calcCurrent === '0' && d !== '.') ? d : calcCurrent + d;
+  if (calcCurrent.length > 16) calcCurrent = calcCurrent.slice(0, 16);
   calcRender();
 }
 
@@ -3470,7 +3705,8 @@ function calcDot() {
 }
 
 function calcOp(op) {
-  if (calcOper && !calcJustEq) calcEquals(true); // chain operations
+  if (calcCurrent === 'Error') return;
+  if (calcOper && !calcJustEq) calcEquals(true);
   calcPrev   = calcCurrent;
   calcOper   = op;
   calcJustEq = false;
@@ -3480,16 +3716,21 @@ function calcOp(op) {
 
 function calcEquals(chain = false) {
   if (!calcOper) return;
-  const a = parseFloat(calcPrev)   || 0;
-  const b = parseFloat(calcCurrent)|| 0;
+  const a = parseFloat(calcPrev)    || 0;
+  const b = parseFloat(calcCurrent) || 0;
   let result;
   if      (calcOper === '+') result = a + b;
   else if (calcOper === '-') result = a - b;
   else if (calcOper === '*') result = a * b;
   else if (calcOper === '/') result = b === 0 ? 'Error' : a / b;
-  const str = result === 'Error' ? 'Error' : +result.toFixed(10) + '';
+  else if (calcOper === '^') result = Math.pow(a, b);
+  const str = (result === 'Error' || result === undefined)
+    ? 'Error'
+    : +parseFloat(result.toFixed(10)) + '';
   if (!chain) {
-    document.getElementById('calcExpr').textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
+    const exprEl = document.getElementById('calcExpr');
+    if (exprEl) exprEl.textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
+    if (result !== 'Error' && result !== undefined) calcLastAns = parseFloat(str) || 0;
     calcOper   = null;
     calcPrev   = '';
     calcJustEq = true;
@@ -3500,6 +3741,9 @@ function calcEquals(chain = false) {
 
 function calcClear() {
   calcCurrent = '0'; calcPrev = ''; calcOper = null; calcJustEq = false;
+  calcParenDepth = 0; calcExprStack = [];
+  const exprEl = document.getElementById('calcExpr');
+  if (exprEl) exprEl.textContent = '';
   calcRender();
 }
 
@@ -3511,8 +3755,133 @@ function calcToggleSign() {
 
 function calcPercent() {
   const v = parseFloat(calcCurrent) || 0;
-  calcCurrent = String(+( v / 100 ).toFixed(10));
+  // If there's a pending operation, calculate percentage of that value
+  if (calcOper && calcPrev !== '') {
+    const a = parseFloat(calcPrev) || 0;
+    calcCurrent = String(+(a * v / 100).toFixed(10));
+  } else {
+    calcCurrent = String(+(v / 100).toFixed(10));
+  }
   calcRender();
+}
+
+// ── Scientific functions ──────────────────────────────────────
+function calcToRad(v) { return calcIsDeg ? v * Math.PI / 180 : v; }
+function calcFromRad(v) { return calcIsDeg ? v * 180 / Math.PI : v; }
+
+function calcApply(fn) {
+  if (calcCurrent === 'Error') return;
+  try {
+    const v = parseFloat(calcCurrent) || 0;
+    const r = fn(v);
+    if (!isFinite(r) || isNaN(r)) { calcCurrent = 'Error'; }
+    else { calcCurrent = String(+parseFloat(r.toFixed(10))); calcJustEq = true; calcLastAns = parseFloat(calcCurrent) || 0; }
+    calcRender();
+  } catch(e) { calcCurrent = 'Error'; calcRender(); }
+}
+
+function calcTrig(fn) {
+  if (calcIsInv) {
+    // Inverse trig: input is a ratio, output is an angle
+    const invFns = { sin: Math.asin, cos: Math.acos, tan: Math.atan };
+    calcApply(v => calcFromRad(invFns[fn](v)));
+  } else {
+    const fns = { sin: Math.sin, cos: Math.cos, tan: Math.tan };
+    calcApply(v => fns[fn](calcToRad(v)));
+  }
+}
+
+function calcLn()  { calcApply(v => Math.log(v)); }
+function calcLog() { calcApply(v => Math.log10(v)); }
+function calcSqrt(){ calcApply(v => Math.sqrt(v)); }
+
+function calcFactorial() {
+  calcApply(v => {
+    const n = Math.round(v);
+    if (n < 0 || n > 170) throw new Error('out of range');
+    let f = 1;
+    for (let i = 2; i <= n; i++) f *= i;
+    return f;
+  });
+}
+
+function calcConst(name) {
+  const val = name === 'pi' ? Math.PI : Math.E;
+  if (calcJustEq || calcCurrent === '0') { calcCurrent = String(val); calcJustEq = false; }
+  else calcCurrent = String(val);
+  calcRender();
+}
+
+function calcAns() {
+  calcCurrent = String(calcLastAns);
+  calcJustEq = false;
+  calcRender();
+}
+
+function calcEXP() {
+  // Inserts ×10^ — sets up a power-of-10 operation
+  if (calcCurrent === 'Error') return;
+  const exprEl = document.getElementById('calcExpr');
+  if (exprEl) exprEl.textContent = calcCurrent + ' × 10^';
+  calcPrev   = calcCurrent;
+  calcOper   = 'exp10';
+  calcCurrent = '0';
+  calcJustEq = false;
+  calcRender();
+}
+
+// Override calcEquals to handle 'exp10'
+const _origCalcEquals = calcEquals;
+
+function calcEquals(chain = false) {
+  if (calcOper === 'exp10') {
+    const a = parseFloat(calcPrev)    || 0;
+    const b = parseFloat(calcCurrent) || 0;
+    const result = a * Math.pow(10, b);
+    const str = +parseFloat(result.toFixed(10)) + '';
+    if (!chain) {
+      const exprEl = document.getElementById('calcExpr');
+      if (exprEl) exprEl.textContent = calcPrev + ' × 10^' + calcCurrent + ' =';
+      calcLastAns = parseFloat(str) || 0;
+      calcOper = null; calcPrev = ''; calcJustEq = true;
+    }
+    calcCurrent = str;
+    calcRender();
+    return;
+  }
+  if (!calcOper) return;
+  const a = parseFloat(calcPrev)    || 0;
+  const b = parseFloat(calcCurrent) || 0;
+  let result;
+  if      (calcOper === '+') result = a + b;
+  else if (calcOper === '-') result = a - b;
+  else if (calcOper === '*') result = a * b;
+  else if (calcOper === '/') result = b === 0 ? 'Error' : a / b;
+  else if (calcOper === '^') result = Math.pow(a, b);
+  const str = (result === 'Error' || result === undefined)
+    ? 'Error'
+    : +parseFloat(result.toFixed(10)) + '';
+  if (!chain) {
+    const exprEl = document.getElementById('calcExpr');
+    if (exprEl) exprEl.textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
+    if (result !== 'Error' && result !== undefined) calcLastAns = parseFloat(str) || 0;
+    calcOper = null; calcPrev = ''; calcJustEq = true;
+  }
+  calcCurrent = str;
+  calcRender();
+}
+
+function calcParen(p) {
+  // Very simple paren tracking — just adjusts depth visually
+  if (p === '(') {
+    calcParenDepth++;
+    const exprEl = document.getElementById('calcExpr');
+    if (exprEl) exprEl.textContent = (exprEl.textContent || '') + '(';
+  } else {
+    if (calcParenDepth > 0) { calcParenDepth--; }
+    const exprEl = document.getElementById('calcExpr');
+    if (exprEl) exprEl.textContent = (exprEl.textContent || '') + ')';
+  }
 }
 
 // keyboard support
@@ -3536,10 +3905,11 @@ document.addEventListener('keydown', e => {
   else if (e.key === '-') calcOp('-');
   else if (e.key === '*') calcOp('*');
   else if (e.key === '/') { e.preventDefault(); calcOp('/'); }
+  else if (e.key === '^') calcOp('^');
   else if (e.key === 'Enter' || e.key === '=') calcEquals();
   else if (e.key === 'Escape') calcClear();
   else if (e.key === 'Backspace') {
-    if (calcCurrent.length > 1) calcCurrent = calcCurrent.slice(0,-1);
+    if (calcCurrent.length > 1) calcCurrent = calcCurrent.slice(0, -1);
     else calcCurrent = '0';
     calcRender();
   }
@@ -5440,15 +5810,18 @@ function switchPage(page) {
   document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
   document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
   document.getElementById('pagePlan').style.display     = page === 'plan'     ? 'grid' : 'none';
+  document.getElementById('pageTracker').style.display  = page === 'tracker'  ? 'grid' : 'none';
   document.getElementById('fxBar').style.display           = page === 'expenses' ? 'flex' : 'none';
   document.getElementById('expenseControls').style.display = page === 'expenses' ? 'flex' : 'none';
   document.getElementById('ccControls').style.display      = page === 'splitter' ? 'flex' : 'none';
   document.getElementById('hsControls').style.display      = page === 'hangout'  ? 'flex' : 'none';
   document.getElementById('planControls').style.display    = page === 'plan'     ? 'flex' : 'none';
+  document.getElementById('trackerControls').style.display = page === 'tracker'  ? 'flex' : 'none';
   document.getElementById('tabExpenses').classList.toggle('active', page === 'expenses');
   document.getElementById('tabSplitter').classList.toggle('active', page === 'splitter');
   document.getElementById('tabHangout').classList.toggle('active', page === 'hangout');
   document.getElementById('tabPlan').classList.toggle('active', page === 'plan');
+  document.getElementById('tabTracker').classList.toggle('active', page === 'tracker');
   if (page === 'plan') {
     renderGoals();
     renderSubs();
@@ -5463,9 +5836,24 @@ function switchPage(page) {
   if (page === 'expenses') {
     setTimeout(drawChart, 60);
   }
+  if (page === 'tracker') {
+    trkrRenderPersonList();
+    trkrRenderYearTabs();
+    trkrRenderTable();
+    trkrPopulatePersonSelect();
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────
+// Tracker state — declared here so trkrInit() (called below) can access them
+const TRKR_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const TRKR_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let trkrPersons  = [];
+let trkrEntries  = [];
+let trkrSeq      = 1;
+let trkrYears    = [];
+let trkrViewYear = new Date().getFullYear();
+
 loadData();
 renderNec();
 renderPL('shopee');
@@ -5499,6 +5887,7 @@ renderSlogCats();
 loadBillChecks();
 renderSplitArchive('ccArchiveList', 'cc');
 renderSplitArchive('hsArchiveList', 'hs');
+trkrInit();
 
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 1: QUICK BALANCE SYNC
@@ -5781,6 +6170,317 @@ function renderSpendLog() {
       <button class="del-btn" style="padding:2px 6px;font-size:12px;" onclick="removeSpendEntry(${e.id})">✕</button>
     </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MONTHLY TRACKER — multi-person monthly payment tracker
+// ═══════════════════════════════════════════════════════════════
+// (TRKR_MONTHS, trkrPersons, trkrEntries, trkrSeq, trkrYears, trkrViewYear declared near INIT above)
+
+function trkrSave() {
+  try {
+    localStorage.setItem('va_tracker', JSON.stringify({ trkrPersons, trkrEntries, trkrSeq, trkrYears, trkrViewYear }));
+  } catch(e) {}
+}
+
+function trkrLoad() {
+  try {
+    const raw = localStorage.getItem('va_tracker');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (Array.isArray(d.trkrPersons)) trkrPersons  = d.trkrPersons;
+    if (Array.isArray(d.trkrEntries)) trkrEntries  = d.trkrEntries;
+    if (Array.isArray(d.trkrYears))   trkrYears    = d.trkrYears;
+    if (typeof d.trkrSeq === 'number') trkrSeq     = d.trkrSeq;
+    if (typeof d.trkrViewYear === 'number') trkrViewYear = d.trkrViewYear;
+  } catch(e) {}
+  // Always have the current year
+  const curY = new Date().getFullYear();
+  if (!trkrYears.includes(curY)) trkrYears.push(curY);
+  trkrYears.sort((a, b) => a - b);
+}
+
+function trkrFmt(n) { return '₱' + (n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+// ─── Person Management ─────────────────────────────────────────
+function trkrAddPerson() {
+  const inp = document.getElementById('trkrNewPerson');
+  const name = (inp?.value || '').trim();
+  if (!name) { inp?.focus(); return; }
+  if (trkrPersons.includes(name)) {
+    showToast('Person already exists', true); return;
+  }
+  trkrPersons.push(name);
+  inp.value = '';
+  trkrSave();
+  trkrRenderPersonList();
+  trkrPopulatePersonSelect();
+  trkrRenderTable();
+  inp.focus();
+}
+
+function trkrRemovePerson(name) {
+  if (!confirm(`Remove "${name}" and all their entries?`)) return;
+  trkrPersons = trkrPersons.filter(p => p !== name);
+  trkrEntries = trkrEntries.filter(e => e.person !== name);
+  trkrSave();
+  trkrRenderPersonList();
+  trkrPopulatePersonSelect();
+  trkrRenderTable();
+}
+
+function trkrRenderPersonList() {
+  const c = document.getElementById('trkrPersonList');
+  if (!c) return;
+  if (trkrPersons.length === 0) {
+    c.innerHTML = '<span style="font-size:12px; color:var(--text3);">No people added yet.</span>';
+    return;
+  }
+  c.innerHTML = trkrPersons.map(name => `
+    <div class="trkr-person-tag">
+      <span>${escH(name)}</span>
+      <button class="del-btn" style="padding:2px 6px; font-size:12px;" onclick="trkrRemovePerson('${escH(name).replace(/'/g,"\\'")}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function trkrPopulatePersonSelect() {
+  const sel = document.getElementById('trkrSelPerson');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— select person —</option>' +
+    trkrPersons.map(p => `<option value="${escH(p)}"${escH(p) === cur ? ' selected' : ''}>${escH(p)}</option>`).join('');
+}
+
+// ─── Year Management ──────────────────────────────────────────
+function trkrAddYear() {
+  const curMax = trkrYears.length ? Math.max(...trkrYears) : new Date().getFullYear();
+  const newYear = curMax + 1;
+  if (!trkrYears.includes(newYear)) { trkrYears.push(newYear); trkrYears.sort((a,b)=>a-b); }
+  trkrViewYear = newYear;
+  trkrSave();
+  trkrPopulateYearSelect();
+  trkrRenderYearTabs();
+  trkrRenderTable();
+}
+
+function trkrPopulateYearSelect() {
+  const sel = document.getElementById('trkrSelYear');
+  if (!sel) return;
+  // Include current trkrYears + current page view year + current year
+  const allYears = new Set([...trkrYears, trkrViewYear, new Date().getFullYear()]);
+  const sorted = [...allYears].sort((a,b)=>a-b);
+  const cur = sel.value || String(trkrViewYear);
+  sel.innerHTML = sorted.map(y => `<option value="${y}"${String(y) === cur ? ' selected' : ''}>${y}</option>`).join('');
+}
+
+function trkrUpdateMonthSelect() {
+  // nothing special needed for now — month dropdown is always full list
+}
+
+// ─── Entry Management ─────────────────────────────────────────
+function trkrAddEntry() {
+  const person = document.getElementById('trkrSelPerson')?.value;
+  const year   = parseInt(document.getElementById('trkrSelYear')?.value);
+  const month  = parseInt(document.getElementById('trkrSelMonth')?.value);
+  const amt    = parseFloat(document.getElementById('trkrAmt')?.value) || 0;
+  const msg    = document.getElementById('trkrFormMsg');
+
+  if (!person) { if (msg) msg.textContent = '⚠ Please select a person.'; return; }
+  if (!year)   { if (msg) msg.textContent = '⚠ Please select a year.'; return; }
+  if (amt <= 0){ if (msg) msg.textContent = '⚠ Please enter an amount greater than 0.'; return; }
+  if (msg) msg.textContent = '';
+
+  // Check if entry already exists for this person+year+month; if so, update it
+  const existing = trkrEntries.find(e => e.person === person && e.year === year && e.month === month);
+  if (existing) {
+    existing.amount = amt;
+  } else {
+    trkrEntries.push({ id: trkrSeq++, person, year, month, amount: amt });
+    if (!trkrYears.includes(year)) { trkrYears.push(year); trkrYears.sort((a,b)=>a-b); }
+  }
+
+  trkrViewYear = year;
+  trkrSave();
+  trkrRenderYearTabs();
+  trkrRenderTable();
+  trkrRenderSummaryCards();
+
+  // Reset amount
+  const amtEl = document.getElementById('trkrAmt');
+  if (amtEl) { amtEl.value = ''; amtEl.focus(); }
+  showToast('✓ Entry saved');
+}
+
+function trkrDeleteEntry(id) {
+  trkrEntries = trkrEntries.filter(e => e.id !== id);
+  trkrSave();
+  trkrRenderTable();
+  trkrRenderSummaryCards();
+}
+
+// ─── Year Tabs ────────────────────────────────────────────────
+function trkrRenderYearTabs() {
+  const c = document.getElementById('trkrYearTabs');
+  if (!c) return;
+  const allYears = new Set([...trkrYears, trkrViewYear]);
+  const sorted   = [...allYears].sort((a, b) => a - b);
+  c.innerHTML = sorted.map(y => `
+    <button class="trkr-year-tab${y === trkrViewYear ? ' active' : ''}" onclick="trkrSetYear(${y})">${y}</button>
+  `).join('');
+}
+
+function trkrSetYear(y) {
+  trkrViewYear = y;
+  if (!trkrYears.includes(y)) { trkrYears.push(y); trkrYears.sort((a,b)=>a-b); }
+  trkrSave();
+  trkrRenderYearTabs();
+  trkrPopulateYearSelect();
+  trkrRenderTable();
+  trkrRenderSummaryCards();
+}
+
+// ─── Summary Cards ────────────────────────────────────────────
+function trkrRenderSummaryCards() {
+  const c = document.getElementById('trkrSummaryCards');
+  if (!c) return;
+  if (trkrPersons.length === 0) { c.innerHTML = ''; return; }
+
+  const yearEntries = trkrEntries.filter(e => e.year === trkrViewYear);
+  const grandTotal  = yearEntries.reduce((s, e) => s + (e.amount || 0), 0);
+
+  c.innerHTML = trkrPersons.map(person => {
+    const total = yearEntries.filter(e => e.person === person).reduce((s, e) => s + (e.amount || 0), 0);
+    return `<div class="trkr-summary-card">
+      <div class="trkr-summary-name">${escH(person)}</div>
+      <div class="trkr-summary-amt" style="color:${total > 0 ? 'var(--green-text)' : 'var(--text3)'};">${trkrFmt(total)}</div>
+      <div style="font-size:11px; color:var(--text3); margin-top:4px; font-family:'DM Mono',monospace;">${trkrViewYear} total</div>
+    </div>`;
+  }).join('') + (trkrPersons.length > 1 ? `
+    <div class="trkr-summary-card" style="border-color:var(--amber);">
+      <div class="trkr-summary-name" style="color:var(--amber-text);">Grand Total</div>
+      <div class="trkr-summary-amt" style="color:var(--amber-text);">${trkrFmt(grandTotal)}</div>
+      <div style="font-size:11px; color:var(--text3); margin-top:4px; font-family:'DM Mono',monospace;">all people · ${trkrViewYear}</div>
+    </div>
+  ` : '');
+}
+
+// ─── Main Table ───────────────────────────────────────────────
+function trkrRenderTable() {
+  const thead = document.getElementById('trkrTableHead');
+  const tbody = document.getElementById('trkrTableBody');
+  const tfoot = document.getElementById('trkrTableFoot');
+  const emptyMsg = document.getElementById('trkrEmptyMsg');
+  if (!thead || !tbody || !tfoot) return;
+
+  trkrRenderSummaryCards();
+
+  const yearEntries = trkrEntries.filter(e => e.year === trkrViewYear);
+  const hasData = yearEntries.length > 0;
+
+  if (trkrPersons.length === 0) {
+    thead.innerHTML = '<th>Month</th><th>Total</th>';
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:var(--text3); padding:18px 0;">Add people first to start tracking.</td></tr>';
+    tfoot.innerHTML = '';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    return;
+  }
+
+  // Build header
+  thead.innerHTML = '<th>Month</th>' +
+    trkrPersons.map(p => `<th>${escH(p)}</th>`).join('') +
+    (trkrPersons.length > 1 ? '<th style="color:var(--amber-text);">Total</th>' : '');
+
+  // Build rows per month
+  const colTotals = Object.fromEntries(trkrPersons.map(p => [p, 0]));
+  let grandTotal  = 0;
+  let anyData     = false;
+
+  tbody.innerHTML = TRKR_MONTHS.map((mName, mi) => {
+    const rowEntries = yearEntries.filter(e => e.month === mi);
+    const rowTotal   = rowEntries.reduce((s, e) => s + (e.amount || 0), 0);
+    if (rowTotal > 0) anyData = true;
+    grandTotal += rowTotal;
+
+    const cells = trkrPersons.map(person => {
+      const entry = rowEntries.find(e => e.person === person);
+      const amt   = entry ? (entry.amount || 0) : 0;
+      if (amt > 0) colTotals[person] += amt;
+      const cls   = amt > 0 ? 'trkr-pos' : 'trkr-zero';
+      // Clicking a cell lets you edit the entry inline
+      const entryId = entry ? entry.id : null;
+      return `<td class="${cls}"
+        title="Click to edit"
+        style="cursor:pointer;"
+        onclick="trkrCellClick('${escH(person)}', ${trkrViewYear}, ${mi}, ${amt})"
+      >${amt > 0 ? trkrFmt(amt) : '<span style="color:var(--text3);">—</span>'}</td>`;
+    }).join('');
+
+    const totalCell = trkrPersons.length > 1
+      ? `<td class="${rowTotal > 0 ? 'trkr-total-col' : 'trkr-zero'}">${rowTotal > 0 ? trkrFmt(rowTotal) : '—'}</td>`
+      : '';
+
+    return `<tr><td style="color:var(--text); font-family:'Outfit',sans-serif;">${mName}</td>${cells}${totalCell}</tr>`;
+  }).join('');
+
+  // Footer totals
+  const footCells = trkrPersons.map(p =>
+    `<td style="color:var(--green-text);">${colTotals[p] > 0 ? trkrFmt(colTotals[p]) : '—'}</td>`
+  ).join('');
+  const footGrand = trkrPersons.length > 1
+    ? `<td style="color:var(--amber-text);">${grandTotal > 0 ? trkrFmt(grandTotal) : '—'}</td>`
+    : '';
+  tfoot.innerHTML = `<tr><td style="font-family:'Outfit',sans-serif; color:var(--text);">Total ${trkrViewYear}</td>${footCells}${footGrand}</tr>`;
+
+  if (emptyMsg) emptyMsg.style.display = anyData ? 'none' : 'block';
+}
+
+function trkrCellClick(person, year, month, currentAmt) {
+  // Pre-fill the form with this cell's values for easy editing
+  const selPerson = document.getElementById('trkrSelPerson');
+  const selYear   = document.getElementById('trkrSelYear');
+  const selMonth  = document.getElementById('trkrSelMonth');
+  const amtEl     = document.getElementById('trkrAmt');
+
+  // Make sure person exists in select
+  if (selPerson) selPerson.value = person;
+  if (selYear)   selYear.value   = String(year);
+  if (selMonth)  selMonth.value  = String(month);
+  if (amtEl)  {
+    amtEl.value = currentAmt > 0 ? currentAmt : '';
+    amtEl.focus();
+    amtEl.select();
+  }
+  const msg = document.getElementById('trkrFormMsg');
+  if (msg) msg.textContent = `Editing: ${person} · ${TRKR_MONTHS[month]} ${year}${currentAmt > 0 ? ' · current: ' + trkrFmt(currentAmt) : ''}`;
+  // Scroll to form
+  document.getElementById('trkrFormGrid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetTracker() {
+  if (!confirm('Clear all tracker data? This cannot be undone.')) return;
+  trkrPersons = []; trkrEntries = []; trkrSeq = 1;
+  trkrYears = [new Date().getFullYear()]; trkrViewYear = new Date().getFullYear();
+  trkrSave();
+  trkrRenderPersonList();
+  trkrPopulatePersonSelect();
+  trkrRenderYearTabs();
+  trkrRenderTable();
+  showToast('✓ Tracker cleared');
+}
+
+function trkrInit() {
+  trkrLoad();
+  trkrRenderPersonList();
+  trkrPopulatePersonSelect();
+  trkrPopulateYearSelect();
+  trkrRenderYearTabs();
+  // Set year select to current trkrViewYear
+  const ys = document.getElementById('trkrSelYear');
+  if (ys) ys.value = String(trkrViewYear);
+  // Set month select to current month
+  const ms = document.getElementById('trkrSelMonth');
+  if (ms) ms.value = String(new Date().getMonth());
 }
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
