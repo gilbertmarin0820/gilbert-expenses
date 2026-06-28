@@ -3714,30 +3714,6 @@ function calcOp(op) {
   calcRender();
 }
 
-function calcEquals(chain = false) {
-  if (!calcOper) return;
-  const a = parseFloat(calcPrev)    || 0;
-  const b = parseFloat(calcCurrent) || 0;
-  let result;
-  if      (calcOper === '+') result = a + b;
-  else if (calcOper === '-') result = a - b;
-  else if (calcOper === '*') result = a * b;
-  else if (calcOper === '/') result = b === 0 ? 'Error' : a / b;
-  else if (calcOper === '^') result = Math.pow(a, b);
-  const str = (result === 'Error' || result === undefined)
-    ? 'Error'
-    : +parseFloat(result.toFixed(10)) + '';
-  if (!chain) {
-    const exprEl = document.getElementById('calcExpr');
-    if (exprEl) exprEl.textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
-    if (result !== 'Error' && result !== undefined) calcLastAns = parseFloat(str) || 0;
-    calcOper   = null;
-    calcPrev   = '';
-    calcJustEq = true;
-  }
-  calcCurrent = str;
-  calcRender();
-}
 
 function calcClear() {
   calcCurrent = '0'; calcPrev = ''; calcOper = null; calcJustEq = false;
