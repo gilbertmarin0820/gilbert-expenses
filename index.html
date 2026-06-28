@@ -6388,7 +6388,7 @@ function trkrRenderTable() {
       return `<td class="${cls}"
         title="Click to edit"
         style="cursor:pointer;"
-        onclick="trkrCellClick('${escH(person)}', ${trkrViewYear}, ${mi}, ${amt})"
+        onclick="trkrCellClick(this, '${escH(person)}', ${trkrViewYear}, ${mi}, ${amt})"
       >${amt > 0 ? trkrFmt(amt) : '<span style="color:var(--text3);">—</span>'}</td>`;
     }).join('');
 
@@ -6411,26 +6411,72 @@ function trkrRenderTable() {
   if (emptyMsg) emptyMsg.style.display = anyData ? 'none' : 'block';
 }
 
-function trkrCellClick(person, year, month, currentAmt) {
-  // Pre-fill the form with this cell's values for easy editing
-  const selPerson = document.getElementById('trkrSelPerson');
-  const selYear   = document.getElementById('trkrSelYear');
-  const selMonth  = document.getElementById('trkrSelMonth');
-  const amtEl     = document.getElementById('trkrAmt');
+function trkrCellClick(cell, person, year, month, currentAmt) {
+  // Prevent opening a second input if one is already active in this cell
+  if (cell.querySelector('input')) return;
 
-  // Make sure person exists in select
-  if (selPerson) selPerson.value = person;
-  if (selYear)   selYear.value   = String(year);
-  if (selMonth)  selMonth.value  = String(month);
-  if (amtEl)  {
-    amtEl.value = currentAmt > 0 ? currentAmt : '';
-    amtEl.focus();
-    amtEl.select();
-  }
-  const msg = document.getElementById('trkrFormMsg');
-  if (msg) msg.textContent = `Editing: ${person} · ${TRKR_MONTHS[month]} ${year}${currentAmt > 0 ? ' · current: ' + trkrFmt(currentAmt) : ''}`;
-  // Scroll to form
-  document.getElementById('trkrFormGrid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Build the inline input
+  const input = document.createElement('input');
+  input.type        = 'number';
+  input.value       = currentAmt > 0 ? currentAmt : '';
+  input.min         = '0';
+  input.step        = '0.01';
+  input.placeholder = '0';
+  input.style.cssText = [
+    'width:100%',
+    'background:transparent',
+    'border:none',
+    'border-bottom:2px solid var(--teal)',
+    'color:var(--teal-text)',
+    "font-family:'DM Mono',monospace",
+    'font-size:13px',
+    'text-align:right',
+    'outline:none',
+    'padding:2px 0',
+  ].join(';');
+
+  cell.innerHTML = '';
+  cell.style.padding = '4px 8px';
+  cell.appendChild(input);
+  input.focus();
+  if (currentAmt > 0) input.select();
+
+  // Save: upsert or delete (amount 0 removes the entry)
+  const commit = () => {
+    const newAmt = parseFloat(input.value) || 0;
+    const existing = trkrEntries.find(
+      e => e.person === person && e.year === year && e.month === month
+    );
+    if (newAmt > 0) {
+      if (existing) {
+        existing.amount = newAmt;
+      } else {
+        trkrEntries.push({ id: trkrSeq++, person, year, month, amount: newAmt });
+        if (!trkrYears.includes(year)) {
+          trkrYears.push(year);
+          trkrYears.sort((a, b) => a - b);
+        }
+      }
+    } else if (existing) {
+      // Amount cleared to 0 → remove the entry
+      trkrEntries = trkrEntries.filter(e => e.id !== existing.id);
+    }
+    trkrSave();
+    trkrRenderTable();
+    trkrRenderSummaryCards();
+  };
+
+  // Cancel: just re-render without saving
+  const cancel = () => {
+    input.removeEventListener('blur', commit);
+    trkrRenderTable();
+  };
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
 }
 
 function resetTracker() {
