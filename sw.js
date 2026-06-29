@@ -8,7 +8,7 @@
      own JS already has multiple fallback providers and handles failures.
 */
 
-const CACHE_NAME = 'gilbert-expenses-v1';
+const CACHE_NAME = 'gilbert-expenses-v2';
 
 const APP_SHELL = [
   './index.html',

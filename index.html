@@ -1209,7 +1209,55 @@
   <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="trackerControls">
     <button class="action-btn danger" onclick="resetTracker()" title="Clear all tracker data">✕ Reset Tracker</button>
   </div>
+  <!-- Settings / Backup — always visible on every page -->
+  <button class="action-btn" onclick="openSettings()" title="Export / Import data" style="flex-shrink:0; font-size:16px; padding:5px 10px; min-width:36px;">⚙️</button>
 </header>
+
+<!-- EXPORT / IMPORT MODAL -->
+<div id="settingsModal" style="
+  display:none; position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+  align-items:center; justify-content:center; padding:20px;">
+  <div style="
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:24px; width:100%;
+    max-width:420px; box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup</div>
+      <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
+    </div>
+
+    <!-- Export -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📤 Export data</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Downloads a <code style="background:var(--surface3); padding:1px 5px; border-radius:3px; font-size:11px;">.json</code> file with everything — savings, bills, goals, tracker, split history. Copy it to another device or save as backup.
+      </div>
+      <button onclick="exportData()" style="
+        width:100%; padding:10px; background:var(--green-dim); border:1px solid var(--green);
+        color:var(--green-text); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+        Download backup file
+      </button>
+    </div>
+
+    <!-- Import -->
+    <div style="padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📥 Import data</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Restore from a backup file. <strong style="color:var(--amber-text);">This replaces all current data on this device</strong> and reloads the app.
+      </div>
+      <button onclick="importData()" style="
+        width:100%; padding:10px; background:var(--blue-dim); border:1px solid var(--blue);
+        color:var(--blue-text); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+        Choose backup file to restore
+      </button>
+    </div>
+
+    <div id="settingsMsg" style="font-size:12px; color:var(--text3); margin-top:14px; text-align:center; min-height:18px;"></div>
+  </div>
+</div>
 
 <!-- PAGE NAV -->
 <nav class="page-nav">
@@ -2262,6 +2310,9 @@
   <div>
     <div class="section-title">Add / Edit Entry</div>
     <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; padding:8px 12px; background:var(--surface2); border-radius:var(--radius-sm); border-left:3px solid var(--teal);">
+        💡 <strong style="color:var(--text2);">Tip:</strong> Tap any cell in the Monthly Breakdown table to edit it directly. Use this form to add entries for months that haven't been filled in yet.
+      </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;" class="trkr-add-row" id="trkrFormGrid">
         <div>
           <div class="input-label" style="margin-bottom:6px;">Person</div>
@@ -3467,6 +3518,8 @@ function renderNec() {
     tbody.appendChild(tr);
   });
   recalcAll();
+  // Keep bill checklist in sync when necessities are added, removed, or renamed
+  renderBillChecklist();
 }
 
 // Refreshes just the ×N badge + "= ₱effective" text for ONE necessities row,
@@ -3638,6 +3691,7 @@ function renderPL(type) {
   });
   // Note: do NOT call recalcAll() here — renderPL is called from recalcAll
   // (via refreshPLBadges) and from explicit callers that do their own recalcAll.
+  renderBillChecklist();
 }
 
 // ─── SCIENTIFIC CALCULATOR ────────────────────────────────────
@@ -4717,6 +4771,7 @@ function renderSubs() {
     c.appendChild(div);
   });
   updateSubsTotal();
+  renderBillChecklist();
 }
 
 function getSubsSum() {
@@ -5856,7 +5911,6 @@ calInit();
 updateConverter();
 
 // ─── NEW FEATURE INIT ─────────────────────────────────────────
-renderQBS();
 loadSpendLog();
 renderSpendLog();
 renderSlogCats();
@@ -5864,41 +5918,6 @@ loadBillChecks();
 renderSplitArchive('ccArchiveList', 'cc');
 renderSplitArchive('hsArchiveList', 'hs');
 trkrInit();
-
-// ═══════════════════════════════════════════════════════════════
-// FEATURE 1: QUICK BALANCE SYNC
-// ═══════════════════════════════════════════════════════════════
-// (QBS_BANKS and quickBalances declared at top of script)
-
-function renderQBS() {
-  const grid = document.getElementById('qbsGrid');
-  if (!grid) return;
-  grid.innerHTML = QBS_BANKS.map(b => `
-    <div class="qbs-item">
-      <div class="qbs-bank-label">
-        <span class="qbs-dot" style="background:${b.color};"></span>${b.name}
-      </div>
-      <input class="qbs-input" type="number" min="0" step="0.01" inputmode="decimal"
-        placeholder="0.00" value="${quickBalances[b.id] || ''}"
-        oninput="quickBalances['${b.id}']=this.value; updateQBSTotal(); saveData()">
-    </div>
-  `).join('');
-  updateQBSTotal();
-}
-
-function updateQBSTotal() {
-  const total = QBS_BANKS.reduce((s, b) => s + (parseFloat(quickBalances[b.id]) || 0), 0);
-  const el = document.getElementById('qbsTotal');
-  if (el) el.textContent = fPHP(total);
-}
-
-function syncQBSToSavings() {
-  const total = QBS_BANKS.reduce((s, b) => s + (parseFloat(quickBalances[b.id]) || 0), 0);
-  document.getElementById('savingsInput').value = total.toFixed(2);
-  recalcAll();
-  saveData();
-  showToast('✓ Savings synced · ' + fPHP(total));
-}
 
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 2: BILL PAYMENT CHECKLIST
@@ -6503,6 +6522,117 @@ function trkrInit() {
   // Set month select to current month
   const ms = document.getElementById('trkrSelMonth');
   if (ms) ms.value = String(new Date().getMonth());
+}
+
+// ─── EXPORT / IMPORT (Backup & Restore) ──────────────────────
+const BACKUP_KEYS = [
+  'va_payroll_data',
+  'va_cc_split_data',
+  'va_hangout_split_data',
+  'va_plan_data',
+  'va_tracker',
+  'va_split_archive',
+  'va_bill_checklist',
+  'va_expense_log',
+  'va_spend_log',
+  'va_fx_rate',
+];
+
+function openSettings() {
+  const modal = document.getElementById('settingsModal');
+  modal.style.display = 'flex';
+  document.getElementById('settingsMsg').textContent = '';
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+
+// Close modal when clicking outside the panel
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+function exportData() {
+  const backup = {
+    appName:  'GibsXpenses',
+    version:  2,
+    exported: new Date().toISOString(),
+    data:     {},
+  };
+  BACKUP_KEYS.forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val !== null) backup.data[key] = val;
+  });
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'gibsxpenses-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  const keyCount = Object.keys(backup.data).length;
+  document.getElementById('settingsMsg').textContent =
+    '✓ Exported ' + keyCount + ' data section' + (keyCount === 1 ? '' : 's') + ' successfully.';
+  document.getElementById('settingsMsg').style.color = 'var(--green-text)';
+}
+
+function importData() {
+  const input    = document.createElement('input');
+  input.type     = 'file';
+  input.accept   = '.json,application/json';
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text   = await file.text();
+      const backup = JSON.parse(text);
+
+      // Basic validation
+      if (!backup || backup.appName !== 'GibsXpenses' || !backup.data) {
+        document.getElementById('settingsMsg').textContent = '✗ Invalid backup file — not a GibsXpenses export.';
+        document.getElementById('settingsMsg').style.color = 'var(--red-text)';
+        return;
+      }
+
+      const keyCount = Object.keys(backup.data).length;
+      const exported = backup.exported
+        ? new Date(backup.exported).toLocaleString()
+        : 'unknown date';
+
+      const confirmed = confirm(
+        'Restore from this backup?\n\n' +
+        '• Exported: ' + exported + '\n' +
+        '• Contains: ' + keyCount + ' data section' + (keyCount === 1 ? '' : 's') + '\n\n' +
+        'This will REPLACE all current data on this device.\n' +
+        'The app will reload automatically.'
+      );
+      if (!confirmed) return;
+
+      // Restore every key from the backup
+      Object.entries(backup.data).forEach(([key, val]) => {
+        try { localStorage.setItem(key, val); } catch(e) {
+          console.warn('Failed to restore key:', key, e);
+        }
+      });
+
+      document.getElementById('settingsMsg').textContent = '✓ Import successful — reloading…';
+      document.getElementById('settingsMsg').style.color = 'var(--green-text)';
+      setTimeout(() => location.reload(), 1200);
+
+    } catch(e) {
+      document.getElementById('settingsMsg').textContent = '✗ Could not read file — make sure it is a valid GibsXpenses backup.';
+      document.getElementById('settingsMsg').style.color = 'var(--red-text)';
+    }
+  };
 }
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
