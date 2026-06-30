@@ -3045,6 +3045,14 @@ function recalcAll() {
   } else {
     bonusRow.style.display = 'none';
   }
+  // Back-fill bonus into the payroll snapshot now that it's been computed
+  if (window._lastPayroll) {
+    const bonusUSDVal = bonusEnabled
+      ? (parseFloat(document.getElementById('bonusUSD').value) || 0)
+      : 0;
+    window._lastPayroll.bonusUSD = +bonusUSDVal.toFixed(2);
+    window._lastPayroll.bonusPHP = +bonusPHP.toFixed(2);
+  }
 
   const savings = parseFloat(document.getElementById('savingsInput').value) || 0;
   document.getElementById('savingsPlusPayroll').textContent = fPHP(savings + netPHP + bonusPHP);
@@ -5692,9 +5700,11 @@ function logPayrollSnapshot() {
     mode: snap.mode,
     rangeLabel: payrollRangeLabel(snap),
     grossUSD: +snap.grossUSD.toFixed(2),
-    netUSD: +snap.netUSD.toFixed(2),
-    netPHP: +snap.netPHP.toFixed(2),
-    fxRate: snap.fxRate,
+    netUSD:   +snap.netUSD.toFixed(2),
+    netPHP:   +snap.netPHP.toFixed(2),
+    fxRate:   snap.fxRate,
+    bonusUSD: +(snap.bonusUSD || 0).toFixed(2),
+    bonusPHP: +(snap.bonusPHP || 0).toFixed(2),
   };
 
   const list = loadSalaryHistory();
@@ -5729,6 +5739,9 @@ function renderSalaryHistory() {
   }
   c.innerHTML = list.map(e => {
     const dateStr = new Date(e.loggedAt).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+    const bonusLine = (e.bonusUSD > 0 || e.bonusPHP > 0)
+      ? `<span class="arch-person">Bonus <span class="arch-person-amt" style="color:var(--purple-text);">${fUSD(e.bonusUSD)} · ${fPHP(e.bonusPHP)}</span></span>`
+      : '';
     return `<div class="arch-entry">
       <div class="arch-header">
         <span class="arch-badge" style="background:var(--teal-dim);color:var(--teal-text);border:1px solid var(--teal);">${escH(e.rangeLabel)}</span>
@@ -5740,6 +5753,7 @@ function renderSalaryHistory() {
         <span class="arch-person">Gross <span class="arch-person-amt">${fUSD(e.grossUSD)}</span></span>
         <span class="arch-person">Net <span class="arch-person-amt">${fUSD(e.netUSD)}</span></span>
         <span class="arch-person">Rate <span class="arch-person-amt">${e.fxRate > 0 ? '₱' + e.fxRate.toFixed(4) : '—'}</span></span>
+        ${bonusLine}
       </div>
     </div>`;
   }).join('');
