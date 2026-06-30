@@ -1423,6 +1423,10 @@
           <div style="font-family:'DM Mono',monospace; font-size:13px; color:var(--text2); margin-top:3px;" id="sDailyBreak">—</div>
         </div>
       </div>
+      <button class="add-btn" style="margin-top:10px; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
+        onclick="logPayrollSnapshot()" title="Save this payroll period to your Salary History">
+        💾 Log this payroll
+      </button>
     </div>
   </div>
 
@@ -1448,6 +1452,18 @@
         <div class="sal-php" id="salMonthPHP">₱—</div>
         <div class="sal-note">≈ 21.67 working days / month</div>
       </div>
+    </div>
+  </div>
+
+  <!-- SALARY HISTORY LOG -->
+  <div>
+    <div class="section-title">Salary History</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Tap "💾 Log this payroll" above to save a snapshot of the current period — date range, gross USD, net PHP, and the exchange rate used. Builds a record over time for visas, loans, or tracking income trends.
+      </div>
+      <div id="salaryHistoryList"><div style="font-size:12px;color:var(--text3);padding:8px 0;">No payroll periods logged yet.</div></div>
+      <button class="action-btn danger" style="margin-top:10px;" onclick="clearSalaryHistory()" title="Clear all logged payroll periods">✕ Clear history</button>
     </div>
   </div>
 
@@ -1962,6 +1978,37 @@
         </div>
       </div>
 
+      <!-- VAT Calculator -->
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="sav-panel-title" style="margin-bottom:14px;">
+          <span style="color:var(--amber-text); font-size:16px;">%</span>
+          VAT Calculator
+          <span style="font-size:11px; color:var(--text3); font-weight:400;">12% — for invoices &amp; quotes</span>
+        </div>
+        <div class="input-block" style="margin-bottom:14px;">
+          <label class="input-label">Price (VAT-inclusive)</label>
+          <div class="input-row" style="border-color: var(--amber);">
+            <div class="input-prefix" style="color:var(--amber-text);">₱</div>
+            <input class="big-input" type="number" id="vatPriceInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+              oninput="calcVAT()" style="color:var(--amber-text);">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">VAT-exclusive (÷1.12)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--text);" id="vatExclusive">₱—</div>
+          </div>
+          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">VAT (12%)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--red-text);" id="vatAmount">₱—</div>
+          </div>
+          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--amber);">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Total (with VAT)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--amber-text);" id="vatTotal">₱—</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2051,6 +2098,10 @@
         <span id="ccGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
       <div id="ccUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+      <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
+        onclick="copySplitMessage('cc')" title="Copy a plain name — amount breakdown to paste in chat">
+        📋 Copy message
+      </button>
     </div>
   </div>
 
@@ -2112,6 +2163,10 @@
         <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
       <div id="hsUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+      <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
+        onclick="copySplitMessage('hs')" title="Copy a plain name — amount breakdown to paste in chat">
+        📋 Copy message
+      </button>
     </div>
   </div>
 
@@ -2955,6 +3010,22 @@ function recalcAll() {
   document.getElementById('sTax').textContent       = '-' + fUSD(taxAmt);
   document.getElementById('sNetUSD').textContent    = fUSD(netUSD);
   document.getElementById('sNetPHP').textContent    = fxRate > 0 ? fPHP(netPHP) : '₱—';
+
+  // Snapshot of the current payroll period, used by the Salary History Log feature
+  window._lastPayroll = {
+    mode: payMode,
+    totalDays: totalDays,
+    grossUSD: grossUSD,
+    netUSD: netUSD,
+    netPHP: netPHP,
+    fxRate: fxRate,
+    dateStart: document.getElementById('dateStart').value,
+    dateEnd: document.getElementById('dateEnd').value,
+    weeksWorked: parseFloat(document.getElementById('weeksWorked').value) || 0,
+    dailyHours: payMode === 'weekly'
+      ? (parseFloat(document.getElementById('dailyHours').value) || 0)
+      : (parseFloat(document.getElementById('dailyHoursM').value) || 0),
+  };
 
   // bonus
   const bonusEnabled = document.getElementById('bonusEnabled').checked;
@@ -3953,6 +4024,63 @@ function showToast(msg, err=false) {
   setTimeout(() => { t.classList.remove('show'); }, 3500);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FEATURE: SPLIT MESSAGE GENERATOR
+// Builds a plain "Name - Amount" breakdown (one line per person) and
+// copies it to the clipboard, ready to paste into Messenger/GCash/etc.
+// ═══════════════════════════════════════════════════════════════
+function formatSplitAmt(n) {
+  const r = Math.round(n * 100) / 100;
+  return r.toLocaleString('en-PH', { minimumFractionDigits: r % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+}
+
+function copySplitMessage(type) {
+  const people = type === 'cc' ? ccPeople : hsPeople;
+  const totals = type === 'cc' ? _ccLastTotals : _hsLastTotals;
+
+  const rows = people
+    .filter(p => (totals[p.id] || 0) > 0.005)
+    .map(p => ({ name: p.name, amt: totals[p.id] || 0 }));
+
+  if (rows.length === 0) {
+    showToast('Nothing to copy yet — add people and amounts first', true);
+    return;
+  }
+
+  const maxLen = Math.max(...rows.map(r => r.name.length));
+  const text = rows.map(r => r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt)).join('\n');
+
+  copyTextToClipboard(text, '📋 Message copied — ready to paste');
+}
+
+function copyTextToClipboard(text, successMsg) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast(successMsg || '📋 Copied to clipboard'))
+      .catch(() => fallbackCopyText(text, successMsg));
+  } else {
+    fallbackCopyText(text, successMsg);
+  }
+}
+
+function fallbackCopyText(text, successMsg) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) showToast(successMsg || '📋 Copied to clipboard');
+    else showToast('Could not copy — try selecting the text manually', true);
+  } catch (e) {
+    showToast('Could not copy — try selecting the text manually', true);
+  }
+}
+
 // ════════════════════════════════════════════════════════════════
 // CREDIT CARD SPLITTER — completely independent of the Expenses page.
 // Own data model, own localStorage key, own render/save/load.
@@ -3960,6 +4088,7 @@ function showToast(msg, err=false) {
 // ════════════════════════════════════════════════════════════════
 
 let ccPeople     = [];   // [{ id, name }]
+let _ccLastTotals = {};  // last computed { personId: amountOwed } — used by Copy message
 let ccStores     = [];   // [{ name, amt, people:[personId,...] }]
 let ccPersonSeq  = 1;
 
@@ -4118,6 +4247,9 @@ function updateCCSummary() {
     }
   });
 
+  // Stash for the "Copy message" feature
+  _ccLastTotals = totals;
+
   const listEl = document.getElementById('ccSummaryList');
   if (ccPeople.length === 0) {
     listEl.innerHTML = '<div style="font-size:12px; color:var(--text3);">Add people above to see totals.</div>';
@@ -4243,6 +4375,7 @@ function loadCC() {
 // ════════════════════════════════════════════════════════════════
 
 let hsPeople    = [];                  // [{ id, name }]
+let _hsLastTotals = {};                // last computed { personId: amountOwed } — used by Copy message
 let hsPersonSeq = 1;
 let hsItems     = { drinks: [], food: [] }; // each: [{ name, amt, people:[personId,...] }]
 
@@ -4412,6 +4545,9 @@ function updateHSSummary() {
       }
     });
   });
+
+  // Stash for the "Copy message" feature
+  _hsLastTotals = totals;
 
   const listEl = document.getElementById('hsSummaryList');
   if (hsPeople.length === 0) {
@@ -5496,6 +5632,119 @@ function updateConvQuickBtns() {
   `).join('');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FEATURE: VAT CALCULATOR (12%)
+// ═══════════════════════════════════════════════════════════════
+const VAT_RATE = 0.12;
+function calcVAT() {
+  const price = parseFloat(document.getElementById('vatPriceInput').value) || 0;
+  const exclusive = price / (1 + VAT_RATE);
+  const vatAmt    = price - exclusive;
+
+  document.getElementById('vatExclusive').textContent = price > 0 ? fPHP(exclusive) : '₱—';
+  document.getElementById('vatAmount').textContent     = price > 0 ? fPHP(vatAmt)    : '₱—';
+  document.getElementById('vatTotal').textContent      = price > 0 ? fPHP(price)     : '₱—';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE: SALARY HISTORY LOG
+// ═══════════════════════════════════════════════════════════════
+const SALARY_HISTORY_KEY = 'va_salary_history';
+const SALARY_HISTORY_MAX = 200;
+
+function loadSalaryHistory() {
+  try {
+    const raw = localStorage.getItem(SALARY_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveSalaryHistoryList(list) {
+  try { localStorage.setItem(SALARY_HISTORY_KEY, JSON.stringify(list)); } catch(e) {}
+}
+
+function payrollRangeLabel(snap) {
+  if (snap.mode === 'weekly') {
+    const w = snap.weeksWorked || 0;
+    return (w || '0') + ' week' + (w === 1 ? '' : 's') + ' @ ' + (snap.dailyHours || 0) + ' hrs/day';
+  }
+  if (snap.dateStart && snap.dateEnd) {
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+    return fmt(snap.dateStart) + ' → ' + fmt(snap.dateEnd);
+  }
+  return 'No date range set';
+}
+
+function logPayrollSnapshot() {
+  const snap = window._lastPayroll;
+  if (!snap || !(snap.grossUSD > 0)) {
+    showToast('Nothing to log yet — enter your hours/rate first', true);
+    return;
+  }
+  if (snap.mode === 'monthly' && (!snap.dateStart || !snap.dateEnd)) {
+    showToast('Pick a start and end date first', true);
+    return;
+  }
+
+  const entry = {
+    id: Date.now(),
+    loggedAt: new Date().toISOString(),
+    mode: snap.mode,
+    rangeLabel: payrollRangeLabel(snap),
+    grossUSD: +snap.grossUSD.toFixed(2),
+    netUSD: +snap.netUSD.toFixed(2),
+    netPHP: +snap.netPHP.toFixed(2),
+    fxRate: snap.fxRate,
+  };
+
+  const list = loadSalaryHistory();
+  list.unshift(entry);
+  if (list.length > SALARY_HISTORY_MAX) list.length = SALARY_HISTORY_MAX;
+  saveSalaryHistoryList(list);
+  renderSalaryHistory();
+  showToast('💾 Payroll period logged');
+}
+
+function deleteSalaryEntry(id) {
+  const list = loadSalaryHistory().filter(e => e.id !== id);
+  saveSalaryHistoryList(list);
+  renderSalaryHistory();
+}
+
+function clearSalaryHistory() {
+  if (loadSalaryHistory().length === 0) return;
+  if (!confirm('Clear all logged payroll periods? This cannot be undone.')) return;
+  saveSalaryHistoryList([]);
+  renderSalaryHistory();
+  showToast('✓ Salary history cleared');
+}
+
+function renderSalaryHistory() {
+  const c = document.getElementById('salaryHistoryList');
+  if (!c) return;
+  const list = loadSalaryHistory();
+  if (list.length === 0) {
+    c.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">No payroll periods logged yet.</div>';
+    return;
+  }
+  c.innerHTML = list.map(e => {
+    const dateStr = new Date(e.loggedAt).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+    return `<div class="arch-entry">
+      <div class="arch-header">
+        <span class="arch-badge" style="background:var(--teal-dim);color:var(--teal-text);border:1px solid var(--teal);">${escH(e.rangeLabel)}</span>
+        <span class="arch-date">logged ${dateStr}</span>
+        <span class="arch-total">${fPHP(e.netPHP)}</span>
+        <button class="action-btn danger" style="padding:3px 8px; min-height:auto;" onclick="deleteSalaryEntry(${e.id})" title="Delete this entry">✕</button>
+      </div>
+      <div class="arch-people">
+        <span class="arch-person">Gross <span class="arch-person-amt">${fUSD(e.grossUSD)}</span></span>
+        <span class="arch-person">Net <span class="arch-person-amt">${fUSD(e.netUSD)}</span></span>
+        <span class="arch-person">Rate <span class="arch-person-amt">${e.fxRate > 0 ? '₱' + e.fxRate.toFixed(4) : '—'}</span></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── PAYDAY CALENDAR ──────────────────────────────────────────
 const CAL_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -5917,6 +6166,7 @@ renderSlogCats();
 loadBillChecks();
 renderSplitArchive('ccArchiveList', 'cc');
 renderSplitArchive('hsArchiveList', 'hs');
+renderSalaryHistory();
 trkrInit();
 
 // ═══════════════════════════════════════════════════════════════
@@ -6536,6 +6786,7 @@ const BACKUP_KEYS = [
   'va_expense_log',
   'va_spend_log',
   'va_fx_rate',
+  'va_salary_history',
 ];
 
 function openSettings() {
