@@ -20,6 +20,17 @@
 <!-- Android Chrome standalone-mode support -->
 <meta name="mobile-web-app-capable" content="yes">
 
+<!-- Apply saved theme BEFORE first paint so there's no dark→light flash -->
+<script>
+  try {
+    if (localStorage.getItem('va_theme') === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', '#f2f4f8');
+    }
+  } catch(e) {}
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -52,6 +63,43 @@
     --teal-text: #2dd4bf;
     --radius: 10px;
     --radius-sm: 6px;
+    --shadow-card: rgba(0,0,0,0.4);
+    --shadow-modal: rgba(0,0,0,0.5);
+  }
+  /* ── LIGHT THEME ─────────────────────────────────────────────
+     Toggled via ⚙️ Settings → Appearance. Saved in localStorage
+     ('va_theme') and applied before first paint by the tiny
+     script in <head>, so there's no dark→light flash on load. */
+  html[data-theme="light"] {
+    --bg: #f2f4f8;
+    --surface: #ffffff;
+    --surface2: #f0f3f7;
+    --surface3: #e7ecf2;
+    --border: #d0d7de;
+    --border2: #afb8c1;
+    --text: #1f2328;
+    --text2: #57606a;
+    --text3: #77808a;
+    --green: #2da44e;
+    --green-dim: #dafbe1;
+    --green-text: #1a7f37;
+    --red: #cf222e;
+    --red-dim: #ffebe9;
+    --red-text: #c1272d;
+    --amber: #bf8700;
+    --amber-dim: #fff3c4;
+    --amber-text: #9a6700;
+    --blue: #0969da;
+    --blue-dim: #ddf4ff;
+    --blue-text: #0757b3;
+    --purple: #8250df;
+    --purple-dim: #f3eaff;
+    --purple-text: #6f42c1;
+    --teal: #0d9488;
+    --teal-dim: #d3f2ee;
+    --teal-text: #0c7d73;
+    --shadow-card: rgba(140,149,159,0.25);
+    --shadow-modal: rgba(31,35,40,0.25);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -716,7 +764,7 @@
     .card          {
       padding: 14px;
       /* subtle shadow makes cards "float" above the bg on mobile */
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 8px var(--shadow-card);
     }
     .two-col           { grid-template-columns: 1fr; }
     .hours-inputs      { grid-template-columns: 1fr; }
@@ -1221,10 +1269,32 @@
   <div style="
     background:var(--surface); border:1px solid var(--border);
     border-radius:var(--radius); padding:24px; width:100%;
-    max-width:420px; box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+    max-width:420px; box-shadow:0 16px 48px var(--shadow-modal);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
       <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup</div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
+    </div>
+
+    <!-- Appearance / Theme -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🎨 Appearance</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Light mode is easier to read outdoors in daylight. Your choice is remembered on this device.
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="themeBtnDark" onclick="setTheme('dark')" style="
+          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+          🌙 Dark
+        </button>
+        <button id="themeBtnLight" onclick="setTheme('light')" style="
+          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+          ☀️ Light
+        </button>
+      </div>
     </div>
 
     <!-- Export -->
@@ -2077,6 +2147,15 @@
           onkeydown="if(event.key==='Enter'){addPerson();}">
         <button class="add-btn" style="width:auto; flex-shrink:0; padding:0 20px;" onclick="addPerson()">+ Add person</button>
       </div>
+      <!-- Saved squads — one tap loads a whole group of names -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">👥 Saved Squads — tap to load</div>
+        <div id="ccSquadChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;"></div>
+        <button class="add-btn" style="border-color:var(--purple); color:var(--purple-text); border-style:dashed;"
+          onclick="saveSquadFrom('cc')" title="Save the people above as a reusable group">
+          💾 Save current people as a squad
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2134,6 +2213,15 @@
         <input type="text" id="hsNewPersonName" class="nec-cat-input" placeholder="Person's name" style="flex:1"
           onkeydown="if(event.key==='Enter'){addHSPerson();}">
         <button class="add-btn" style="width:auto; flex-shrink:0; padding:0 20px;" onclick="addHSPerson()">+ Add person</button>
+      </div>
+      <!-- Saved squads — one tap loads a whole group of names -->
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">👥 Saved Squads — tap to load</div>
+        <div id="hsSquadChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;"></div>
+        <button class="add-btn" style="border-color:var(--purple); color:var(--purple-text); border-style:dashed;"
+          onclick="saveSquadFrom('hs')" title="Save the people above as a reusable group">
+          💾 Save current people as a squad
+        </button>
       </div>
     </div>
   </div>
@@ -2335,6 +2423,62 @@
         <div id="cfSummary" class="cf-summary" style="display:none;"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- OVERTIME PAY CALCULATOR (DOLE) -->
+  <div>
+    <div class="section-title">⏰ Overtime Pay Calculator (DOLE)</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Based on DOLE rules for private-sector employees. Enter your daily rate and total hours worked that day — the hourly rate is your daily rate ÷ 8, hours beyond 8 are paid at the OT premium for that day type.
+      </div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">Daily rate (₱)</label>
+          <div class="input-row">
+            <div class="input-prefix">₱ / day</div>
+            <input class="big-input" type="number" id="otDailyRate" min="0" step="1" inputmode="decimal" placeholder="e.g. 800" oninput="otCalc()">
+          </div>
+        </div>
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">Hours worked</label>
+          <div class="input-row">
+            <div class="input-prefix">hrs</div>
+            <input class="big-input" type="number" id="otHours" min="0" max="24" step="0.5" inputmode="decimal" placeholder="e.g. 10" oninput="otCalc()">
+          </div>
+        </div>
+      </div>
+
+      <div class="input-block" style="margin-bottom:16px;">
+        <label class="input-label">Day type</label>
+        <select id="otDayType" class="nec-cat-input" style="width:100%; height:42px; font-size:14px; cursor:pointer;" onchange="otCalc()">
+          <option value="regular">Regular working day — OT at 125%</option>
+          <option value="rest">Rest day — 130% · OT 169%</option>
+          <option value="special">Special (non-working) holiday — 130% · OT 169%</option>
+          <option value="specialRest">Special holiday + rest day — 150% · OT 195%</option>
+          <option value="regularHol">Regular holiday — 200% · OT 260%</option>
+          <option value="regularHolRest">Regular holiday + rest day — 260% · OT 338%</option>
+        </select>
+      </div>
+
+      <!-- Results -->
+      <div style="padding:14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label">Hourly rate (daily ÷ 8)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otHourly">—</span></div>
+        <div class="nb-row"><span class="nb-label" id="otBaseLabel">First 8 hrs</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otBasePay">—</span></div>
+        <div class="nb-row"><span class="nb-label" id="otOTLabel">Overtime</span><span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="otOTPay">—</span></div>
+        <div class="divider"></div>
+        <div class="nb-row" style="font-size:15px;">
+          <span class="nb-label" style="color:var(--text);">= Total pay for this day</span>
+          <span class="c-green" id="otTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span>
+        </div>
+        <div id="otVsNormal" style="font-size:11px; color:var(--text3); margin-top:8px;"></div>
+      </div>
+
+      <div style="font-size:11px; color:var(--text3); margin-top:12px; line-height:1.6;">
+        📌 Premiums per the Labor Code: regular-day OT is hourly × 125%. Rest days and special holidays pay 130% for the first 8 hrs, and OT on those days is 130% × 130% = 169%. Regular holidays pay 200% (260% OT). Night shift differential (+10% for 10 PM–6 AM work) is not included here.
+      </div>
     </div>
   </div>
 
@@ -5114,7 +5258,7 @@ function drawChart() {
   ctx.clearRect(0, 0, W, W);
 
   if (total === 0) {
-    ctx.fillStyle = '#6e7681';
+    ctx.fillStyle = cssVar('--text3');
     ctx.font = '13px Outfit, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -5137,7 +5281,7 @@ function drawChart() {
     ctx.closePath();
     ctx.fillStyle = seg.color;
     ctx.fill();
-    ctx.strokeStyle = '#0d1117';
+    ctx.strokeStyle = cssVar('--bg');
     ctx.lineWidth = 2;
     ctx.stroke();
     angle += slice;
@@ -5146,18 +5290,18 @@ function drawChart() {
   // Donut hole
   ctx.beginPath();
   ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
-  ctx.fillStyle = '#161b22';
+  ctx.fillStyle = cssVar('--surface');
   ctx.fill();
 
   // Center labels
   const fs = Math.max(11, Math.round(W * 0.075));
-  ctx.fillStyle = '#e6edf3';
+  ctx.fillStyle = cssVar('--text');
   ctx.font = `600 ${fs}px DM Mono, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(fPHP(total), cx, cy - Math.round(W * 0.035));
   ctx.font = `${Math.round(W * 0.055)}px Outfit, sans-serif`;
-  ctx.fillStyle = '#8b949e';
+  ctx.fillStyle = cssVar('--text2');
   ctx.fillText('total', cx, cy + Math.round(W * 0.065));
 
   // Legend
@@ -5214,7 +5358,7 @@ function drawMiniChart(segments, total) {
   const legendEl = document.getElementById('miniChartLegend');
 
   if (!total || total < 0.005) {
-    ctx.fillStyle = '#6e7681';
+    ctx.fillStyle = cssVar('--text3');
     ctx.font = '10px Outfit, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -5237,7 +5381,7 @@ function drawMiniChart(segments, total) {
     ctx.closePath();
     ctx.fillStyle = seg.color;
     ctx.fill();
-    ctx.strokeStyle = '#161b22';
+    ctx.strokeStyle = cssVar('--surface');
     ctx.lineWidth = 1.5;
     ctx.stroke();
     angle += slice;
@@ -5246,11 +5390,11 @@ function drawMiniChart(segments, total) {
   // Donut hole
   ctx.beginPath();
   ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
-  ctx.fillStyle = '#161b22';
+  ctx.fillStyle = cssVar('--surface');
   ctx.fill();
 
   // Center label
-  ctx.fillStyle = '#8b949e';
+  ctx.fillStyle = cssVar('--text2');
   ctx.font = '9px Outfit, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -6182,6 +6326,8 @@ renderSplitArchive('ccArchiveList', 'cc');
 renderSplitArchive('hsArchiveList', 'hs');
 renderSalaryHistory();
 trkrInit();
+// (Squads, OT calculator, and theme UI init at the very end of this
+//  script — their state vars are declared later, after this block.)
 
 // ═══════════════════════════════════════════════════════════════
 // FEATURE 2: BILL PAYMENT CHECKLIST
@@ -6801,12 +6947,232 @@ const BACKUP_KEYS = [
   'va_spend_log',
   'va_fx_rate',
   'va_salary_history',
+  'va_squads',
+  'va_ot_calc',
+  'va_theme',
 ];
+
+// ═══════════════════════════════════════════════════════════════
+// OVERTIME PAY CALCULATOR — DOLE premium rates
+// Hourly rate = daily rate ÷ 8. First 8 hrs paid at the day-type
+// base multiplier; hours beyond 8 at the OT multiplier (base ×
+// 125% on regular days, base × 130% on rest days / holidays).
+// ═══════════════════════════════════════════════════════════════
+const OT_TYPES = {
+  regular:        { base: 1.00, ot: 1.25, baseLabel: '100%' },
+  rest:           { base: 1.30, ot: 1.69, baseLabel: '130%' },
+  special:        { base: 1.30, ot: 1.69, baseLabel: '130%' },
+  specialRest:    { base: 1.50, ot: 1.95, baseLabel: '150%' },
+  regularHol:     { base: 2.00, ot: 2.60, baseLabel: '200%' },
+  regularHolRest: { base: 2.60, ot: 3.38, baseLabel: '260%' },
+};
+
+function otCalc() {
+  const daily = parseFloat(document.getElementById('otDailyRate').value) || 0;
+  const hours = Math.max(0, parseFloat(document.getElementById('otHours').value) || 0);
+  const type  = document.getElementById('otDayType').value;
+  const t     = OT_TYPES[type] || OT_TYPES.regular;
+
+  const hourly    = daily / 8;
+  const baseHrs   = Math.min(hours, 8);
+  const otHrs     = Math.max(0, hours - 8);
+  const basePay   = hourly * t.base * baseHrs;
+  const otPay     = hourly * t.ot   * otHrs;
+  const total     = basePay + otPay;
+  const normalPay = hourly * hours;   // what the same hours pay at plain 100%
+
+  document.getElementById('otHourly').textContent  = daily > 0 ? fPHP(hourly) + ' /hr' : '—';
+  document.getElementById('otBaseLabel').textContent =
+    'First ' + (baseHrs ? baseHrs : 8) + ' hrs × ' + Math.round(t.base * 100) + '%';
+  document.getElementById('otBasePay').textContent = hours > 0 && daily > 0 ? fPHP(basePay) : '—';
+  document.getElementById('otOTLabel').textContent =
+    otHrs > 0 ? 'OT ' + otHrs + ' hr' + (otHrs === 1 ? '' : 's') + ' × ' + Math.round(t.ot * 100) + '%'
+              : 'Overtime (hours beyond 8) × ' + Math.round(t.ot * 100) + '%';
+  document.getElementById('otOTPay').textContent   = otHrs > 0 && daily > 0 ? fPHP(otPay) : '—';
+  document.getElementById('otTotal').textContent   = fPHP(total);
+
+  const vsEl = document.getElementById('otVsNormal');
+  if (daily > 0 && hours > 0 && total > normalPay + 0.005) {
+    vsEl.textContent = '↑ ' + fPHP(total - normalPay) + ' more than the same hours at plain rate — that\'s the legal premium.';
+  } else {
+    vsEl.textContent = '';
+  }
+
+  // Persist inputs so they survive reloads
+  try {
+    localStorage.setItem('va_ot_calc', JSON.stringify({ daily: document.getElementById('otDailyRate').value, hours: document.getElementById('otHours').value, type }));
+  } catch(e) {}
+}
+
+function loadOTCalc() {
+  try {
+    const raw = localStorage.getItem('va_ot_calc');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.daily != null) document.getElementById('otDailyRate').value = d.daily;
+    if (d.hours != null) document.getElementById('otHours').value     = d.hours;
+    if (d.type && OT_TYPES[d.type]) document.getElementById('otDayType').value = d.type;
+  } catch(e) {}
+  otCalc();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SQUADS — reusable named groups of people ("Barkada", "Work
+// Friends", …). Saved once, then one tap loads every name into a
+// CC Split or Hangout session. Shared between both pages; stored
+// as plain name strings so they're independent of session ids.
+// ═══════════════════════════════════════════════════════════════
+let squads   = [];   // [{ id, name, members:["Ana","Ben",…] }]
+let squadSeq = 1;
+
+function loadSquads() {
+  try {
+    const raw = localStorage.getItem('va_squads');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    squads   = Array.isArray(d.squads) ? d.squads : [];
+    squadSeq = d.seq || (squads.length ? Math.max(...squads.map(s => s.id)) + 1 : 1);
+  } catch(e) { squads = []; squadSeq = 1; }
+}
+
+function saveSquads() {
+  try { localStorage.setItem('va_squads', JSON.stringify({ squads, seq: squadSeq })); } catch(e) {}
+}
+
+function renderSquadChips() {
+  ['ccSquadChips', 'hsSquadChips'].forEach(cid => {
+    const c = document.getElementById(cid);
+    if (!c) return;
+    const target = cid === 'ccSquadChips' ? 'cc' : 'hs';
+    if (squads.length === 0) {
+      c.innerHTML = '<span style="font-size:12px; color:var(--text3);">No squads saved yet — add people above, then save them as a squad.</span>';
+      return;
+    }
+    c.innerHTML = squads.map(s => `
+      <div class="person-tag" style="padding:0; overflow:hidden;">
+        <button onclick="applySquad(${s.id}, '${target}')"
+          title="Load: ${escH(s.members.join(', '))}"
+          style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:7px 4px 7px 12px; display:flex; align-items:center; gap:6px;">
+          👥 ${escH(s.name)}
+          <span style="font-size:10px; color:var(--text3); font-family:'DM Mono',monospace;">(${s.members.length})</span>
+        </button>
+        <button class="del-btn" style="padding:2px 8px; font-size:13px;" title="Delete this squad"
+          onclick="deleteSquad(${s.id})">✕</button>
+      </div>
+    `).join('');
+  });
+}
+
+// Load every squad member into the target session, skipping names
+// already in the list (case-insensitive) so tapping twice is safe.
+function applySquad(id, target) {
+  const squad = squads.find(s => s.id === id);
+  if (!squad) return;
+  let added = 0;
+
+  if (target === 'cc') {
+    const existing = new Set(ccPeople.map(p => p.name.trim().toLowerCase()));
+    squad.members.forEach(name => {
+      if (!existing.has(name.trim().toLowerCase())) {
+        ccPeople.push({ id: ccPersonSeq++, name: name });
+        existing.add(name.trim().toLowerCase());
+        added++;
+      }
+    });
+    renderCCPeople();
+    renderCCStores();
+    updateCCSummary();
+    saveCC();
+  } else {
+    const existing = new Set(hsPeople.map(p => p.name.trim().toLowerCase()));
+    squad.members.forEach(name => {
+      if (!existing.has(name.trim().toLowerCase())) {
+        hsPeople.push({ id: hsPersonSeq++, name: name });
+        existing.add(name.trim().toLowerCase());
+        added++;
+      }
+    });
+    renderHSPeople();
+    renderHSItems('drinks');
+    renderHSItems('food');
+    updateHSSummary();
+    saveHS();
+  }
+}
+
+// Save the current session's people as a named squad. If a squad
+// with the same name exists, it's updated instead of duplicated.
+function saveSquadFrom(target) {
+  const people = target === 'cc' ? ccPeople : hsPeople;
+  if (people.length === 0) {
+    alert('Add at least one person first, then save them as a squad.');
+    return;
+  }
+  const members = people.map(p => p.name.trim()).filter(Boolean);
+  const suggested = squads.length === 0 ? 'Barkada' : '';
+  const name = (prompt('Name this squad (e.g. "Barkada", "Work Friends"):', suggested) || '').trim();
+  if (!name) return;
+
+  const existing = squads.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    if (!confirm('A squad named "' + existing.name + '" already exists.\nReplace its members with the current list?')) return;
+    existing.members = members;
+  } else {
+    squads.push({ id: squadSeq++, name: name, members: members });
+  }
+  saveSquads();
+  renderSquadChips();
+}
+
+function deleteSquad(id) {
+  const squad = squads.find(s => s.id === id);
+  if (!squad) return;
+  if (!confirm('Delete squad "' + squad.name + '"?\n(People already added to sessions are not affected.)')) return;
+  squads = squads.filter(s => s.id !== id);
+  saveSquads();
+  renderSquadChips();
+}
+
+// ─── THEME (dark / light) ────────────────────────────────────
+// Read any CSS variable's current value — lets the canvas charts
+// pick up theme colors instead of hardcoded dark hexes.
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
+function setTheme(theme) {
+  if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('va_theme', theme); } catch(e) {}
+
+  // Keep the browser/PWA chrome color in sync
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#f2f4f8' : '#0d1117');
+
+  updateThemeButtons();
+  // Charts paint theme colors onto canvas — repaint with new palette
+  setTimeout(() => { try { drawChart(); } catch(e) {} }, 30);
+}
+
+function updateThemeButtons() {
+  const t = currentTheme();
+  const dark  = document.getElementById('themeBtnDark');
+  const light = document.getElementById('themeBtnLight');
+  if (!dark || !light) return;
+  const on  = (btn) => { btn.style.background = 'var(--blue-dim)'; btn.style.borderColor = 'var(--blue)'; btn.style.color = 'var(--blue-text)'; };
+  const off = (btn) => { btn.style.background = 'var(--surface3)'; btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text2)'; };
+  if (t === 'light') { on(light); off(dark); } else { on(dark); off(light); }
+}
 
 function openSettings() {
   const modal = document.getElementById('settingsModal');
   modal.style.display = 'flex';
   document.getElementById('settingsMsg').textContent = '';
+  updateThemeButtons();
 }
 
 function closeSettings() {
@@ -6899,6 +7265,14 @@ function importData() {
     }
   };
 }
+
+// ─── LATE INIT: squads, OT calculator, theme buttons ───────────
+// Runs here (end of script) because these modules' state vars are
+// declared above with let/const and aren't hoisted like functions.
+loadSquads();
+renderSquadChips();
+loadOTCalc();
+updateThemeButtons();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
 // Registering requires a secure context (https:// or localhost) — this
