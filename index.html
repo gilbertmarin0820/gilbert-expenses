@@ -1079,7 +1079,6 @@
     font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500;
   }
   .stat-tile-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
-  .mini-chart-wrap { width: 110px; height: 110px; flex-shrink: 0; }
 
   /* ── CURRENCY CONVERTER ───────────────────────────────────── */
   .conv-dir-toggle {
@@ -1213,23 +1212,38 @@
   .slog-amt { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--red-text); flex-shrink: 0; }
 
   /* ═══════════════════════════════════════════════════════════
-     FEATURE: BUDGET LIMITS (necessities table)
+     FEATURE: INSTALLMENTS (necessities table)
      ═══════════════════════════════════════════════════════════ */
-  .nec-limit-input {
-    background: var(--surface2); border: 1px solid transparent;
-    color: var(--text); font-family: 'DM Mono', monospace;
-    font-size: 13px; padding: 5px 7px; border-radius: var(--radius-sm);
-    width: 90px; text-align: right; transition: border-color 0.2s;
+  .nec-inst-check {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text2); cursor: pointer;
+    user-select: none; white-space: nowrap;
   }
-  .nec-limit-input:focus { outline: none; border-color: var(--amber); background: var(--surface3); }
-  .nec-limit-badge {
-    font-family: 'DM Mono', monospace; font-size: 10px;
+  .nec-inst-check input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
+  .nec-inst-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 11px; padding: 4px 5px; border-radius: var(--radius-sm);
+    max-width: 74px; cursor: pointer;
+  }
+  .nec-inst-select:focus { outline: none; border-color: var(--amber); }
+  .nec-inst-badge {
+    font-family: 'DM Mono', monospace; font-size: 9px;
     border-radius: 20px; padding: 1px 6px; white-space: nowrap;
-    display: none; margin-top: 3px;
+    display: none;
   }
-  .nec-limit-badge.ok   { background: var(--green-dim); color: var(--green-text); border: 1px solid var(--green); display: inline-block; }
-  .nec-limit-badge.near { background: var(--amber-dim); color: var(--amber-text); border: 1px solid var(--amber); display: inline-block; }
-  .nec-limit-badge.over { background: var(--red-dim);   color: var(--red-text);   border: 1px solid var(--red);   display: inline-block; }
+  .nec-inst-badge.active   { background: var(--green-dim); color: var(--green-text); border: 1px solid var(--green); display: inline-block; }
+  .nec-inst-badge.inactive { background: var(--surface3);  color: var(--text3);      border: 1px solid var(--border); display: inline-block; }
+  .nec-inst-range { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+  /* PayLater new-purchase mini form */
+  .pl-purchase-form {
+    margin-top: 8px; padding: 10px; background: var(--surface3);
+    border: 1px dashed var(--border2); border-radius: var(--radius-sm);
+    display: none; flex-direction: column; gap: 8px;
+  }
+  .pl-purchase-form.open { display: flex; }
+  .pl-purchase-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pl-purchase-form .nec-inst-select { flex: 1; min-width: 0; max-width: none; }
 
 </style>
 </head>
@@ -1271,7 +1285,9 @@
   <div style="
     background:var(--surface); border:1px solid var(--border);
     border-radius:var(--radius); padding:24px; width:100%;
-    max-width:420px; box-shadow:0 16px 48px var(--shadow-modal);">
+    max-width:420px; box-shadow:0 16px 48px var(--shadow-modal);
+    max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
       <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup</div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
@@ -1885,6 +1901,26 @@
           <div class="paylater-logo"><span class="badge-shopee">Shopee</span> SPayLater <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 5th</span></div>
           <div id="shopeeRows"></div>
           <button class="add-btn" onclick="addPLRow('shopee')">+ Add month</button>
+          <button class="add-btn" onclick="togglePLPurchase('shopee')" style="color:var(--amber-text); border-color:var(--amber);">🛒 New purchase (spread across months)</button>
+          <div class="pl-purchase-form" id="shopeePurchaseForm">
+            <div class="pl-purchase-row">
+              <span style="font-size:12px;color:var(--text3);">₱</span>
+              <input class="pl-input" type="number" id="shopeePurchaseAmt" placeholder="Amount" min="0" step="0.01" inputmode="decimal" style="flex:1;">
+              <select class="nec-inst-select" id="shopeePurchaseMode" title="How to apply the amount across the months">
+                <option value="total">Total — split evenly</option>
+                <option value="per">Per month</option>
+              </select>
+            </div>
+            <div class="pl-purchase-row">
+              <select class="nec-inst-select" id="shopeePurchaseFrom" title="First billing month"></select>
+              <span style="color:var(--text3); font-size:11px;">→</span>
+              <select class="nec-inst-select" id="shopeePurchaseTo" title="Last billing month"></select>
+            </div>
+            <div class="pl-purchase-row">
+              <div id="shopeePurchasePreview" style="flex:1; font-size:10px; color:var(--text3); font-family:'DM Mono',monospace;"></div>
+              <button class="add-btn" style="margin-top:0;" onclick="addPLPurchase('shopee')">✓ Add</button>
+            </div>
+          </div>
           <div class="pl-total-row">
             <span style="color:var(--text3);">Total</span>
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="shopeeTotal">₱0.00</span>
@@ -1895,6 +1931,26 @@
           <div class="paylater-logo"><span class="badge-tiktok">TikTok</span> PayLater <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 1st</span></div>
           <div id="tiktokRows"></div>
           <button class="add-btn" onclick="addPLRow('tiktok')">+ Add month</button>
+          <button class="add-btn" onclick="togglePLPurchase('tiktok')" style="color:var(--amber-text); border-color:var(--amber);">🛒 New purchase (spread across months)</button>
+          <div class="pl-purchase-form" id="tiktokPurchaseForm">
+            <div class="pl-purchase-row">
+              <span style="font-size:12px;color:var(--text3);">₱</span>
+              <input class="pl-input" type="number" id="tiktokPurchaseAmt" placeholder="Amount" min="0" step="0.01" inputmode="decimal" style="flex:1;">
+              <select class="nec-inst-select" id="tiktokPurchaseMode" title="How to apply the amount across the months">
+                <option value="total">Total — split evenly</option>
+                <option value="per">Per month</option>
+              </select>
+            </div>
+            <div class="pl-purchase-row">
+              <select class="nec-inst-select" id="tiktokPurchaseFrom" title="First billing month"></select>
+              <span style="color:var(--text3); font-size:11px;">→</span>
+              <select class="nec-inst-select" id="tiktokPurchaseTo" title="Last billing month"></select>
+            </div>
+            <div class="pl-purchase-row">
+              <div id="tiktokPurchasePreview" style="flex:1; font-size:10px; color:var(--text3); font-family:'DM Mono',monospace;"></div>
+              <button class="add-btn" style="margin-top:0;" onclick="addPLPurchase('tiktok')">✓ Add</button>
+            </div>
+          </div>
           <div class="pl-total-row">
             <span style="color:var(--text3);">Total</span>
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="tiktokTotal">₱0.00</span>
@@ -1906,16 +1962,6 @@
       <div style="margin-top:16px;">
         <div class="section-title">Financial Health</div>
         <div class="card" style="padding:16px;">
-          <!-- Mini donut chart + legend -->
-          <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:14px;">
-            <div class="mini-chart-wrap">
-              <canvas id="miniIncomeChart" width="110" height="110"></canvas>
-            </div>
-            <div style="flex:1; min-width:0;">
-              <div style="font-size:10px; color:var(--text3); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.8px;">Breakdown</div>
-              <div id="miniChartLegend" style="display:flex; flex-direction:column; gap:5px;"></div>
-            </div>
-          </div>
           <!-- 4 stat tiles -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
             <div class="stat-tile">
@@ -1952,11 +1998,10 @@
         <table class="nec-table">
           <thead>
             <tr>
-              <th style="width:28%">Category</th>
-              <th style="width:20%; text-align:right">Amount (₱)</th>
+              <th style="width:26%">Category</th>
+              <th style="width:22%; text-align:right">Amount (₱)</th>
               <th style="width:12%; text-align:center" title="Day of month this is due. If set and a date range is selected, the amount auto-multiplies by how many times that day falls in the range.">Pay Day</th>
-              <th style="width:16%; text-align:right" title="Optional spending ceiling. Row turns amber/red if amount exceeds limit.">Limit (₱)</th>
-              <th style="width:15%">Note</th>
+              <th style="width:36%; text-align:center" title="Check if this expense is an installment. Set the month range it runs — it only counts toward totals in months within that range.">Installment</th>
               <th style="width:36px"></th>
             </tr>
           </thead>
@@ -3290,11 +3335,9 @@ function recalcAll() {
   let necSum = 0;
   necData.forEach(row => {
     const base = parseFloat(row.amt) || 0;
-    const day  = parseInt(row.day)  || 0;
-    const mult = (day >= 1 && day <= 31 && startStr2 && endStr2)
-      ? (countPayDay(day, startStr2, endStr2) || 1)
-      : 1;
-    necSum += base * mult;
+    // necRowMult respects the pay-day counter AND installment month ranges
+    // (returns 0 for installments not active in the current period)
+    necSum += base * necRowMult(row, startStr2, endStr2);
   });
   document.getElementById('necTotal').textContent = fPHP(necSum);
 
@@ -3539,10 +3582,10 @@ function resetAll() {
   document.getElementById('corpDREnd').value   = '';
 
   necData = [
-    {cat:'Grocery',     note:'', amt:'', day:''},
-    {cat:'Electric Bill',note:'', amt:'', day:'10'},
-    {cat:'Water Bill',  note:'', amt:'', day:''},
-    {cat:'Internet',    note:'', amt:'', day:''},
+    {cat:'Grocery',      amt:'', day:'',   inst:false, instFrom:0, instTo:0},
+    {cat:'Electric Bill', amt:'', day:'10', inst:false, instFrom:0, instTo:0},
+    {cat:'Water Bill',   amt:'', day:'',   inst:false, instFrom:0, instTo:0},
+    {cat:'Internet',     amt:'', day:'',   inst:false, instFrom:0, instTo:0},
   ];
   plData.shopee = [];
   plData.tiktok = [];
@@ -3720,11 +3763,76 @@ function loadData() {
 
 // ─── NECESSITIES ──────────────────────────────────────────────
 let necData = [
-  {cat:'Grocery',note:'',amt:'',day:'',limit:''},
-  {cat:'Electric Bill',note:'',amt:'',day:'10',limit:''},
-  {cat:'Water Bill',note:'',amt:'',day:'',limit:''},
-  {cat:'Internet',note:'',amt:'',day:'',limit:''},
+  {cat:'Grocery',amt:'',day:'',inst:false,instFrom:0,instTo:0},
+  {cat:'Electric Bill',amt:'',day:'10',inst:false,instFrom:0,instTo:0},
+  {cat:'Water Bill',amt:'',day:'',inst:false,instFrom:0,instTo:0},
+  {cat:'Internet',amt:'',day:'',inst:false,instFrom:0,instTo:0},
 ];
+
+// Is month m (0-11) inside the [from, to] installment range?
+// Handles ranges that wrap the year boundary (e.g. Nov → Feb).
+function monthInInstRange(m, from, to) {
+  from = parseInt(from); to = parseInt(to);
+  if (isNaN(from) || isNaN(to)) return true;
+  return from <= to ? (m >= from && m <= to) : (m >= from || m <= to);
+}
+
+// Effective multiplier for a necessities row, respecting both the
+// pay-day counter AND (if installment) the installment month range.
+// Returns 0 when an installment is not active in the current period.
+function necRowMult(row, startStr, endStr) {
+  const day = parseInt(row.day) || 0;
+  const hasDay   = day >= 1 && day <= 31;
+  const hasRange = !!(startStr && endStr);
+
+  if (!row.inst) {
+    // Original behavior
+    return (hasDay && hasRange) ? (countPayDay(day, startStr, endStr) || 1) : 1;
+  }
+
+  // Installment row
+  if (!hasRange) {
+    // No date range selected — active only if the CURRENT month is in range
+    return monthInInstRange(new Date().getMonth(), row.instFrom, row.instTo) ? 1 : 0;
+  }
+
+  // Date range selected — count months in the range that fall inside the
+  // installment window (one payment per such month; if a pay day is set,
+  // only count occurrences of that day inside the date range).
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return 0;
+  let count = 0;
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (cur <= end) {
+    const yr = cur.getFullYear(), mo = cur.getMonth();
+    if (monthInInstRange(mo, row.instFrom, row.instTo)) {
+      if (hasDay) {
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const candidate   = new Date(yr, mo, Math.min(day, daysInMonth));
+        if (candidate >= start && candidate <= end) count++;
+      } else {
+        count++;
+      }
+    }
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return count;
+}
+
+// Checkbox handler — turns installment mode on/off for a row
+function toggleNecInst(i, checked) {
+  const row = necData[i];
+  if (!row) return;
+  row.inst = checked;
+  if (checked) {
+    const curM = new Date().getMonth();
+    if (row.instFrom === undefined || row.instFrom === '' || row.instFrom === null) row.instFrom = curM;
+    if (row.instTo   === undefined || row.instTo   === '' || row.instTo   === null) row.instTo   = curM;
+  }
+  renderNec();
+  saveData();
+}
 
 function renderNec() {
   const tbody = document.getElementById('necBody');
@@ -3735,21 +3843,19 @@ function renderNec() {
   const endStr   = document.getElementById('dateEnd').value;
 
   necData.forEach((row, i) => {
-    const day = parseInt(row.day) || 0;
-    const mult = (day >= 1 && day <= 31 && startStr && endStr)
-      ? countPayDay(day, startStr, endStr)
-      : 1;
+    const mult = necRowMult(row, startStr, endStr);
     const showBadge = mult > 1;
     const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
 
-    const lim     = parseFloat(row.limit) || 0;
-    const amt     = parseFloat(row.amt)   || 0;
-    const limCls  = (lim > 0 && amt > 0)
-      ? (amt > lim ? 'over' : (amt > lim * 0.8 ? 'near' : 'ok'))
-      : '';
-    const limTxt  = { over: '▲ over', near: '~ near', ok: '✓ ok' }[limCls] || '';
+    // Installment status badge — active this period or skipped
+    const instCls = row.inst ? (mult > 0 ? 'active' : 'inactive') : '';
+    const instTxt = row.inst ? (mult > 0 ? '✓ active' : '⊘ not this period') : '';
+    const shortM  = MONTHS.map(m => m.slice(0, 3));
+    const fromOpts = shortM.map((m, mi) => `<option value="${mi}"${mi === +row.instFrom ? ' selected' : ''}>${m}</option>`).join('');
+    const toOpts   = shortM.map((m, mi) => `<option value="${mi}"${mi === +row.instTo   ? ' selected' : ''}>${m}</option>`).join('');
 
     const tr = document.createElement('tr');
+    if (row.inst && mult === 0) tr.style.opacity = '0.45';
     tr.innerHTML = `
       <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; saveData()"></td>
       <td style="text-align:right">
@@ -3766,13 +3872,22 @@ function renderNec() {
           title="Day of month this is due (1–31)"
           oninput="necData[${i}].day=this.value; updateNecBadge(${i}); recalcAll(); saveData()">
       </td>
-      <td style="text-align:right;">
-        <input class="nec-limit-input" type="number" value="${row.limit||''}" placeholder="—" min="0" step="0.01"
-          title="Optional spending ceiling" id="necLimitInput-${i}"
-          oninput="necData[${i}].limit=this.value; updateNecBadge(${i}); saveData()">
-        <div class="nec-limit-badge ${limCls}" id="necLimitBadge-${i}">${limTxt}</div>
+      <td>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <label class="nec-inst-check">
+            <input type="checkbox" ${row.inst ? 'checked' : ''} onchange="toggleNecInst(${i}, this.checked)">
+            Installment
+          </label>
+          <div class="nec-inst-range" style="${row.inst ? '' : 'display:none;'}">
+            <select class="nec-inst-select" title="Installment start month"
+              onchange="necData[${i}].instFrom=+this.value; updateNecBadge(${i}); recalcAll(); saveData()">${fromOpts}</select>
+            <span style="color:var(--text3); font-size:10px;">→</span>
+            <select class="nec-inst-select" title="Installment end month"
+              onchange="necData[${i}].instTo=+this.value; updateNecBadge(${i}); recalcAll(); saveData()">${toOpts}</select>
+            <span class="nec-inst-badge ${instCls}" id="necInstBadge-${i}">${instTxt}</span>
+          </div>
+        </div>
       </td>
-      <td><input class="nec-cat-input" value="${row.note}" placeholder="Note…" oninput="necData[${i}].note=this.value; saveData()" style="font-size:12px;"></td>
       <td><button class="del-btn" onclick="necData.splice(${i},1); renderNec(); saveData()">✕</button></td>
     `;
     tbody.appendChild(tr);
@@ -3792,10 +3907,7 @@ function updateNecBadge(i) {
   if (!row) return;
   const startStr = document.getElementById('dateStart').value;
   const endStr   = document.getElementById('dateEnd').value;
-  const day  = parseInt(row.day) || 0;
-  const mult = (day >= 1 && day <= 31 && startStr && endStr)
-    ? countPayDay(day, startStr, endStr)
-    : 1;
+  const mult = necRowMult(row, startStr, endStr);
   const showBadge    = mult > 1;
   const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
 
@@ -3810,15 +3922,14 @@ function updateNecBadge(i) {
     effEl.style.display = showBadge ? '' : 'none';
     effEl.textContent = '= ' + fPHP(effectiveAmt);
   }
-  // Limit badge
-  const lim     = parseFloat(row.limit) || 0;
-  const amt2    = parseFloat(row.amt)   || 0;
-  const limCls  = (lim > 0 && amt2 > 0) ? (amt2 > lim ? 'over' : (amt2 > lim * 0.8 ? 'near' : 'ok')) : '';
-  const limTxt  = { over: '▲ over', near: '~ near', ok: '✓ ok' }[limCls] || '';
-  const limBadge = document.getElementById('necLimitBadge-' + i);
-  if (limBadge) {
-    limBadge.className = 'nec-limit-badge' + (limCls ? ' ' + limCls : '');
-    limBadge.textContent = limTxt;
+  // Installment badge + row dimming
+  const instBadge = document.getElementById('necInstBadge-' + i);
+  if (instBadge) {
+    const instCls = row.inst ? (mult > 0 ? 'active' : 'inactive') : '';
+    instBadge.className = 'nec-inst-badge' + (instCls ? ' ' + instCls : '');
+    instBadge.textContent = row.inst ? (mult > 0 ? '✓ active' : '⊘ not this period') : '';
+    const tr = instBadge.closest('tr');
+    if (tr) tr.style.opacity = (row.inst && mult === 0) ? '0.45' : '';
   }
 }
 
@@ -3863,7 +3974,7 @@ function isPLBillingInRange(month, billingDay, startStr, endStr) {
 }
 
 function addNec() {
-  necData.push({cat:'',note:'',amt:'',day:''});
+  necData.push({cat:'',amt:'',day:'',inst:false,instFrom:new Date().getMonth(),instTo:new Date().getMonth()});
   renderNec();
   saveData();
   setTimeout(() => {
@@ -3879,6 +3990,82 @@ const PL_BILLING_DAY = { shopee: 5, tiktok: 1 };
 
 function addPLRow(type) {
   plData[type].push({ month: new Date().getMonth(), amt: '' });
+  renderPL(type);
+  recalcAll();
+  saveData();
+}
+
+// ─── PAYLATER: NEW PURCHASE SPREAD ACROSS MONTHS ──────────────
+// Buy an item on installment → adds one row per month in the chosen
+// range. "Total" mode splits the amount evenly; "Per month" adds the
+// same amount to each month.
+
+// Populate the from/to month selects for both purchase forms (run once)
+function initPLPurchaseForms() {
+  const curM = new Date().getMonth();
+  ['shopee', 'tiktok'].forEach(type => {
+    ['From', 'To'].forEach(which => {
+      const sel = document.getElementById(type + 'Purchase' + which);
+      if (!sel || sel.options.length) return;
+      sel.innerHTML = MONTHS.map((m, mi) => `<option value="${mi}">${m.slice(0,3)}</option>`).join('');
+      sel.value = which === 'From' ? curM : (curM + 2) % 12;   // default: 3-month installment
+      sel.onchange = () => updatePLPurchasePreview(type);
+    });
+    const amtEl = document.getElementById(type + 'PurchaseAmt');
+    const modeEl = document.getElementById(type + 'PurchaseMode');
+    if (amtEl)  amtEl.oninput   = () => updatePLPurchasePreview(type);
+    if (modeEl) modeEl.onchange = () => updatePLPurchasePreview(type);
+  });
+}
+
+function togglePLPurchase(type) {
+  const form = document.getElementById(type + 'PurchaseForm');
+  if (!form) return;
+  form.classList.toggle('open');
+  if (form.classList.contains('open')) updatePLPurchasePreview(type);
+}
+
+// List of month indices from `from` to `to` inclusive, wrapping the year
+// boundary if needed (e.g. Nov → Feb = [10, 11, 0, 1]).
+function plMonthSpan(from, to) {
+  const months = [];
+  let m = from;
+  months.push(m);
+  while (m !== to && months.length < 12) { m = (m + 1) % 12; months.push(m); }
+  return months;
+}
+
+function updatePLPurchasePreview(type) {
+  const el = document.getElementById(type + 'PurchasePreview');
+  if (!el) return;
+  const amt  = parseFloat(document.getElementById(type + 'PurchaseAmt').value) || 0;
+  const mode = document.getElementById(type + 'PurchaseMode').value;
+  const from = +document.getElementById(type + 'PurchaseFrom').value;
+  const to   = +document.getElementById(type + 'PurchaseTo').value;
+  const months = plMonthSpan(from, to);
+  if (amt <= 0) { el.textContent = ''; return; }
+  const per = mode === 'total' ? amt / months.length : amt;
+  el.textContent = `${months.length} mo × ${fPHP(per)}` + (mode === 'per' ? ` = ${fPHP(per * months.length)} total` : '');
+}
+
+function addPLPurchase(type) {
+  const amtEl = document.getElementById(type + 'PurchaseAmt');
+  const amt   = parseFloat(amtEl.value) || 0;
+  const mode  = document.getElementById(type + 'PurchaseMode').value;
+  const from  = +document.getElementById(type + 'PurchaseFrom').value;
+  const to    = +document.getElementById(type + 'PurchaseTo').value;
+  if (amt <= 0) { amtEl.focus(); return; }
+
+  const months = plMonthSpan(from, to);
+  const per    = mode === 'total' ? Math.round((amt / months.length) * 100) / 100 : amt;
+  months.forEach(mo => plData[type].push({ month: mo, amt: String(per) }));
+
+  // Reset + close the form
+  amtEl.value = '';
+  document.getElementById(type + 'PurchaseForm').classList.remove('open');
+  const prev = document.getElementById(type + 'PurchasePreview');
+  if (prev) prev.textContent = '';
+
   renderPL(type);
   recalcAll();
   saveData();
@@ -5301,7 +5488,6 @@ function drawChart() {
     ctx.textBaseline = 'middle';
     ctx.fillText('Add data on the Expenses page', W / 2, W / 2);
     document.getElementById('chartLegend').innerHTML = '<div style="font-size:12px;color:var(--text3);">No data yet — fill in the Expenses page.</div>';
-    drawMiniChart(segments, total);
     return;
   }
 
@@ -5354,101 +5540,6 @@ function drawChart() {
     `).join('');
   }
 
-  drawMiniChart(segments, total);
-}
-
-// ─── MINI DONUT CHART (Financial Health widget) ────────────────
-function drawMiniChart(segments, total) {
-  const canvas = document.getElementById('miniIncomeChart');
-  if (!canvas || !canvas.getContext) return;
-
-  // If called without args, rebuild segments from DOM
-  if (!segments) {
-    function readNB(id) {
-      const el = document.getElementById(id);
-      return el ? (parseFloat((el.textContent || '').replace(/[₱,]/g, '')) || 0) : 0;
-    }
-    const savings = readNB('nb1'), payroll = readNB('nb2'),
-          corp = readNB('nb-corp'), bonus = readNB('nb-bonus'),
-          nec = readNB('nb3'), shopee = readNB('nb4'), tiktok = readNB('nb5'),
-          subs = getSubsSum(), insts = getInstsMonthlySum(), ote = getOTESum();
-    segments = [
-      { label: 'Savings',     value: savings, color: '#3FB950' },
-      { label: 'VA Payroll',  value: payroll, color: '#388bfd' },
-      { label: 'Corporate',   value: corp,    color: '#0d9488' },
-      { label: 'Bonus',       value: bonus,   color: '#8b5cf6' },
-      { label: 'Necessities', value: nec,     color: '#f85149' },
-      { label: 'SPayLater',   value: shopee,  color: '#ff5722' },
-      { label: 'TikTok',      value: tiktok,  color: '#555'    },
-      { label: 'Subs',        value: subs,    color: '#d29922' },
-      { label: 'Installments',value: insts,   color: '#e3b341' },
-      { label: 'One-time',    value: ote,     color: '#ff7b72' },
-    ].filter(s => s.value > 0.005);
-    total = segments.reduce((s, seg) => s + seg.value, 0);
-  }
-
-  const W = 110;
-  canvas.width = canvas.height = W;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, W);
-
-  const legendEl = document.getElementById('miniChartLegend');
-
-  if (!total || total < 0.005) {
-    ctx.fillStyle = cssVar('--text3');
-    ctx.font = '10px Outfit, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('No data', W / 2, W / 2 - 6);
-    ctx.fillText('yet', W / 2, W / 2 + 6);
-    if (legendEl) legendEl.innerHTML = '<div style="font-size:11px;color:var(--text3);">Enter data to see breakdown.</div>';
-    return;
-  }
-
-  const cx = W / 2, cy = W / 2;
-  const outerR = W / 2 - 4;
-  const innerR = outerR * 0.52;
-  let angle = -Math.PI / 2;
-
-  segments.forEach(seg => {
-    const slice = (seg.value / total) * 2 * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, outerR, angle, angle + slice);
-    ctx.closePath();
-    ctx.fillStyle = seg.color;
-    ctx.fill();
-    ctx.strokeStyle = cssVar('--surface');
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    angle += slice;
-  });
-
-  // Donut hole
-  ctx.beginPath();
-  ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
-  ctx.fillStyle = cssVar('--surface');
-  ctx.fill();
-
-  // Center label
-  ctx.fillStyle = cssVar('--text2');
-  ctx.font = '9px Outfit, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('total', cx, cy);
-
-  // Compact legend (max 7 items to avoid overflow)
-  if (legendEl) {
-    const shown = segments.slice(0, 7);
-    const rest  = segments.length - shown.length;
-    legendEl.innerHTML = shown.map(s => `
-      <div style="display:flex; align-items:center; gap:5px; font-size:11px;">
-        <div style="width:8px; height:8px; border-radius:2px; background:${s.color}; flex-shrink:0;"></div>
-        <span style="color:var(--text2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.label}</span>
-        <span style="font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); flex-shrink:0;">${(s.value / total * 100).toFixed(0)}%</span>
-      </div>
-    `).join('') + (rest > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">+${rest} more</div>` : '');
-  }
 }
 
 // ─── FINANCIAL HEALTH STAT TILES ──────────────────────────────
@@ -5982,6 +6073,7 @@ function getCashFlowEvents(year, month) {
   necData.forEach(row => {
     const day = parseInt(row.day) || 0;
     const amt = parseFloat(row.amt) || 0;
+    if (row.inst && !monthInInstRange(month, row.instFrom, row.instTo)) return; // installment not active this month
     if (day >= 1 && day <= 31 && amt > 0 && (row.cat || '').trim())
       events.push({ day: Math.min(day, lastDay), type: 'bill', label: row.cat.trim(), amount: amt });
   });
@@ -6114,6 +6206,7 @@ function renderCalendar() {
   if (plData.shopee.some(r => r.month === calMonth)) billDays.add(5);
   necData.forEach(row => {
     const d = parseInt(row.day) || 0;
+    if (row.inst && !monthInInstRange(calMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if (d >= 1 && d <= 31 && (parseFloat(row.amt) || 0) > 0)
       billDays.add(Math.min(d, lastDay));
   });
@@ -6333,6 +6426,7 @@ loadData();
 renderNec();
 renderPL('shopee');
 renderPL('tiktok');
+initPLPurchaseForms();
 renderSavingsItems();
 loadCachedRate(); // show last known rate immediately while live fetch runs
 fetchRate(false); // then fetch a fresh live rate in the background
@@ -6409,7 +6503,9 @@ function renderBillChecklist() {
   }
 
   const items = [];
+  const bclMonth = new Date().getMonth();
   necData.forEach((row, i) => {
+    if (row.inst && !monthInInstRange(bclMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if ((parseFloat(row.amt) || 0) > 0 && (row.cat || '').trim())
       items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: parseFloat(row.amt)||0, src: 'nec' });
   });
