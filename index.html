@@ -1688,6 +1688,55 @@
           </div>
         </div>
 
+        <!-- OVERTIME PAY CALCULATOR — lives inside corp salary since it uses your corporate daily rate -->
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:12px;">⏰ Overtime Pay Calculator (DOLE)</div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <div class="input-block" style="flex:1; min-width:130px;">
+              <label class="input-label">Daily rate (₱)</label>
+              <div class="input-row">
+                <div class="input-prefix">₱/day</div>
+                <input class="big-input" type="number" id="otDailyRate" min="0" step="1" inputmode="decimal" placeholder="e.g. 800" oninput="otCalc()">
+              </div>
+            </div>
+            <div class="input-block" style="flex:1; min-width:130px;">
+              <label class="input-label">Hours worked</label>
+              <div class="input-row">
+                <div class="input-prefix">hrs</div>
+                <input class="big-input" type="number" id="otHours" min="0" max="24" step="0.5" inputmode="decimal" placeholder="e.g. 10" oninput="otCalc()">
+              </div>
+            </div>
+          </div>
+
+          <div class="input-block" style="margin-bottom:12px;">
+            <label class="input-label">Day type</label>
+            <select id="otDayType" class="nec-cat-input" style="width:100%; height:42px; font-size:13px; cursor:pointer;" onchange="otCalc()">
+              <option value="regular">Regular working day — OT at 125%</option>
+              <option value="rest">Rest day — 130% · OT 169%</option>
+              <option value="special">Special (non-working) holiday — 130% · OT 169%</option>
+              <option value="specialRest">Special holiday + rest day — 150% · OT 195%</option>
+              <option value="regularHol">Regular holiday — 200% · OT 260%</option>
+              <option value="regularHolRest">Regular holiday + rest day — 260% · OT 338%</option>
+            </select>
+          </div>
+
+          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div class="nb-row"><span class="nb-label">Hourly rate (daily ÷ 8)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otHourly">—</span></div>
+            <div class="nb-row"><span class="nb-label" id="otBaseLabel">First 8 hrs</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otBasePay">—</span></div>
+            <div class="nb-row"><span class="nb-label" id="otOTLabel">Overtime</span><span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="otOTPay">—</span></div>
+            <div class="divider"></div>
+            <div class="nb-row" style="font-size:15px;">
+              <span class="nb-label" style="color:var(--text);">= Total pay for this day</span>
+              <span class="c-green" id="otTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span>
+            </div>
+            <div id="otVsNormal" style="font-size:11px; color:var(--text3); margin-top:6px;"></div>
+          </div>
+          <div style="font-size:11px; color:var(--text3); margin-top:10px; line-height:1.6;">
+            📌 Regular-day OT = hourly × 125%. Rest/special holiday = 130% first 8 hrs, 169% OT. Regular holiday = 200% (260% OT). Night diff (+10%) not included.
+          </div>
+        </div>
+
       </div>
       <div id="corpDisabledMsg" style="font-size:12px; color:var(--text3); padding:4px 0;">
         Enable the checkbox above to track your corporate salary alongside your hourly pay.
@@ -2426,61 +2475,6 @@
     </div>
   </div>
 
-  <!-- OVERTIME PAY CALCULATOR (DOLE) -->
-  <div>
-    <div class="section-title">⏰ Overtime Pay Calculator (DOLE)</div>
-    <div class="card">
-      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        Based on DOLE rules for private-sector employees. Enter your daily rate and total hours worked that day — the hourly rate is your daily rate ÷ 8, hours beyond 8 are paid at the OT premium for that day type.
-      </div>
-
-      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
-        <div class="input-block" style="flex:1; min-width:140px;">
-          <label class="input-label">Daily rate (₱)</label>
-          <div class="input-row">
-            <div class="input-prefix">₱ / day</div>
-            <input class="big-input" type="number" id="otDailyRate" min="0" step="1" inputmode="decimal" placeholder="e.g. 800" oninput="otCalc()">
-          </div>
-        </div>
-        <div class="input-block" style="flex:1; min-width:140px;">
-          <label class="input-label">Hours worked</label>
-          <div class="input-row">
-            <div class="input-prefix">hrs</div>
-            <input class="big-input" type="number" id="otHours" min="0" max="24" step="0.5" inputmode="decimal" placeholder="e.g. 10" oninput="otCalc()">
-          </div>
-        </div>
-      </div>
-
-      <div class="input-block" style="margin-bottom:16px;">
-        <label class="input-label">Day type</label>
-        <select id="otDayType" class="nec-cat-input" style="width:100%; height:42px; font-size:14px; cursor:pointer;" onchange="otCalc()">
-          <option value="regular">Regular working day — OT at 125%</option>
-          <option value="rest">Rest day — 130% · OT 169%</option>
-          <option value="special">Special (non-working) holiday — 130% · OT 169%</option>
-          <option value="specialRest">Special holiday + rest day — 150% · OT 195%</option>
-          <option value="regularHol">Regular holiday — 200% · OT 260%</option>
-          <option value="regularHolRest">Regular holiday + rest day — 260% · OT 338%</option>
-        </select>
-      </div>
-
-      <!-- Results -->
-      <div style="padding:14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-        <div class="nb-row"><span class="nb-label">Hourly rate (daily ÷ 8)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otHourly">—</span></div>
-        <div class="nb-row"><span class="nb-label" id="otBaseLabel">First 8 hrs</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otBasePay">—</span></div>
-        <div class="nb-row"><span class="nb-label" id="otOTLabel">Overtime</span><span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="otOTPay">—</span></div>
-        <div class="divider"></div>
-        <div class="nb-row" style="font-size:15px;">
-          <span class="nb-label" style="color:var(--text);">= Total pay for this day</span>
-          <span class="c-green" id="otTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span>
-        </div>
-        <div id="otVsNormal" style="font-size:11px; color:var(--text3); margin-top:8px;"></div>
-      </div>
-
-      <div style="font-size:11px; color:var(--text3); margin-top:12px; line-height:1.6;">
-        📌 Premiums per the Labor Code: regular-day OT is hourly × 125%. Rest days and special holidays pay 130% for the first 8 hrs, and OT on those days is 130% × 130% = 169%. Regular holidays pay 200% (260% OT). Night shift differential (+10% for 10 PM–6 AM work) is not included here.
-      </div>
-    </div>
-  </div>
 
 </div>
 
