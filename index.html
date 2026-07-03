@@ -1245,10 +1245,12 @@
   <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="ccControls">
     <button class="action-btn" id="ccUndoBtn" onclick="ccUndo()" disabled title="Undo last CC Split change">↩ Undo</button>
     <button class="action-btn danger" onclick="resetCC()" title="Clear all CC Split data">✕ Reset</button>
+    <button class="action-btn" onclick="openQROverlay()" title="Show my payment QR code full-screen">📱 My QR</button>
   </div>
   <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="hsControls">
     <button class="action-btn" id="hsUndoBtn" onclick="hsUndo()" disabled title="Undo last Hangout Split change">↩ Undo</button>
     <button class="action-btn danger" onclick="resetHS()" title="Clear all Hangout Split data">✕ Reset</button>
+    <button class="action-btn" onclick="openQROverlay()" title="Show my payment QR code full-screen">📱 My QR</button>
   </div>
   <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="planControls">
     <button class="action-btn" id="planUndoBtn" onclick="planUndo()" disabled title="Undo last Plan change">↩ Undo</button>
@@ -1297,6 +1299,27 @@
       </div>
     </div>
 
+    <!-- Payment QR codes -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📱 Payment QR codes</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Save your QR Ph code from each wallet app (Maya, GoTyme, MariBank, RCBC…) as an image, then add it here. Tap <strong style="color:var(--text2);">📱 My QR</strong> on the CC Split or Hangout page to show it full-screen for friends to scan. Any QR Ph code works from any InstaPay app.
+      </div>
+      <div id="walletQRList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="walletQRName" type="text" placeholder="Wallet name (e.g. Maya)" maxlength="20" style="
+          flex:1; min-width:0; padding:9px 10px; background:var(--surface3); border:1px solid var(--border);
+          color:var(--text); border-radius:var(--radius-sm); font-family:'Outfit',sans-serif; font-size:13px;">
+        <button onclick="addWalletQR()" style="
+          padding:9px 14px; background:var(--blue-dim); border:1px solid var(--blue);
+          color:var(--blue-text); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; white-space:nowrap;">
+          + Add QR image
+        </button>
+      </div>
+      <input id="walletQRFile" type="file" accept="image/*" style="display:none;">
+    </div>
+
     <!-- Export -->
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📤 Export data</div>
@@ -1327,6 +1350,26 @@
 
     <div id="settingsMsg" style="font-size:12px; color:var(--text3); margin-top:14px; text-align:center; min-height:18px;"></div>
   </div>
+</div>
+
+<!-- FULL-SCREEN PAYMENT QR OVERLAY -->
+<div id="qrOverlay" style="
+  display:none; position:fixed; inset:0; z-index:1100;
+  background:rgba(0,0,0,0.88); backdrop-filter:blur(6px);
+  flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;">
+  <div id="qrWalletTabs" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;"></div>
+  <!-- White card so the QR scans reliably even in dark mode / dim bars -->
+  <div style="background:#ffffff; border-radius:16px; padding:18px; max-width:min(86vw, 420px); width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <img id="qrOverlayImg" alt="Payment QR code" style="display:block; width:100%; height:auto; border-radius:8px;">
+    <div id="qrOverlayName" style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:600; color:#111; text-align:center; margin-top:10px;"></div>
+    <div style="font-family:'Outfit',sans-serif; font-size:11px; color:#666; text-align:center; margin-top:2px;">Scan with any QR Ph / InstaPay app</div>
+  </div>
+  <button onclick="closeQROverlay()" style="
+    padding:10px 28px; background:transparent; border:1px solid rgba(255,255,255,0.4);
+    color:#fff; border-radius:999px; cursor:pointer;
+    font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+    ✕ Close
+  </button>
 </div>
 
 <!-- PAGE NAV -->
@@ -6928,6 +6971,156 @@ function trkrInit() {
   if (ms) ms.value = String(new Date().getMonth());
 }
 
+// ─── PAYMENT QR CODES (QR Ph images from wallet apps) ────────
+// Stores user-uploaded QR Ph images (Maya, GoTyme, MariBank, RCBC…)
+// as downscaled PNG data-URLs. QR Ph is interoperable, so any one
+// of these can be paid from any InstaPay-enabled app.
+const WALLET_QR_KEY = 'va_wallet_qrs';
+const WALLET_QR_MAX = 6;
+
+function loadWalletQRs() {
+  try {
+    const raw = localStorage.getItem(WALLET_QR_KEY);
+    if (!raw) return [];
+    const d = JSON.parse(raw);
+    return Array.isArray(d.wallets) ? d.wallets : [];
+  } catch(e) { return []; }
+}
+
+function saveWalletQRs(wallets) {
+  try {
+    localStorage.setItem(WALLET_QR_KEY, JSON.stringify({ wallets }));
+    return true;
+  } catch(e) {
+    showToast('⚠ Storage full — try removing an old QR first', true);
+    return false;
+  }
+}
+
+// Downscale the uploaded image to ≤600px PNG so it stays small in
+// localStorage but remains crisp enough to scan across a table.
+function processQRImage(file, cb) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 600;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';         // flatten transparency to white
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/png'));
+    };
+    img.onerror = () => showToast('⚠ Could not read that image', true);
+    img.src = reader.result;
+  };
+  reader.onerror = () => showToast('⚠ Could not read that file', true);
+  reader.readAsDataURL(file);
+}
+
+function addWalletQR() {
+  const nameEl = document.getElementById('walletQRName');
+  const name = (nameEl.value || '').trim();
+  if (!name) { showToast('⚠ Give the wallet a name first (e.g. Maya)', true); nameEl.focus(); return; }
+  const wallets = loadWalletQRs();
+  if (wallets.length >= WALLET_QR_MAX) { showToast('⚠ Max ' + WALLET_QR_MAX + ' QR codes — remove one first', true); return; }
+  const fileEl = document.getElementById('walletQRFile');
+  fileEl.onchange = () => {
+    const file = fileEl.files && fileEl.files[0];
+    fileEl.value = '';                   // allow re-selecting the same file later
+    if (!file) return;
+    processQRImage(file, (dataURL) => {
+      const list = loadWalletQRs();
+      list.push({ id: Date.now(), name, img: dataURL });
+      if (saveWalletQRs(list)) {
+        nameEl.value = '';
+        renderWalletQRList();
+        showToast('✓ ' + name + ' QR saved');
+      }
+    });
+  };
+  fileEl.click();
+}
+
+function deleteWalletQR(id) {
+  const wallets = loadWalletQRs().filter(w => w.id !== id);
+  saveWalletQRs(wallets);
+  renderWalletQRList();
+  showToast('✓ QR removed');
+}
+
+function renderWalletQRList() {
+  const box = document.getElementById('walletQRList');
+  if (!box) return;
+  const wallets = loadWalletQRs();
+  if (!wallets.length) {
+    box.innerHTML = '<div style="font-size:12px; color:var(--text3); font-style:italic;">No QR codes saved yet.</div>';
+    return;
+  }
+  box.innerHTML = wallets.map(w => `
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--surface3); border:1px solid var(--border); border-radius:var(--radius-sm);">
+      <img src="${w.img}" alt="" style="width:34px; height:34px; object-fit:cover; border-radius:4px; background:#fff;">
+      <div style="flex:1; font-size:13px; color:var(--text); font-weight:500;">${escHTML(w.name)}</div>
+      <button onclick="deleteWalletQR(${w.id})" title="Remove this QR" style="
+        background:none; border:none; color:var(--red-text); font-size:15px; cursor:pointer; padding:2px 6px;">✕</button>
+    </div>`).join('');
+}
+
+function escHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let _qrActiveId = null;
+
+function openQROverlay() {
+  const wallets = loadWalletQRs();
+  if (!wallets.length) {
+    showToast('⚠ No QR saved yet — add one in ⚙️ Settings', true);
+    openSettings();
+    return;
+  }
+  if (_qrActiveId == null || !wallets.some(w => w.id === _qrActiveId)) _qrActiveId = wallets[0].id;
+  renderQROverlay(wallets);
+  document.getElementById('qrOverlay').style.display = 'flex';
+}
+
+function renderQROverlay(wallets) {
+  wallets = wallets || loadWalletQRs();
+  const active = wallets.find(w => w.id === _qrActiveId) || wallets[0];
+  if (!active) return;
+  _qrActiveId = active.id;
+  document.getElementById('qrOverlayImg').src = active.img;
+  document.getElementById('qrOverlayName').textContent = active.name;
+  const tabs = document.getElementById('qrWalletTabs');
+  tabs.innerHTML = wallets.length > 1 ? wallets.map(w => `
+    <button onclick="switchQRWallet(${w.id})" style="
+      padding:7px 16px; border-radius:999px; cursor:pointer;
+      font-family:'Outfit',sans-serif; font-size:13px; font-weight:500;
+      background:${w.id === active.id ? '#fff' : 'transparent'};
+      color:${w.id === active.id ? '#111' : '#fff'};
+      border:1px solid ${w.id === active.id ? '#fff' : 'rgba(255,255,255,0.4)'};">
+      ${escHTML(w.name)}
+    </button>`).join('') : '';
+}
+
+function switchQRWallet(id) {
+  _qrActiveId = id;
+  renderQROverlay();
+}
+
+function closeQROverlay() {
+  document.getElementById('qrOverlay').style.display = 'none';
+}
+
+document.getElementById('qrOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeQROverlay();
+});
+
 // ─── EXPORT / IMPORT (Backup & Restore) ──────────────────────
 const BACKUP_KEYS = [
   'va_payroll_data',
@@ -6944,6 +7137,7 @@ const BACKUP_KEYS = [
   'va_squads',
   'va_ot_calc',
   'va_theme',
+  'va_wallet_qrs',
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -7167,6 +7361,7 @@ function openSettings() {
   modal.style.display = 'flex';
   document.getElementById('settingsMsg').textContent = '';
   updateThemeButtons();
+  renderWalletQRList();
 }
 
 function closeSettings() {
