@@ -1796,6 +1796,33 @@
           </div>
         </div>
 
+        <!-- VAT CALCULATOR -->
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:12px;">% VAT Calculator (12%)</div>
+          <div class="input-block" style="margin-bottom:12px;">
+            <label class="input-label">Price (VAT-inclusive)</label>
+            <div class="input-row" style="border-color:var(--amber);">
+              <div class="input-prefix" style="color:var(--amber-text);">₱</div>
+              <input class="big-input" type="number" id="vatPriceInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+                oninput="calcVAT()" style="color:var(--amber-text);">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+            <div style="padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+              <div style="font-size:10px; color:var(--text3); margin-bottom:4px;">VAT-exclusive (÷1.12)</div>
+              <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--text);" id="vatExclusive">₱—</div>
+            </div>
+            <div style="padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+              <div style="font-size:10px; color:var(--text3); margin-bottom:4px;">VAT (12%)</div>
+              <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--red-text);" id="vatAmount">₱—</div>
+            </div>
+            <div style="padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--amber);">
+              <div style="font-size:10px; color:var(--text3); margin-bottom:4px;">Total (with VAT)</div>
+              <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--amber-text);" id="vatTotal">₱—</div>
+            </div>
+          </div>
+        </div>
+
       </div>
       <div id="corpDisabledMsg" style="font-size:12px; color:var(--text3); padding:4px 0;">
         Enable the checkbox above to track your corporate salary alongside your hourly pay.
@@ -2078,7 +2105,13 @@
           margin-bottom:10px; text-align:right; min-height:64px;
           display:flex; flex-direction:column; justify-content:flex-end; gap:4px;">
           <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); min-height:16px; word-break:break-all;"></div>
-          <div id="calcScreen" style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all;">0</div>
+          <div id="calcScreen"
+            contenteditable="true"
+            inputmode="decimal"
+            spellcheck="false"
+            autocorrect="off"
+            style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all; outline:none; cursor:text; caret-color:var(--teal);"
+          >0</div>
         </div>
         <!-- 7-column scientific grid -->
         <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">
@@ -2185,36 +2218,7 @@
         </div>
       </div>
 
-      <!-- VAT Calculator -->
-      <div class="card" style="grid-column: 1 / -1;">
-        <div class="sav-panel-title" style="margin-bottom:14px;">
-          <span style="color:var(--amber-text); font-size:16px;">%</span>
-          VAT Calculator
-          <span style="font-size:11px; color:var(--text3); font-weight:400;">12% — for invoices &amp; quotes</span>
-        </div>
-        <div class="input-block" style="margin-bottom:14px;">
-          <label class="input-label">Price (VAT-inclusive)</label>
-          <div class="input-row" style="border-color: var(--amber);">
-            <div class="input-prefix" style="color:var(--amber-text);">₱</div>
-            <input class="big-input" type="number" id="vatPriceInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
-              oninput="calcVAT()" style="color:var(--amber-text);">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
-          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">VAT-exclusive (÷1.12)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--text);" id="vatExclusive">₱—</div>
-          </div>
-          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">VAT (12%)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--red-text);" id="vatAmount">₱—</div>
-          </div>
-          <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--amber);">
-            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Total (with VAT)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--amber-text);" id="vatTotal">₱—</div>
-          </div>
-        </div>
-      </div>
+
 
     </div>
   </div>
@@ -3518,7 +3522,8 @@ function undo() {
 }
 
 function restoreState(data) {
-  if (data.payMode) setMode(data.payMode);
+  _isLoading = true; // prevent saveData() firing during DOM restore
+  if (data.payMode) { payMode = data.payMode; setMode(data.payMode); }
   document.getElementById('rateInput').value    = data.hourly    || '3.50';
   document.getElementById('taxInput').value     = data.tax       || '15';
   updateRateTax();
@@ -3541,6 +3546,7 @@ function restoreState(data) {
   plData.tiktok = Array.isArray(data.plTiktok)  ? data.plTiktok  : [];
   savingsItems  = Array.isArray(data.savingsItems) ? data.savingsItems : [];
   quickBalances = (data.quickBalances && typeof data.quickBalances === 'object') ? data.quickBalances : {};
+  _isLoading = false;
   renderNec();
   renderPL('shopee');
   renderPL('tiktok');
@@ -3563,6 +3569,7 @@ function resetAll() {
   } catch(e) {}
 
   _undoEnabled = false;
+  _isLoading   = true; // block any saveData() triggered by setMode etc. during reset
 
   document.getElementById('rateInput').value    = '3.50';
   document.getElementById('taxInput').value     = '15';
@@ -3593,6 +3600,7 @@ function resetAll() {
 
   setMode('weekly');
   updateRateTax();
+  _isLoading = false; // now safe to let renders trigger saves
   renderNec();
   renderPL('shopee');
   renderPL('tiktok');
@@ -4155,7 +4163,16 @@ let calcExprStack  = [];  // pending paren expression stack
 function calcRender() {
   const screen = document.getElementById('calcScreen');
   const expr   = document.getElementById('calcExpr');
-  if (screen) screen.textContent = calcCurrent;
+  if (screen && screen.textContent !== calcCurrent) {
+    screen.textContent = calcCurrent;
+    // Keep cursor at end when updated programmatically
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(screen);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
   if (expr) {
     expr.textContent = calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
   }
@@ -4168,6 +4185,47 @@ function calcRender() {
     });
   }
 }
+
+// Allow typing and pasting directly into the calculator screen
+(function() {
+  const screen = document.getElementById('calcScreen');
+  if (!screen) return;
+
+  // Paste: strip everything except digits, minus, and one decimal point
+  screen.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const cleaned = text.replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    if (!isNaN(num) && cleaned !== '') {
+      calcCurrent = String(num);
+      calcJustEq  = false;
+      calcOper    = null;
+      calcPrev    = '';
+      calcRender();
+    }
+  });
+
+  // Direct keyboard input into the screen div
+  screen.addEventListener('input', e => {
+    // Grab whatever the user typed, keep only valid characters
+    const raw = screen.textContent || '';
+    const cleaned = raw.replace(/[^0-9.\-]/g, '').slice(0, 16);
+    if (cleaned !== raw) {
+      // Illegal characters were removed — sync back
+      calcCurrent = cleaned || '0';
+      calcRender();
+    } else {
+      calcCurrent = cleaned || '0';
+    }
+  });
+
+  // Allow tab out but not enter (enter = equals)
+  screen.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); calcEquals(); }
+    if (e.key === 'Escape') { e.preventDefault(); calcClear(); }
+  });
+})();
 function calcOperSym(op) {
   return { '*': '×', '/': '÷', '+': '+', '-': '−', '^': 'xʸ' }[op] || op;
 }
@@ -4363,8 +4421,10 @@ function calcParen(p) {
 
 // keyboard support
 document.addEventListener('keydown', e => {
-  const activeTag = document.activeElement && document.activeElement.tagName;
-  const isTypingElsewhere = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+  const activeTag  = document.activeElement && document.activeElement.tagName;
+  const activeId   = document.activeElement && document.activeElement.id;
+  const isTypingElsewhere = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT'
+    || activeId === 'calcScreen'; // calc screen is contenteditable — handle its own keys
 
   // Undo: Ctrl/Cmd + Z (only when not focused in a text input to avoid fighting browser undo)
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
