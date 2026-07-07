@@ -1220,6 +1220,24 @@
     user-select: none; white-space: nowrap;
   }
   .nec-inst-check input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
+
+  /* ── INCLUDE/EXCLUDE TOGGLE ─────────────────────────────────
+     Every amount row gets a small round checkmark. It's ON
+     (green ✓ = counted in totals) by default the moment a value
+     exists. Tapping it OFF keeps the row but excludes its amount
+     from every total — no need to delete the value. */
+  .inc-toggle {
+    width: 20px; height: 20px; min-width: 20px; border-radius: 50%;
+    border: 1.5px solid var(--border2); background: var(--surface3);
+    color: transparent; cursor: pointer; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; line-height: 1; padding: 0; transition: all 0.15s;
+  }
+  .inc-toggle.on { background: var(--green); border-color: var(--green); color: #fff; }
+  .inc-toggle:not(.on):hover { border-color: var(--green); }
+  .inc-off { opacity: 0.45; }
+  .inc-off .nec-amt-input, .inc-off .big-input, .inc-off .pl-input,
+  .inc-off .slog-amt, .inc-off .inst-balance-val { text-decoration: line-through; }
   .nec-inst-select {
     background: var(--surface2); border: 1px solid var(--border);
     color: var(--text); font-family: 'Outfit', sans-serif;
@@ -3011,6 +3029,18 @@ function loadCachedRate() {
 function fPHP(n) { return '₱' + n.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fUSD(n) { return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// ─── INCLUDE / EXCLUDE TOGGLE ─────────────────────────────────
+// Rows are "marked" (included in totals) by default — including all
+// previously saved data, since only an explicit inc === false excludes.
+function isInc(row) { return !row || row.inc !== false; }
+// Builds the round ✓ toggle button HTML for a row
+function incBtn(row, onclick) {
+  const on = isInc(row);
+  return `<button type="button" class="inc-toggle${on ? ' on' : ''}" `
+    + `title="${on ? 'Included in totals — tap to exclude' : 'Excluded from totals — tap to include'}" `
+    + `onclick="${onclick}">✓</button>`;
+}
+
 // ─── MODE ─────────────────────────────────────────────────────
 let payMode = 'weekly'; // 'weekly' | 'monthly'
 
@@ -3338,6 +3368,7 @@ function recalcAll() {
   const endStr2   = document.getElementById('dateEnd').value;
   let necSum = 0;
   necData.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — excluded from totals
     const base = parseFloat(row.amt) || 0;
     // necRowMult respects the pay-day counter AND installment month ranges
     // (returns 0 for installments not active in the current period)
@@ -3351,10 +3382,12 @@ function recalcAll() {
   const plEnd   = document.getElementById('dateEnd').value;
   let shopeeSum = 0, tiktokSum = 0;
   plData.shopee.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — excluded from totals
     if (isPLBillingInRange(row.month, 5, plStart, plEnd))
       shopeeSum += parseFloat(row.amt) || 0;
   });
   plData.tiktok.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — excluded from totals
     if (isPLBillingInRange(row.month, 1, plStart, plEnd))
       tiktokSum += parseFloat(row.amt) || 0;
   });
@@ -3641,7 +3674,7 @@ function renderSavingsItems() {
     ).join('');
 
     const div = document.createElement('div');
-    div.className = 'sav-item-row';
+    div.className = 'sav-item-row' + (isInc(item) ? '' : ' inc-off');
     div.innerHTML = `
       <div class="bank-select-wrap">
         <div class="bank-icon" style="background:${bank.color};">${escH(bank.abbr)}</div>
@@ -3653,6 +3686,7 @@ function renderSavingsItems() {
         <span class="bank-chevron">▾</span>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        ${incBtn(item, `toggleSavInc(${i})`)}
         <span style="font-size:12px;color:var(--text3);">₱</span>
         <input class="nec-amt-input" type="number" value="${item.amt}" placeholder="0.00" min="0" step="0.01"
           style="width:105px;"
@@ -3664,6 +3698,14 @@ function renderSavingsItems() {
   });
 
   updateSavingsSummary();
+}
+
+function toggleSavInc(i) {
+  const item = savingsItems[i];
+  if (!item) return;
+  item.inc = !isInc(item);
+  renderSavingsItems();
+  saveData();
 }
 
 function onBankChange(i, bankId) {
@@ -3688,7 +3730,7 @@ function onBankChange(i, bankId) {
 
 function updateSavingsSummary() {
   let total = 0;
-  savingsItems.forEach(item => { total += parseFloat(item.amt) || 0; });
+  savingsItems.forEach(item => { if (isInc(item)) total += parseFloat(item.amt) || 0; });
 
   const savings = parseFloat(document.getElementById('savingsInput').value) || 0;
   const diff    = total - savings;
@@ -3721,7 +3763,7 @@ function updateSavingsSummary() {
 
 function setSavingsFromItems() {
   let total = 0;
-  savingsItems.forEach(item => { total += parseFloat(item.amt) || 0; });
+  savingsItems.forEach(item => { if (isInc(item)) total += parseFloat(item.amt) || 0; });
   document.getElementById('savingsInput').value = total.toFixed(2);
   recalcAll();
   saveData();
@@ -3829,6 +3871,15 @@ function necRowMult(row, startStr, endStr) {
 }
 
 // Checkbox handler — turns installment mode on/off for a row
+// Include/exclude toggle — keeps the amount but removes it from totals
+function toggleNecInc(i) {
+  const row = necData[i];
+  if (!row) return;
+  row.inc = !isInc(row);
+  renderNec();      // re-renders row state + recalcAll + bill checklist
+  saveData();
+}
+
 function toggleNecInst(i, checked) {
   const row = necData[i];
   if (!row) return;
@@ -3863,11 +3914,13 @@ function renderNec() {
     const toOpts   = shortM.map((m, mi) => `<option value="${mi}"${mi === +row.instTo   ? ' selected' : ''}>${m}</option>`).join('');
 
     const tr = document.createElement('tr');
+    if (!isInc(row)) tr.classList.add('inc-off');
     if (row.inst && mult === 0) tr.style.opacity = '0.45';
     tr.innerHTML = `
       <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; saveData()"></td>
       <td style="text-align:right">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;">
+          ${incBtn(row, `toggleNecInc(${i})`)}
           <span style="font-size:12px;color:var(--text3);">₱</span>
           <input class="nec-amt-input nec-amt" type="number" value="${row.amt}" placeholder="0.00" min="0" step="0.01"
             oninput="necData[${i}].amt=this.value; updateNecBadge(${i}); recalcAll(); saveData()" style="width:100px;">
@@ -4091,7 +4144,7 @@ function refreshPLBadges(startStr, endStr) {
       if (!row) return;
       const inRange = isPLBillingInRange(row.month, billingDay, startStr, endStr);
       const dimmed  = hasRange && !inRange;
-      rowEl.style.opacity = dimmed ? '0.45' : '';
+      rowEl.style.opacity = (dimmed || !isInc(row)) ? '0.45' : '';
       let badge = rowEl.querySelector('.pl-badge');
       if (!badge) {
         badge = document.createElement('span');
@@ -4117,6 +4170,15 @@ function refreshPLBadges(startStr, endStr) {
   });
 }
 
+function togglePLInc(type, i) {
+  const row = plData[type][i];
+  if (!row) return;
+  row.inc = !isInc(row);
+  renderPL(type);
+  recalcAll();
+  saveData();
+}
+
 function renderPL(type) {
   const billingDay = PL_BILLING_DAY[type];
   const startStr   = document.getElementById('dateStart').value;
@@ -4133,9 +4195,10 @@ function renderPL(type) {
       ? `<span class="pl-badge" style="font-size:9px;padding:1px 6px;border-radius:20px;font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;background:${inRange?'var(--green-dim)':'var(--surface3)'};color:${inRange?'var(--green-text)':'var(--text3)'};border:1px solid ${inRange?'var(--green)':'var(--border)'};">${inRange?'✓ in range':'⊘ skipped'}</span>`
       : '';
     const div = document.createElement('div');
-    div.className = 'pl-row';
+    div.className = 'pl-row' + (isInc(row) ? '' : ' inc-off');
     div.style.opacity = dimmed ? '0.45' : '';
     div.innerHTML = `
+      ${incBtn(row, `togglePLInc('${type}', ${i})`)}
       <select class="month-select" onchange="plData['${type}'][${i}].month=+this.value; renderPL('${type}'); recalcAll(); saveData()">${opts}</select>
       <input class="pl-input pl-amt-${type}" type="number" value="${row.amt}" placeholder="₱ 0.00" min="0" step="0.01"
         oninput="plData['${type}'][${i}].amt=this.value; recalcAll(); saveData()">
@@ -4611,6 +4674,15 @@ function updateStoreEach(i) {
     : (n + (n === 1 ? ' person' : ' people') + ' sharing');
 }
 
+function toggleStoreInc(i) {
+  const store = ccStores[i];
+  if (!store) return;
+  store.inc = !isInc(store);
+  renderCCStores();
+  updateCCSummary();
+  saveCC();
+}
+
 function renderCCStores() {
   const container = document.getElementById('ccStoresList');
   container.innerHTML = '';
@@ -4633,7 +4705,7 @@ function renderCCStores() {
         `).join('');
 
     const div = document.createElement('div');
-    div.className = 'card';
+    div.className = 'card' + (isInc(store) ? '' : ' inc-off');
     div.innerHTML = `
       <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;">
         <div class="input-block" style="flex:1; min-width:160px;">
@@ -4650,6 +4722,7 @@ function renderCCStores() {
           </div>
         </div>
         <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeStore(${i})" title="Remove this store">✕</button>
+        <div style="display:flex; align-items:center; height:42px; flex-shrink:0;">${incBtn(store, `toggleStoreInc(${i})`)}</div>
       </div>
 
       <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Split with</div>
@@ -4672,6 +4745,7 @@ function updateCCSummary() {
   let unassigned = 0;
 
   ccStores.forEach(store => {
+    if (!isInc(store)) return;               // unmarked — excluded from the split
     const amt = parseFloat(store.amt) || 0;
     grand += amt;
     const n = store.people.length;
@@ -4903,6 +4977,15 @@ function updateHSItemEach(cat, i) {
     : (n + (n === 1 ? ' person' : ' people') + ' sharing');
 }
 
+function toggleHSItemInc(cat, i) {
+  const item = hsItems[cat][i];
+  if (!item) return;
+  item.inc = !isInc(item);
+  renderHSItems(cat);
+  updateHSSummary();
+  saveHS();
+}
+
 function renderHSItems(cat) {
   const container = document.getElementById(HS_CONTAINERS[cat]);
   container.innerHTML = '';
@@ -4919,6 +5002,7 @@ function renderHSItems(cat) {
 
   hsItems[cat].forEach((item, i) => {
     const amt  = parseFloat(item.amt) || 0;
+    const itemIncluded = isInc(item);
     const n    = item.people.length;
     const each = n > 0 ? amt / n : 0;
 
@@ -4930,7 +5014,7 @@ function renderHSItems(cat) {
         `).join('');
 
     const div = document.createElement('div');
-    div.className = 'card';
+    div.className = 'card' + (itemIncluded ? '' : ' inc-off');
     div.innerHTML = `
       <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;">
         <div class="input-block" style="flex:1; min-width:160px;">
@@ -4947,6 +5031,7 @@ function renderHSItems(cat) {
           </div>
         </div>
         <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeHSItem('${cat}', ${i})" title="Remove this item">✕</button>
+        <div style="display:flex; align-items:center; height:42px; flex-shrink:0;">${incBtn(item, `toggleHSItemInc('${cat}', ${i})`)}</div>
       </div>
 
       <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Who had this</div>
@@ -4970,6 +5055,7 @@ function updateHSSummary() {
 
   ['drinks', 'food'].forEach(cat => {
     hsItems[cat].forEach(item => {
+      if (!isInc(item)) return;              // unmarked — excluded from the split
       const amt = parseFloat(item.amt) || 0;
       grand += amt;
       const n = item.people.length;
@@ -5140,17 +5226,27 @@ function removeOTE(id) {
   savePlanData();
 }
 
+function toggleOTEInc(id) {
+  const e = oneTimeExpenses.find(x => x.id === id);
+  if (!e) return;
+  e.inc = !isInc(e);
+  renderOTE();
+  recalcAll();
+  savePlanData();
+}
+
 function renderOTE() {
   const c = document.getElementById('oteContainer');
   if (!c) return;
   c.innerHTML = '';
   oneTimeExpenses.forEach((e, i) => {
     const div = document.createElement('div');
-    div.className = 'ote-row';
+    div.className = 'ote-row' + (isInc(e) ? '' : ' inc-off');
     div.innerHTML = `
       <input class="nec-cat-input" value="${escH(e.name)}" placeholder="What was it? (e.g. Grab rides)" style="flex:1; min-width:120px;"
         oninput="oneTimeExpenses[${i}].name=this.value; savePlanData()">
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        ${incBtn(e, `toggleOTEInc(${e.id})`)}
         <span style="font-size:12px; color:var(--text3);">₱</span>
         <input class="nec-amt-input" type="number" value="${e.amt}" placeholder="0.00" min="0" step="0.01"
           style="width:110px;"
@@ -5164,7 +5260,7 @@ function renderOTE() {
 }
 
 function getOTESum() {
-  return oneTimeExpenses.reduce((s, e) => s + (parseFloat(e.amt) || 0), 0);
+  return oneTimeExpenses.reduce((s, e) => s + (isInc(e) ? (parseFloat(e.amt) || 0) : 0), 0);
 }
 
 function updateOTETotal() {
@@ -5203,6 +5299,7 @@ function updateGoalProgress(i) {
   // Also update the totals row
   let totalSaved = 0, totalTarget = 0;
   savingsGoals.forEach(g => {
+    if (!isInc(g)) return;
     totalSaved  += parseFloat(g.saved)  || 0;
     totalTarget += parseFloat(g.target) || 0;
   });
@@ -5232,6 +5329,14 @@ function updateInstDisplay(i) {
   }
 }
 
+function toggleGoalInc(id) {
+  const g = savingsGoals.find(x => x.id === id);
+  if (!g) return;
+  g.inc = !isInc(g);
+  renderGoals();
+  savePlanData();
+}
+
 function addGoal() {
   savingsGoals.push({ id: planId(), name: '', target: '', saved: '' });
   renderGoals();
@@ -5256,12 +5361,13 @@ function renderGoals() {
     const barColor = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
 
     const div = document.createElement('div');
-    div.className = 'goal-block';
+    div.className = 'goal-block' + (isInc(g) ? '' : ' inc-off');
     div.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
         <input class="nec-cat-input" value="${escH(g.name)}" placeholder="Goal name (e.g. Travel Fund, Emergency Fund)" style="flex:1;"
           oninput="savingsGoals[${i}].name=this.value; savePlanData()">
         <button class="del-btn" onclick="removeGoal(${g.id})">✕</button>
+        ${incBtn(g, `toggleGoalInc(${g.id})`)}
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
         <div style="flex:1; min-width:120px;">
@@ -5294,6 +5400,7 @@ function renderGoals() {
 
   let totalSaved = 0, totalTarget = 0;
   savingsGoals.forEach(g => {
+    if (!isInc(g)) return;
     totalSaved  += parseFloat(g.saved)  || 0;
     totalTarget += parseFloat(g.target) || 0;
   });
@@ -5317,17 +5424,27 @@ function removeSub(id) {
   savePlanData();
 }
 
+function toggleSubInc(id) {
+  const s = subscriptions.find(x => x.id === id);
+  if (!s) return;
+  s.inc = !isInc(s);
+  renderSubs();     // re-renders + updates total + bill checklist
+  recalcAll();
+  savePlanData();
+}
+
 function renderSubs() {
   const c = document.getElementById('subsContainer');
   if (!c) return;
   c.innerHTML = '';
   subscriptions.forEach((s, i) => {
     const div = document.createElement('div');
-    div.className = 'sub-row';
+    div.className = 'sub-row' + (isInc(s) ? '' : ' inc-off');
     div.innerHTML = `
       <input class="nec-cat-input" value="${escH(s.name)}" placeholder="e.g. Netflix, Spotify, iCloud" style="flex:1; min-width:130px;"
         oninput="subscriptions[${i}].name=this.value; savePlanData()">
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        ${incBtn(s, `toggleSubInc(${s.id})`)}
         <span style="font-size:12px; color:var(--text3);">₱/mo</span>
         <input class="nec-amt-input" type="number" value="${s.amt}" placeholder="0.00" min="0" step="0.01"
           style="width:100px;"
@@ -5347,7 +5464,7 @@ function renderSubs() {
 }
 
 function getSubsSum() {
-  return subscriptions.reduce((s, sub) => s + (parseFloat(sub.amt) || 0), 0);
+  return subscriptions.reduce((s, sub) => s + (isInc(sub) ? (parseFloat(sub.amt) || 0) : 0), 0);
 }
 
 function updateSubsTotal() {
@@ -5369,6 +5486,15 @@ function removeInst(id) {
   savePlanData();
 }
 
+function toggleInstInc(id) {
+  const inst = installments.find(x => x.id === id);
+  if (!inst) return;
+  inst.inc = !isInc(inst);
+  renderInsts();
+  recalcAll();
+  savePlanData();
+}
+
 function renderInsts() {
   const c = document.getElementById('instsContainer');
   if (!c) return;
@@ -5379,12 +5505,13 @@ function renderInsts() {
     const totalRem  = monthly * remaining;
 
     const div = document.createElement('div');
-    div.className = 'inst-block';
+    div.className = 'inst-block' + (isInc(inst) ? '' : ' inc-off');
     div.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
         <input class="nec-cat-input" value="${escH(inst.name)}" placeholder="e.g. iPhone 15 Pro, Samsung TV" style="flex:1;"
           oninput="installments[${i}].name=this.value; savePlanData()">
         <button class="del-btn" onclick="removeInst(${inst.id})">✕</button>
+        ${incBtn(inst, `toggleInstInc(${inst.id})`)}
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;">
         <div style="flex:1; min-width:130px;">
@@ -5413,6 +5540,7 @@ function renderInsts() {
 
 function getInstsMonthlySum() {
   return installments.reduce((s, inst) => {
+    if (!isInc(inst)) return s;
     const mo = parseFloat(inst.monthlyAmt) || 0;
     const re = parseInt(inst.remaining)    || 0;
     return s + (re > 0 ? mo : 0);
@@ -5422,6 +5550,7 @@ function getInstsMonthlySum() {
 function updateInstsTotal() {
   let monthly = 0, totalRem = 0;
   installments.forEach(inst => {
+    if (!isInc(inst)) return;
     const mo = parseFloat(inst.monthlyAmt) || 0;
     const re = parseInt(inst.remaining)    || 0;
     if (re > 0) monthly += mo;
@@ -5451,13 +5580,21 @@ function toggleDebtType(id, type) {
   if (d) { d.type = type; renderDebts(); savePlanData(); }
 }
 
+function toggleDebtInc(id) {
+  const d = personalDebts.find(x => x.id === id);
+  if (!d) return;
+  d.inc = !isInc(d);
+  renderDebts();
+  savePlanData();
+}
+
 function renderDebts() {
   const c = document.getElementById('debtsContainer');
   if (!c) return;
   c.innerHTML = '';
   personalDebts.forEach((d, i) => {
     const div = document.createElement('div');
-    div.className = 'debt-row';
+    div.className = 'debt-row' + (isInc(d) ? '' : ' inc-off');
     div.innerHTML = `
       <div class="debt-type-toggle" style="flex-shrink:0;">
         <button class="debt-type-btn lent${d.type === 'lent' ? ' active' : ''}" onclick="toggleDebtType(${d.id},'lent')">Lent</button>
@@ -5466,6 +5603,7 @@ function renderDebts() {
       <input class="nec-cat-input" value="${escH(d.person)}" placeholder="${d.type === 'lent' ? 'Who owes you?' : 'Who do you owe?'}" style="flex:1; min-width:100px;"
         oninput="personalDebts[${i}].person=this.value; savePlanData()">
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        ${incBtn(d, `toggleDebtInc(${d.id})`)}
         <span style="font-size:12px; color:var(--text3);">₱</span>
         <input class="nec-amt-input" type="number" value="${d.amt}" placeholder="0.00" min="0" step="0.01" style="width:100px;"
           oninput="personalDebts[${i}].amt=this.value; updateDebtsSummary(); savePlanData()">
@@ -5480,6 +5618,7 @@ function renderDebts() {
 function updateDebtsSummary() {
   let lent = 0, owe = 0;
   personalDebts.forEach(d => {
+    if (!isInc(d)) return;
     const a = parseFloat(d.amt) || 0;
     if (d.type === 'lent') lent += a; else owe += a;
   });
@@ -6117,20 +6256,21 @@ function getCashFlowEvents(year, month) {
 
   // ── Bills: TikTok PayLater on 1st ────────────────────────
   const tiktokAmt = plData.tiktok
-    .filter(r => r.month === month)
+    .filter(r => r.month === month && isInc(r))
     .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
   if (tiktokAmt > 0)
     events.push({ day: 1, type: 'bill', label: 'TikTok PayLater', amount: tiktokAmt });
 
   // ── Bills: Shopee SPayLater on 5th ───────────────────────
   const shopeeAmt = plData.shopee
-    .filter(r => r.month === month)
+    .filter(r => r.month === month && isInc(r))
     .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
   if (shopeeAmt > 0)
     events.push({ day: 5, type: 'bill', label: 'SPayLater (Shopee)', amount: shopeeAmt });
 
   // ── Bills: Necessities with a pay day set ────────────────
   necData.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — hidden from cash flow
     const day = parseInt(row.day) || 0;
     const amt = parseFloat(row.amt) || 0;
     if (row.inst && !monthInInstRange(month, row.instFrom, row.instTo)) return; // installment not active this month
@@ -6141,6 +6281,7 @@ function getCashFlowEvents(year, month) {
   // ── Bills: Subscriptions with a billing day ───────────────
   if (typeof subscriptions !== 'undefined') {
     subscriptions.forEach(sub => {
+      if (!isInc(sub)) return;               // unmarked — hidden from cash flow
       const day = parseInt(sub.billingDay) || 0;
       const amt = parseFloat(sub.amt) || 0;
       if (day >= 1 && day <= 31 && amt > 0 && (sub.name || '').trim())
@@ -6262,9 +6403,10 @@ function renderCalendar() {
 
   // Bill days: paylater, necessities with a day, subscriptions with billingDay
   const billDays = new Set();
-  if (plData.tiktok.some(r => r.month === calMonth)) billDays.add(1);
-  if (plData.shopee.some(r => r.month === calMonth)) billDays.add(5);
+  if (plData.tiktok.some(r => r.month === calMonth && isInc(r))) billDays.add(1);
+  if (plData.shopee.some(r => r.month === calMonth && isInc(r))) billDays.add(5);
   necData.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — hidden from calendar
     const d = parseInt(row.day) || 0;
     if (row.inst && !monthInInstRange(calMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if (d >= 1 && d <= 31 && (parseFloat(row.amt) || 0) > 0)
@@ -6272,6 +6414,7 @@ function renderCalendar() {
   });
   if (typeof subscriptions !== 'undefined') {
     subscriptions.forEach(sub => {
+      if (!isInc(sub)) return;               // unmarked — hidden from calendar
       const d = parseInt(sub.billingDay) || 0;
       if (d >= 1 && d <= 31 && (parseFloat(sub.amt) || 0) > 0)
         billDays.add(Math.min(d, lastDay));
@@ -6565,18 +6708,20 @@ function renderBillChecklist() {
   const items = [];
   const bclMonth = new Date().getMonth();
   necData.forEach((row, i) => {
+    if (!isInc(row)) return;                 // unmarked — hidden from checklist
     if (row.inst && !monthInInstRange(bclMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if ((parseFloat(row.amt) || 0) > 0 && (row.cat || '').trim())
       items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: parseFloat(row.amt)||0, src: 'nec' });
   });
   subscriptions.forEach(sub => {
+    if (!isInc(sub)) return;                 // unmarked — hidden from checklist
     if ((parseFloat(sub.amt) || 0) > 0 && (sub.name || '').trim())
       items.push({ key: `sub_${sub.id}`, label: sub.name.trim(), amt: parseFloat(sub.amt)||0, src: 'sub' });
   });
   const curMonth = new Date().getMonth();
-  const shopeeAmt = plData.shopee.filter(r => r.month === curMonth).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
+  const shopeeAmt = plData.shopee.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
   if (shopeeAmt > 0) items.push({ key: 'pl_shopee', label: 'SPayLater (Shopee)', amt: shopeeAmt, src: 'pay' });
-  const tiktokAmt = plData.tiktok.filter(r => r.month === curMonth).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
+  const tiktokAmt = plData.tiktok.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
   if (tiktokAmt > 0) items.push({ key: 'pl_tiktok', label: 'TikTok PayLater', amt: tiktokAmt, src: 'pay' });
 
   const done = items.filter(it => billChecks.checks[it.key]).length;
@@ -6615,6 +6760,7 @@ function archiveSplit(type) {
       ccPeople.forEach(p => { totals[p.id] = 0; });
       let grand = 0;
       ccStores.forEach(s => {
+        if (!isInc(s)) return;
         const amt = parseFloat(s.amt) || 0;
         grand += amt;
         const n = s.people.length;
@@ -6632,6 +6778,7 @@ function archiveSplit(type) {
       let grand = 0;
       ['drinks','food'].forEach(cat => {
         hsItems[cat].forEach(item => {
+          if (!isInc(item)) return;
           const amt = parseFloat(item.amt) || 0; grand += amt;
           const n = item.people.length;
           if (n > 0) item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += amt / n; });
@@ -6731,7 +6878,16 @@ function clearSpendLog() {
   recalcAll();
 }
 
-function getSpendSum() { return spendLog.reduce((s, e) => s + (parseFloat(e.amt) || 0), 0); }
+function getSpendSum() { return spendLog.reduce((s, e) => s + (isInc(e) ? (parseFloat(e.amt) || 0) : 0), 0); }
+
+function toggleSpendInc(id) {
+  const e = spendLog.find(x => x.id === id);
+  if (!e) return;
+  e.inc = !isInc(e);
+  saveSpendLog();
+  renderSpendLog();
+  recalcAll();
+}
 
 function saveSpendLog() {
   try { localStorage.setItem('va_spend_log', JSON.stringify({ log: spendLog, seq: spendSeq })); } catch(e) {}
@@ -6760,7 +6916,8 @@ function renderSpendLog() {
   c.innerHTML = spendLog.map(e => {
     const cat     = SPEND_CATS.find(c => c.id === e.cat) || SPEND_CATS[SPEND_CATS.length - 1];
     const dateStr = new Date(e.date).toLocaleDateString('en-PH', { month:'short', day:'numeric' });
-    return `<div class="slog-row">
+    return `<div class="slog-row${isInc(e) ? '' : ' inc-off'}">
+      ${incBtn(e, `toggleSpendInc(${e.id})`)}
       <span class="slog-icon">${cat.emoji}</span>
       <span class="slog-date">${dateStr}</span>
       <span class="slog-label">${escH(e.label)}</span>
