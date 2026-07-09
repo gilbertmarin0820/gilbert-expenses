@@ -4366,7 +4366,11 @@ const plData = { shopee: [], tiktok: [] };
 const PL_BILLING_DAY = { shopee: 5, tiktok: 1 };
 
 function addPLRow(type) {
-  plData[type].push({ month: new Date().getMonth(), amt: '' });
+  const rows = plData[type];
+  // Default to the month after the last existing row, or current month if empty
+  const lastMonth = rows.length > 0 ? rows[rows.length - 1].month : new Date().getMonth() - 1;
+  const nextMonth = (lastMonth + 1) % 12;
+  plData[type].push({ month: nextMonth, amt: '' });
   renderPL(type);
   recalcAll();
   saveData();
@@ -4435,7 +4439,16 @@ function addPLPurchase(type) {
 
   const months = plMonthSpan(from, to);
   const per    = mode === 'total' ? Math.round((amt / months.length) * 100) / 100 : amt;
-  months.forEach(mo => plData[type].push({ month: mo, amt: String(per) }));
+  months.forEach(mo => {
+    // If a row for this month already exists, add to its amount
+    // instead of pushing a duplicate row
+    const existing = plData[type].find(r => r.month === mo);
+    if (existing) {
+      existing.amt = String(Math.round((parseFloat(existing.amt || 0) + per) * 100) / 100);
+    } else {
+      plData[type].push({ month: mo, amt: String(per) });
+    }
+  });
 
   // Reset + close the form
   amtEl.value = '';
