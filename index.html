@@ -931,13 +931,9 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     NEW FEATURES: Goals · OTE · Subscriptions · Installments
+     NEW FEATURES: Goals · Subscriptions · Installments
                    Personal Debt · Chart · Calendar
      ═══════════════════════════════════════════════════════════ */
-
-  /* ONE-TIME EXPENSES */
-  .ote-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-  @media (max-width: 700px) { .ote-row { flex-wrap: wrap; } }
 
   /* SUBSCRIPTIONS */
   .sub-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
@@ -1103,10 +1099,6 @@
   .conv-dir-btn.active { background: var(--amber-dim); color: var(--amber-text); box-shadow: inset 0 0 0 1px var(--amber); }
   .conv-dir-btn:not(.active):hover { background: var(--surface3); color: var(--text); }
 
-  /* ── OTE + CONVERTER 2-COL ───────────────────────────────── */
-  .ote-converter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 700px) { .ote-converter-grid { grid-template-columns: 1fr; } }
-
   /* ── MULTI-CURRENCY CONVERTER ────────────────────────────── */
   .conv-currency-select {
     width: 100%;
@@ -1200,28 +1192,6 @@
   .arch-person-amt { font-family: 'DM Mono', monospace; color: var(--green-text); }
 
   /* ═══════════════════════════════════════════════════════════
-     FEATURE: DAILY SPEND LOG
-     ═══════════════════════════════════════════════════════════ */
-  .slog-quick-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-  .slog-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-  .slog-cat-btn {
-    background: var(--surface2); border: 1px solid var(--border2);
-    font-size: 16px; padding: 5px 10px; border-radius: var(--radius-sm);
-    cursor: pointer; transition: all 0.15s; line-height: 1;
-  }
-  .slog-cat-btn.active { background: var(--blue-dim); border-color: var(--blue); }
-  .slog-cat-btn:hover:not(.active) { border-color: var(--border2); background: var(--surface3); }
-  .slog-row {
-    display: flex; align-items: center; gap: 8px; padding: 7px 10px;
-    border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 5px;
-    background: var(--surface2); font-size: 13px;
-  }
-  .slog-icon { font-size: 15px; flex-shrink: 0; line-height: 1; }
-  .slog-date { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); flex-shrink: 0; white-space: nowrap; }
-  .slog-label { flex: 1; color: var(--text2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .slog-amt { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--red-text); flex-shrink: 0; }
-
-  /* ═══════════════════════════════════════════════════════════
      FEATURE: INSTALLMENTS (necessities table)
      ═══════════════════════════════════════════════════════════ */
   .nec-inst-check {
@@ -1247,7 +1217,7 @@
   .inc-toggle:not(.on):hover { border-color: var(--green); }
   .inc-off { opacity: 0.45; }
   .inc-off .nec-amt-input, .inc-off .big-input, .inc-off .pl-input,
-  .inc-off .slog-amt, .inc-off .inst-balance-val { text-decoration: line-through; }
+  .inc-off .inst-balance-val { text-decoration: line-through; }
   .nec-inst-select {
     background: var(--surface2); border: 1px solid var(--border);
     color: var(--text); font-family: 'Outfit', sans-serif;
@@ -2229,55 +2199,6 @@
     </div>
   </div>
 
-  <!-- ONE-TIME EXPENSES + DAILY SPEND LOG -->
-  <div class="ote-converter-grid">
-    <div>
-      <div class="section-title">One-time Expenses</div>
-      <div class="card">
-        <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-          Quick-log purchases — shoes, Grab rides, weekend food haul. Automatically deducted from your net balance.
-        </div>
-        <div id="oteContainer"></div>
-        <button class="add-btn" onclick="addOTE()">+ Add expense</button>
-        <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:13px; color:var(--text2);">Total one-time expenses</span>
-          <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="oteTotal">₱0.00</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- DAILY SPEND LOG -->
-    <div>
-      <div class="section-title">Daily Spend Log</div>
-      <div class="card">
-        <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">Quick-add purchases. Total is automatically deducted from your net balance.</div>
-        <!-- Category picker -->
-        <div class="slog-cats" id="slogCats"></div>
-        <!-- Quick-add row -->
-        <div class="slog-quick-add">
-          <input type="text" id="slogLabelInput" class="nec-cat-input" placeholder="What did you spend on?" style="flex:1; min-width:140px;"
-            onkeydown="if(event.key==='Enter'){addSpendEntry();}">
-          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-            <span style="font-size:12px;color:var(--text3);">₱</span>
-            <input type="number" id="slogAmtInput" class="nec-amt-input" placeholder="0.00" min="0" step="0.01" style="width:100px;"
-              onkeydown="if(event.key==='Enter'){addSpendEntry();}">
-          </div>
-          <button class="add-btn" style="width:auto;padding:0 18px;margin-top:0;border-style:solid;border-color:var(--blue);color:var(--blue-text);" onclick="addSpendEntry()">+ Add</button>
-        </div>
-        <!-- Log list -->
-        <div id="slogList"></div>
-        <!-- Total row -->
-        <div style="margin-top:10px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;color:var(--text2);">Spend log total</span>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button onclick="clearSpendLog()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;font-family:'Outfit',sans-serif;" title="Clear all entries">Clear all</button>
-            <span class="c-red" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:500;" id="slogTotal">₱0.00</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- CALCULATOR + CURRENCY CONVERTER -->
   <div>
     <div class="section-title">Calculator &amp; Currency Converter</div>
@@ -2343,6 +2264,8 @@
           <button class="calc-btn" onclick="calcDot()">.</button>
           <button class="calc-btn calc-eq" onclick="calcEquals()">=</button>
           <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
+          <!-- Row 5: full-width backspace -->
+          <button class="calc-btn calc-fn" style="grid-column:1 / -1;" onclick="calcBackspace()" title="Delete last digit (keyboard: Backspace)">⌫</button>
         </div>
       </div>
 
@@ -2432,8 +2355,6 @@
         <div class="nb-row"><span class="nb-label">− TikTok PayLater</span><span class="c-red" id="nb5">₱0.00</span></div>
         <div class="nb-row" id="nb-subs-row" style="display:none;"><span class="nb-label">− Subscriptions</span><span class="c-red" id="nb-subs">₱0.00</span></div>
         <div class="nb-row" id="nb-insts-row" style="display:none;"><span class="nb-label">− Installments</span><span class="c-red" id="nb-insts">₱0.00</span></div>
-        <div class="nb-row" id="nb-ote-row" style="display:none;"><span class="nb-label">− One-time</span><span class="c-red" id="nb-ote">₱0.00</span></div>
-        <div class="nb-row" id="nb-spend-row" style="display:none;"><span class="nb-label">− Spend Log</span><span class="c-red" id="nb-spend">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;">
           <span class="nb-label" style="color:var(--text);">= Net balance</span>
@@ -2909,23 +2830,6 @@ let fxRate = 0;
 let countdownSec = 60;
 let countdownTimer = null;
 let fetching = false;
-
-// ─── SPEND LOG STATE (hoisted) ─────────────────────────────────
-// Declared here — well above the init block — so that recalcAll()
-// can safely call getSpendSum() during the very first renderNec()
-// call without hitting a Temporal Dead Zone ReferenceError.
-const SPEND_CATS = [
-  { id: 'food',      emoji: '🍔', label: 'Food'      },
-  { id: 'drink',     emoji: '☕', label: 'Drinks'    },
-  { id: 'transport', emoji: '🚗', label: 'Transport' },
-  { id: 'shop',      emoji: '🛍️', label: 'Shopping'  },
-  { id: 'health',    emoji: '💊', label: 'Health'    },
-  { id: 'gaming',    emoji: '🎮', label: 'Gaming'    },
-  { id: 'other',     emoji: '📦', label: 'Other'     },
-];
-let spendLog   = [];
-let spendSeq   = 1;
-let activeScat = 'food';
 
 // ─── QUICK BALANCE SYNC STATE (hoisted) ────────────────────────
 const QBS_BANKS = [
@@ -3677,7 +3581,8 @@ function recalcAll() {
   let necSum = 0;
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — excluded from totals
-    const base = parseFloat(row.amt) || 0;
+    // necRowBase splits "Total" installments evenly across their months
+    const base = necRowBase(row);
     // necRowMult respects the pay-day counter AND installment month ranges
     // (returns 0 for installments not active in the current period)
     necSum += base * necRowMult(row, startStr2, endStr2);
@@ -3706,20 +3611,14 @@ function recalcAll() {
   // plan page totals (subscriptions, installments, one-time expenses)
   const subsSum  = getSubsSum();
   const instsSum = getInstsMonthlySum();
-  const oteSum   = getOTESum();
-  const spendSum = getSpendSum();
 
   const subsRow  = document.getElementById('nb-subs-row');
   const instsRow = document.getElementById('nb-insts-row');
-  const oteRow   = document.getElementById('nb-ote-row');
-  const spendRow = document.getElementById('nb-spend-row');
   if (subsRow)  { subsRow.style.display  = subsSum  > 0 ? 'flex' : 'none'; document.getElementById('nb-subs').textContent  = fPHP(subsSum);  }
   if (instsRow) { instsRow.style.display = instsSum > 0 ? 'flex' : 'none'; document.getElementById('nb-insts').textContent = fPHP(instsSum); }
-  if (oteRow)   { oteRow.style.display   = oteSum   > 0 ? 'flex' : 'none'; document.getElementById('nb-ote').textContent   = fPHP(oteSum);   }
-  if (spendRow) { spendRow.style.display = spendSum > 0 ? 'flex' : 'none'; document.getElementById('nb-spend').textContent = fPHP(spendSum); }
 
   // net summary
-  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - subsSum - instsSum - oteSum - spendSum;
+  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - subsSum - instsSum;
   document.getElementById('nb1').textContent = fPHP(savings);
   document.getElementById('nb2').textContent = fPHP(netPHP);
   document.getElementById('nb3').textContent = fPHP(necSum);
@@ -4146,6 +4045,24 @@ function monthInInstRange(m, from, to) {
 // Effective multiplier for a necessities row, respecting both the
 // pay-day counter AND (if installment) the installment month range.
 // Returns 0 when an installment is not active in the current period.
+// Number of months in an installment window, inclusive (wraps the year
+// boundary, e.g. Nov → Feb = 4 months). Same span logic as plMonthSpan.
+function necInstSpanLen(row) {
+  const from = +row.instFrom, to = +row.instTo;
+  if (isNaN(from) || isNaN(to)) return 1;
+  return ((to - from + 12) % 12) + 1;
+}
+
+// Per-month base amount for a necessities row.
+// Installment mode 'total' = the typed amount is the WHOLE installment,
+// split evenly across the months (like the PayLater "Total — split evenly"
+// option). Default 'per' = the typed amount is charged every month.
+function necRowBase(row) {
+  const amt = parseFloat(row.amt) || 0;
+  if (row.inst && row.instMode === 'total') return amt / necInstSpanLen(row);
+  return amt;
+}
+
 function necRowMult(row, startStr, endStr) {
   const day = parseInt(row.day) || 0;
   const hasDay   = day >= 1 && day <= 31;
@@ -4201,6 +4118,7 @@ function toggleNecInst(i, checked) {
   if (!row) return;
   row.inst = checked;
   if (checked) {
+    if (!row.instMode) row.instMode = 'per';
     const curM = new Date().getMonth();
     if (row.instFrom === undefined || row.instFrom === '' || row.instFrom === null) row.instFrom = curM;
     if (row.instTo   === undefined || row.instTo   === '' || row.instTo   === null) row.instTo   = curM;
@@ -4219,8 +4137,14 @@ function renderNec() {
 
   necData.forEach((row, i) => {
     const mult = necRowMult(row, startStr, endStr);
-    const showBadge = mult > 1;
-    const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
+    const perMo = necRowBase(row);
+    const isSplit = row.inst && row.instMode === 'total' && (parseFloat(row.amt) || 0) > 0;
+    const showBadge = mult > 1 || (isSplit && mult > 0);
+    const effectiveAmt = perMo * mult;
+    const badgeTxt = isSplit ? ('÷' + necInstSpanLen(row) + (mult > 1 ? ' ×' + mult : '')) : ('×' + mult);
+    const effTxt = isSplit
+      ? ('= ' + fPHP(perMo) + '/mo' + (mult > 1 ? ' · ' + fPHP(effectiveAmt) + ' in range' : ''))
+      : ('= ' + fPHP(effectiveAmt));
 
     // Installment status badge — active this period or skipped
     const instCls = row.inst ? (mult > 0 ? 'active' : 'inactive') : '';
@@ -4240,9 +4164,9 @@ function renderNec() {
           <span style="font-size:12px;color:var(--text3);">₱</span>
           <input class="nec-amt-input nec-amt" type="number" value="${row.amt}" placeholder="0.00" min="0" step="0.01"
             oninput="necData[${i}].amt=this.value; updateNecBadge(${i}); recalcAll(); saveData()" style="width:100px;">
-          <span class="nec-mult-badge" id="necBadge-${i}" title="Paid ${mult}× in date range" style="${showBadge ? '' : 'display:none;'}">×${mult}</span>
+          <span class="nec-mult-badge" id="necBadge-${i}" title="${isSplit ? 'Total split evenly across ' + necInstSpanLen(row) + ' months' : 'Paid ' + mult + '× in date range'}" style="${showBadge ? '' : 'display:none;'}">${badgeTxt}</span>
         </div>
-        <div id="necEffAmt-${i}" style="font-size:10px;color:var(--teal-text);text-align:right;margin-top:2px;font-family:'DM Mono',monospace;${showBadge ? '' : 'display:none;'}">= ${fPHP(effectiveAmt)}</div>
+        <div id="necEffAmt-${i}" style="font-size:10px;color:var(--teal-text);text-align:right;margin-top:2px;font-family:'DM Mono',monospace;${showBadge ? '' : 'display:none;'}">${effTxt}</div>
       </td>
       <td style="text-align:center;">
         <input class="nec-day-input" type="number" value="${row.day}" placeholder="—" min="1" max="31" step="1"
@@ -4256,6 +4180,11 @@ function renderNec() {
             Installment
           </label>
           <div class="nec-inst-range" style="${row.inst ? '' : 'display:none;'}">
+            <select class="nec-inst-select" title="How the amount applies: Per month = charged every month · Total — split = the amount is the whole installment, divided evenly across the months"
+              onchange="necData[${i}].instMode=this.value; updateNecBadge(${i}); recalcAll(); saveData()">
+              <option value="per"${row.instMode !== 'total' ? ' selected' : ''}>Per month</option>
+              <option value="total"${row.instMode === 'total' ? ' selected' : ''}>Total — split</option>
+            </select>
             <select class="nec-inst-select" title="Installment start month"
               onchange="necData[${i}].instFrom=+this.value; updateNecBadge(${i}); recalcAll(); saveData()">${fromOpts}</select>
             <span style="color:var(--text3); font-size:10px;">→</span>
@@ -4285,19 +4214,23 @@ function updateNecBadge(i) {
   const startStr = document.getElementById('dateStart').value;
   const endStr   = document.getElementById('dateEnd').value;
   const mult = necRowMult(row, startStr, endStr);
-  const showBadge    = mult > 1;
-  const effectiveAmt = (parseFloat(row.amt) || 0) * mult;
+  const perMo   = necRowBase(row);
+  const isSplit = row.inst && row.instMode === 'total' && (parseFloat(row.amt) || 0) > 0;
+  const showBadge    = mult > 1 || (isSplit && mult > 0);
+  const effectiveAmt = perMo * mult;
 
   const badgeEl = document.getElementById('necBadge-' + i);
   const effEl   = document.getElementById('necEffAmt-' + i);
   if (badgeEl) {
     badgeEl.style.display = showBadge ? '' : 'none';
-    badgeEl.title = 'Paid ' + mult + '× in date range';
-    badgeEl.textContent = '×' + mult;
+    badgeEl.title = isSplit ? ('Total split evenly across ' + necInstSpanLen(row) + ' months') : ('Paid ' + mult + '× in date range');
+    badgeEl.textContent = isSplit ? ('÷' + necInstSpanLen(row) + (mult > 1 ? ' ×' + mult : '')) : ('×' + mult);
   }
   if (effEl) {
     effEl.style.display = showBadge ? '' : 'none';
-    effEl.textContent = '= ' + fPHP(effectiveAmt);
+    effEl.textContent = isSplit
+      ? ('= ' + fPHP(perMo) + '/mo' + (mult > 1 ? ' · ' + fPHP(effectiveAmt) + ' in range' : ''))
+      : ('= ' + fPHP(effectiveAmt));
   }
   // Installment badge + row dimming
   const instBadge = document.getElementById('necInstBadge-' + i);
@@ -4351,7 +4284,7 @@ function isPLBillingInRange(month, billingDay, startStr, endStr) {
 }
 
 function addNec() {
-  necData.push({cat:'',amt:'',day:'',inst:false,instFrom:new Date().getMonth(),instTo:new Date().getMonth()});
+  necData.push({cat:'',amt:'',day:'',inst:false,instMode:'per',instFrom:new Date().getMonth(),instTo:new Date().getMonth()});
   renderNec();
   saveData();
   setTimeout(() => {
@@ -4583,19 +4516,32 @@ function calcRender() {
   const screen = document.getElementById('calcScreen');
   if (!screen) return;
 
-  // Paste: strip everything except digits, minus, and one decimal point
+  // Paste: strip everything except digits, minus, and one decimal point.
+  // NEVER wipes what's already in the calculator:
+  //  • pending operation ("500 +") → pasted number becomes the 2nd operand
+  //  • a value already on screen   → auto-chains with + so both get calculated
+  //  • empty / 0                   → pasted number simply fills the screen
   screen.addEventListener('paste', e => {
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text');
     const cleaned = text.replace(/[^0-9.\-]/g, '');
     const num = parseFloat(cleaned);
-    if (!isNaN(num) && cleaned !== '') {
+    if (isNaN(num) || cleaned === '') return;
+
+    if (calcOper && !calcJustEq) {
+      // An operation is pending (e.g. "500 +") — fill in the second operand
       calcCurrent = String(num);
-      calcJustEq  = false;
-      calcOper    = null;
-      calcPrev    = '';
-      calcRender();
+    } else if (calcCurrent !== '0' && calcCurrent !== 'Error' && parseFloat(calcCurrent) !== 0) {
+      // A value is already on screen — keep it and add the pasted one to it
+      calcPrev    = calcCurrent;
+      calcOper    = '+';
+      calcCurrent = String(num);
+      showToast('➕ Kept ' + calcPrev + ' — press = to add, or keep going');
+    } else {
+      calcCurrent = String(num);
     }
+    calcJustEq = false;
+    calcRender();
   });
 
   // Direct keyboard input into the screen div
@@ -4665,6 +4611,14 @@ function calcOp(op) {
   calcRender();
 }
 
+
+function calcBackspace() {
+  if (calcCurrent === 'Error') { calcClear(); return; }
+  calcJustEq  = false;
+  calcCurrent = calcCurrent.length > 1 ? calcCurrent.slice(0, -1) : '0';
+  if (calcCurrent === '-' || calcCurrent === '') calcCurrent = '0';
+  calcRender();
+}
 
 function calcClear() {
   calcCurrent = '0'; calcPrev = ''; calcOper = null; calcJustEq = false;
@@ -4837,11 +4791,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === '^') calcOp('^');
   else if (e.key === 'Enter' || e.key === '=') calcEquals();
   else if (e.key === 'Escape') calcClear();
-  else if (e.key === 'Backspace') {
-    if (calcCurrent.length > 1) calcCurrent = calcCurrent.slice(0, -1);
-    else calcCurrent = '0';
-    calcRender();
-  }
+  else if (e.key === 'Backspace') calcBackspace();
 });
 
 // ─── TOAST ────────────────────────────────────────────────────
@@ -5524,13 +5474,12 @@ function loadHS() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PLAN PAGE — Goals · One-Time Expenses · Subscriptions
-//              Installments · Personal Debt · Chart · Calendar
+// PLAN PAGE — Goals · Subscriptions · Installments
+//              Personal Debt · Chart · Calendar
 // ═══════════════════════════════════════════════════════════════
 
 // ─── SHARED PLAN DATA ─────────────────────────────────────────
 let savingsGoals    = [];   // [{id, name, target, saved}]
-let oneTimeExpenses = [];   // [{id, name, amt}]
 let subscriptions   = [];   // [{id, name, amt, billingDay}]
 let installments    = [];   // [{id, name, monthlyAmt, remaining}]
 let personalDebts   = [];   // [{id, type:'lent'|'owe', person, amt}]
@@ -5540,62 +5489,6 @@ let _cfVAWeeklyPHP   = 0;
 let _cfCorpPerCutoff = 0;
 let planSeq = 1;
 function planId() { return planSeq++; }
-
-// ─── ONE-TIME EXPENSES ────────────────────────────────────────
-function addOTE() {
-  oneTimeExpenses.push({ id: planId(), name: '', amt: '' });
-  renderOTE();
-  savePlanData();
-}
-
-function removeOTE(id) {
-  oneTimeExpenses = oneTimeExpenses.filter(e => e.id !== id);
-  renderOTE();
-  recalcAll();
-  savePlanData();
-}
-
-function toggleOTEInc(id) {
-  const e = oneTimeExpenses.find(x => x.id === id);
-  if (!e) return;
-  e.inc = !isInc(e);
-  renderOTE();
-  recalcAll();
-  savePlanData();
-}
-
-function renderOTE() {
-  const c = document.getElementById('oteContainer');
-  if (!c) return;
-  c.innerHTML = '';
-  oneTimeExpenses.forEach((e, i) => {
-    const div = document.createElement('div');
-    div.className = 'ote-row' + (isInc(e) ? '' : ' inc-off');
-    div.innerHTML = `
-      <input class="nec-cat-input" value="${escH(e.name)}" placeholder="What was it? (e.g. Grab rides)" style="flex:1; min-width:120px;"
-        oninput="oneTimeExpenses[${i}].name=this.value; savePlanData()">
-      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-        ${incBtn(e, `toggleOTEInc(${e.id})`)}
-        <span style="font-size:12px; color:var(--text3);">₱</span>
-        <input class="nec-amt-input" type="number" value="${e.amt}" placeholder="0.00" min="0" step="0.01"
-          style="width:110px;"
-          oninput="oneTimeExpenses[${i}].amt=this.value; updateOTETotal(); recalcAll(); savePlanData()">
-      </div>
-      <button class="del-btn" onclick="removeOTE(${e.id})">✕</button>
-    `;
-    c.appendChild(div);
-  });
-  updateOTETotal();
-}
-
-function getOTESum() {
-  return oneTimeExpenses.reduce((s, e) => s + (isInc(e) ? (parseFloat(e.amt) || 0) : 0), 0);
-}
-
-function updateOTETotal() {
-  const el = document.getElementById('oteTotal');
-  if (el) el.textContent = fPHP(getOTESum());
-}
 
 // ─── SAVINGS GOALS ────────────────────────────────────────────
 // Updates only the progress bar / percentage / info text for goal[i]
@@ -5984,7 +5877,6 @@ function drawChart() {
   const tiktok  = readNB('nb5');
   const subs    = getSubsSum();
   const insts   = getInstsMonthlySum();
-  const ote     = getOTESum();
 
   const segments = [
     { label: 'Savings',       value: savings, color: '#3FB950', income: true  },
@@ -5996,8 +5888,6 @@ function drawChart() {
     { label: 'TikTok',        value: tiktok,  color: '#555',    income: false },
     { label: 'Subscriptions', value: subs,    color: '#d29922', income: false },
     { label: 'Installments',  value: insts,   color: '#e3b341', income: false },
-    { label: 'One-time',      value: ote,     color: '#ff7b72', income: false },
-    { label: 'Spend Log',     value: getSpendSum(), color: '#c0392b', income: false },
   ].filter(s => s.value > 0.005);
 
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -6086,10 +5976,9 @@ function updateHealthStats() {
   const tiktok   = readNB('nb5');
   const subs     = getSubsSum();
   const insts    = getInstsMonthlySum();
-  const ote      = getOTESum();
 
   const totalIncome      = savings + payroll + corp + bonus;
-  const totalExpenses    = nec + shopee + tiktok + subs + insts + ote;
+  const totalExpenses    = nec + shopee + tiktok + subs + insts;
   const totalObligations = nec + shopee + tiktok + subs + insts;
 
   // 1. Savings Rate — % of total inflow that isn't consumed
@@ -6601,7 +6490,7 @@ function getCashFlowEvents(year, month) {
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — hidden from cash flow
     const day = parseInt(row.day) || 0;
-    const amt = parseFloat(row.amt) || 0;
+    const amt = necRowBase(row);             // "Total" installments show their per-month share
     if (row.inst && !monthInInstRange(month, row.instFrom, row.instTo)) return; // installment not active this month
     if (day >= 1 && day <= 31 && amt > 0 && (row.cat || '').trim())
       events.push({ day: Math.min(day, lastDay), type: 'bill', label: row.cat.trim(), amount: amt });
@@ -6828,7 +6717,7 @@ function savePlanData() {
 
   try {
     localStorage.setItem('va_plan_data', JSON.stringify({
-      savingsGoals, oneTimeExpenses, subscriptions, installments, personalDebts, planSeq,
+      savingsGoals, subscriptions, installments, personalDebts, planSeq,
     }));
   } catch(e) { console.warn('Plan save failed', e); }
 }
@@ -6841,14 +6730,12 @@ function planUndo() {
   try {
     const d = raw ? JSON.parse(raw) : {};
     if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
-    if (Array.isArray(d.oneTimeExpenses)) oneTimeExpenses = d.oneTimeExpenses;
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
     // Re-render all Plan sections
     renderGoals();
-    renderOTE();
     renderSubs();
     renderInsts();
     renderDebts();
@@ -6873,14 +6760,12 @@ function resetPlan() {
   } catch(e) {}
 
   savingsGoals    = [];
-  oneTimeExpenses = [];
   subscriptions   = [];
   installments    = [];
   personalDebts   = [];
   planSeq         = 1;
 
   renderGoals();
-  renderOTE();
   renderSubs();
   renderInsts();
   renderDebts();
@@ -6896,7 +6781,6 @@ function loadPlanData() {
     if (!raw) return;
     const d = JSON.parse(raw);
     if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
-    if (Array.isArray(d.oneTimeExpenses)) oneTimeExpenses = d.oneTimeExpenses;
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
@@ -6975,15 +6859,11 @@ renderHSItems('food');
 updateHSSummary();
 
 loadPlanData();
-renderOTE();          // one-time expenses live on Expenses page
 setTimeout(drawChart, 200);
 calInit();
 updateConverter();
 
 // ─── NEW FEATURE INIT ─────────────────────────────────────────
-loadSpendLog();
-renderSpendLog();
-renderSlogCats();
 loadBillChecks();
 renderSplitArchive('ccArchiveList', 'cc');
 renderSplitArchive('hsArchiveList', 'hs');
@@ -7039,8 +6919,8 @@ function renderBillChecklist() {
   necData.forEach((row, i) => {
     if (!isInc(row)) return;                 // unmarked — hidden from checklist
     if (row.inst && !monthInInstRange(bclMonth, row.instFrom, row.instTo)) return; // installment not active this month
-    if ((parseFloat(row.amt) || 0) > 0 && (row.cat || '').trim())
-      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: parseFloat(row.amt)||0, src: 'nec' });
+    if (necRowBase(row) > 0 && (row.cat || '').trim())
+      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec' });
   });
   subscriptions.forEach(sub => {
     if (!isInc(sub)) return;                 // unmarked — hidden from checklist
@@ -7159,101 +7039,6 @@ function renderSplitArchive(listId, filterType) {
       </div>`;
     }).join('');
   } catch(e) { c.innerHTML = '<div style="font-size:12px;color:var(--red-text);">Error loading archive.</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// FEATURE 4: DAILY SPEND LOG
-// ═══════════════════════════════════════════════════════════════
-// (SPEND_CATS, spendLog, spendSeq, activeScat declared at top of script)
-
-function renderSlogCats() {
-  const c = document.getElementById('slogCats');
-  if (!c) return;
-  c.innerHTML = SPEND_CATS.map(cat =>
-    `<button class="slog-cat-btn${activeScat === cat.id ? ' active' : ''}" title="${cat.label}"
-      onclick="activeScat='${cat.id}'; renderSlogCats();">${cat.emoji}</button>`
-  ).join('');
-}
-
-function addSpendEntry() {
-  const labelEl = document.getElementById('slogLabelInput');
-  const amtEl   = document.getElementById('slogAmtInput');
-  const amt     = parseFloat(amtEl?.value) || 0;
-  if (amt <= 0) { amtEl?.focus(); return; }
-  const cat  = SPEND_CATS.find(c => c.id === activeScat) || SPEND_CATS[0];
-  const label = (labelEl?.value.trim()) || cat.label;
-  spendLog.unshift({ id: spendSeq++, date: new Date().toISOString(), label, cat: activeScat, amt: amt.toFixed(2) });
-  if (labelEl) labelEl.value = '';
-  if (amtEl)   amtEl.value  = '';
-  saveSpendLog();
-  renderSpendLog();
-  recalcAll();
-  labelEl?.focus();
-}
-
-function removeSpendEntry(id) {
-  spendLog = spendLog.filter(e => e.id !== id);
-  saveSpendLog();
-  renderSpendLog();
-  recalcAll();
-}
-
-function clearSpendLog() {
-  if (spendLog.length === 0) return;
-  if (!confirm('Clear all spend log entries?')) return;
-  spendLog = [];
-  saveSpendLog();
-  renderSpendLog();
-  recalcAll();
-}
-
-function getSpendSum() { return spendLog.reduce((s, e) => s + (isInc(e) ? (parseFloat(e.amt) || 0) : 0), 0); }
-
-function toggleSpendInc(id) {
-  const e = spendLog.find(x => x.id === id);
-  if (!e) return;
-  e.inc = !isInc(e);
-  saveSpendLog();
-  renderSpendLog();
-  recalcAll();
-}
-
-function saveSpendLog() {
-  try { localStorage.setItem('va_spend_log', JSON.stringify({ log: spendLog, seq: spendSeq })); } catch(e) {}
-}
-
-function loadSpendLog() {
-  try {
-    const raw = localStorage.getItem('va_spend_log');
-    if (!raw) return;
-    const d = JSON.parse(raw);
-    if (Array.isArray(d.log)) spendLog = d.log;
-    if (typeof d.seq === 'number') spendSeq = Math.max(spendSeq, d.seq);
-  } catch(e) {}
-}
-
-function renderSpendLog() {
-  const c   = document.getElementById('slogList');
-  const tot = document.getElementById('slogTotal');
-  const sum = getSpendSum();
-  if (tot) tot.textContent = fPHP(sum);
-  if (!c) return;
-  if (spendLog.length === 0) {
-    c.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px 4px;">No entries yet.</div>';
-    return;
-  }
-  c.innerHTML = spendLog.map(e => {
-    const cat     = SPEND_CATS.find(c => c.id === e.cat) || SPEND_CATS[SPEND_CATS.length - 1];
-    const dateStr = new Date(e.date).toLocaleDateString('en-PH', { month:'short', day:'numeric' });
-    return `<div class="slog-row${isInc(e) ? '' : ' inc-off'}">
-      ${incBtn(e, `toggleSpendInc(${e.id})`)}
-      <span class="slog-icon">${cat.emoji}</span>
-      <span class="slog-date">${dateStr}</span>
-      <span class="slog-label">${escH(e.label)}</span>
-      <span class="slog-amt">−${fPHP(parseFloat(e.amt)||0)}</span>
-      <button class="del-btn" style="padding:2px 6px;font-size:12px;" onclick="removeSpendEntry(${e.id})">✕</button>
-    </div>`;
-  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
