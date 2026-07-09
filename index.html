@@ -1364,6 +1364,56 @@
       <input id="walletQRFile" type="file" accept="image/*" style="display:none;">
     </div>
 
+    <!-- Cloud Sync -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">☁️ Cloud Sync</div>
+      <div id="syncStatusLine" style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;"></div>
+
+      <!-- Shown when sync is OFF -->
+      <div id="syncSetupBox">
+        <div style="font-size:12px; color:var(--text3); margin-bottom:10px; line-height:1.5;">
+          Pick a <strong style="color:var(--text2);">sync code</strong> — any secret phrase you'll remember.
+          Enter the <em>same code</em> on your other devices and they'll all share the same data.
+          Make it long and unique (like a password) — anyone who knows it can see your data.
+        </div>
+        <input id="syncPhraseInput" type="text" placeholder="e.g. gilbert-mango-747-expenses" autocomplete="off" style="
+          width:100%; box-sizing:border-box; padding:10px; margin-bottom:8px;
+          background:var(--surface3); border:1px solid var(--border);
+          color:var(--text); border-radius:var(--radius-sm); font-family:'Outfit',sans-serif; font-size:14px;">
+        <button onclick="enableSync()" style="
+          width:100%; padding:10px; background:var(--green-dim); border:1px solid var(--green);
+          color:var(--green-text); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+          Turn on Cloud Sync
+        </button>
+      </div>
+
+      <!-- Shown when sync is ON -->
+      <div id="syncControlBox" style="display:none;">
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <button onclick="cloudUpload(true)" style="
+            flex:1; padding:10px; background:var(--green-dim); border:1px solid var(--green);
+            color:var(--green-text); border-radius:var(--radius-sm); cursor:pointer;
+            font-family:'Outfit',sans-serif; font-size:13px; font-weight:500;">
+            ⬆️ Upload now
+          </button>
+          <button onclick="cloudDownload()" style="
+            flex:1; padding:10px; background:var(--blue-dim); border:1px solid var(--blue);
+            color:var(--blue-text); border-radius:var(--radius-sm); cursor:pointer;
+            font-family:'Outfit',sans-serif; font-size:13px; font-weight:500;">
+            ⬇️ Download
+          </button>
+        </div>
+        <button onclick="disableSync()" style="
+          width:100%; padding:8px; background:transparent; border:1px solid var(--border);
+          color:var(--text3); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:12px;">
+          Turn off sync on this device
+        </button>
+      </div>
+      <div id="syncMsg" style="font-size:12px; color:var(--text3); margin-top:10px; min-height:16px;"></div>
+    </div>
+
     <!-- Export -->
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📤 Export data</div>
@@ -7720,6 +7770,263 @@ const BACKUP_KEYS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
+// CLOUD SYNC (Supabase)
+// All app data (except the per-device theme choice) is bundled into
+// one JSON payload and upserted to the `user_data` table, keyed by a
+// SHA-256 hash of the user's sync code. Last write wins.
+// ═══════════════════════════════════════════════════════════════
+const SUPA_URL = 'https://ghbgxmtdlinjsfifuxyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_1bMoEB7kIEeMdCMZb37Sog_MyF0VNGV';
+const SYNC_KEYS = BACKUP_KEYS.filter(k => k !== 'va_theme'); // theme stays per-device
+const SYNC_META_KEY = 'va_sync_meta';
+
+let _syncSuspended = false;   // true while we're restoring cloud data locally
+let _syncTimer     = null;    // debounce timer for auto-upload
+let _syncBusy      = false;
+
+function getSyncMeta() {
+  try { return JSON.parse(localStorage.getItem(SYNC_META_KEY)) || null; } catch(e) { return null; }
+}
+function saveSyncMeta(meta) {
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta)); } catch(e) {}
+}
+
+// Hash the sync code so the raw phrase never leaves the device.
+async function hashSyncPhrase(phrase) {
+  const text = 'gibsxpenses::' + phrase.trim().toLowerCase();
+  if (window.crypto && crypto.subtle && crypto.subtle.digest) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Fallback for non-secure contexts (file://) where crypto.subtle is unavailable
+  let h1 = 0x811c9dc5, h2 = 0x1b873593;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
+  }
+  return 'fb_' + h1.toString(16) + h2.toString(16) + '_' + text.length;
+}
+
+function supaHeaders(extra) {
+  return Object.assign({
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+  }, extra || {});
+}
+
+function buildSyncPayload() {
+  const bundle = { appName: 'GibsXpenses', version: 2, synced_at: new Date().toISOString(), data: {} };
+  SYNC_KEYS.forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val !== null) bundle.data[key] = val;
+  });
+  return bundle;
+}
+
+function setSyncMsg(text, ok) {
+  const el = document.getElementById('syncMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok === true ? 'var(--green-text)' : ok === false ? 'var(--red-text)' : 'var(--text3)';
+}
+
+function friendlySyncError(status, bodyText) {
+  if (status === 404 || /user_data.*not exist|Could not find the table/i.test(bodyText || ''))
+    return 'The user_data table doesn\u2019t exist yet in Supabase \u2014 create it first (see setup notes).';
+  if (status === 401 || status === 403)
+    return 'Supabase rejected the key (check RLS is off, or the key was regenerated).';
+  return 'Sync failed (' + status + '). Check your internet connection and try again.';
+}
+
+// ── Upload (upsert) ────────────────────────────────────────────
+async function cloudUpload(manual) {
+  const meta = getSyncMeta();
+  if (!meta || _syncBusy) return;
+  _syncBusy = true;
+  if (manual) setSyncMsg('Uploading\u2026');
+  try {
+    const bundle = buildSyncPayload();
+    const res = await fetch(SUPA_URL + '/rest/v1/user_data?on_conflict=user_id', {
+      method: 'POST',
+      headers: supaHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ user_id: meta.userId, payload: JSON.stringify(bundle) }]),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(friendlySyncError(res.status, body));
+    }
+    meta.lastSyncedAt = bundle.synced_at;
+    saveSyncMeta(meta);
+    updateSyncUI();
+    if (manual) setSyncMsg('\u2713 Uploaded to cloud.', true);
+  } catch (e) {
+    if (manual) setSyncMsg('\u2717 ' + (e && e.message ? e.message : 'Upload failed.'), false);
+    else console.warn('Auto-sync upload failed:', e);
+  } finally {
+    _syncBusy = false;
+  }
+}
+
+// ── Download & restore ─────────────────────────────────────────
+async function fetchCloudBundle(meta) {
+  const res = await fetch(
+    SUPA_URL + '/rest/v1/user_data?user_id=eq.' + encodeURIComponent(meta.userId) + '&select=payload',
+    { headers: supaHeaders() }
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(friendlySyncError(res.status, body));
+  }
+  const rows = await res.json();
+  if (!rows.length) return null;
+  try { return JSON.parse(rows[0].payload); } catch(e) { return null; }
+}
+
+function applyCloudBundle(bundle, meta) {
+  _syncSuspended = true;
+  try {
+    SYNC_KEYS.forEach(key => {
+      if (Object.prototype.hasOwnProperty.call(bundle.data, key)) {
+        try { localStorage.setItem(key, bundle.data[key]); } catch(e) {}
+      } else {
+        try { localStorage.removeItem(key); } catch(e) {}
+      }
+    });
+    meta.lastSyncedAt = bundle.synced_at || new Date().toISOString();
+    saveSyncMeta(meta);
+  } finally {
+    _syncSuspended = false;
+  }
+}
+
+async function cloudDownload() {
+  const meta = getSyncMeta();
+  if (!meta) return;
+  setSyncMsg('Checking cloud\u2026');
+  try {
+    const bundle = await fetchCloudBundle(meta);
+    if (!bundle || !bundle.data) { setSyncMsg('No cloud data found for this sync code yet. Tap Upload on the device that has your data.', false); return; }
+    const when = bundle.synced_at ? new Date(bundle.synced_at).toLocaleString() : 'unknown time';
+    if (!confirm('Download cloud data?\n\n\u2022 Last uploaded: ' + when + '\n\nThis will REPLACE the data on this device.\nThe app will reload automatically.')) { setSyncMsg(''); return; }
+    applyCloudBundle(bundle, meta);
+    setSyncMsg('\u2713 Downloaded \u2014 reloading\u2026', true);
+    setTimeout(() => location.reload(), 900);
+  } catch (e) {
+    setSyncMsg('\u2717 ' + (e && e.message ? e.message : 'Download failed.'), false);
+  }
+}
+
+// ── Enable / disable ───────────────────────────────────────────
+async function enableSync() {
+  const input = document.getElementById('syncPhraseInput');
+  const phrase = (input.value || '').trim();
+  if (phrase.length < 8) { setSyncMsg('Sync code must be at least 8 characters.', false); return; }
+  setSyncMsg('Setting up\u2026');
+  const userId = await hashSyncPhrase(phrase);
+  const meta = { userId: userId, lastSyncedAt: null };
+  saveSyncMeta(meta);
+  input.value = '';
+  try {
+    const bundle = await fetchCloudBundle(meta);
+    if (bundle && bundle.data && Object.keys(bundle.data).length) {
+      const when = bundle.synced_at ? new Date(bundle.synced_at).toLocaleString() : 'unknown time';
+      if (confirm('Found existing cloud data for this sync code.\n\n\u2022 Last uploaded: ' + when + '\n\nDownload it to this device? (Cancel keeps this device\u2019s data and uploads it instead.)')) {
+        applyCloudBundle(bundle, meta);
+        updateSyncUI();
+        setSyncMsg('\u2713 Sync is on \u2014 reloading with cloud data\u2026', true);
+        setTimeout(() => location.reload(), 900);
+        return;
+      }
+    }
+    updateSyncUI();
+    await cloudUpload(true);
+    setSyncMsg('\u2713 Sync is on \u2014 your data is now in the cloud. Enter the same code on your other devices.', true);
+  } catch (e) {
+    updateSyncUI();
+    setSyncMsg('\u2717 ' + (e && e.message ? e.message : 'Could not reach the cloud.'), false);
+  }
+}
+
+function disableSync() {
+  if (!confirm('Turn off sync on this device?\n\nYour data stays on this device and in the cloud \u2014 this just stops syncing.')) return;
+  try { localStorage.removeItem(SYNC_META_KEY); } catch(e) {}
+  updateSyncUI();
+  setSyncMsg('Sync is off on this device.');
+}
+
+function updateSyncUI() {
+  const meta   = getSyncMeta();
+  const setup  = document.getElementById('syncSetupBox');
+  const ctrl   = document.getElementById('syncControlBox');
+  const status = document.getElementById('syncStatusLine');
+  if (!setup || !ctrl || !status) return;
+  if (meta) {
+    setup.style.display = 'none';
+    ctrl.style.display  = 'block';
+    const last = meta.lastSyncedAt ? new Date(meta.lastSyncedAt).toLocaleString() : 'never';
+    status.innerHTML = '<strong style="color:var(--green-text);">Sync is ON.</strong> Changes upload automatically. Last sync: ' + last + '.';
+  } else {
+    setup.style.display = 'block';
+    ctrl.style.display  = 'none';
+    status.textContent  = 'Keep your data the same on every device \u2014 no more export/import files.';
+  }
+}
+
+// ── Auto-upload: intercept localStorage writes ─────────────────
+// Every module already calls localStorage.setItem/removeItem on save,
+// so hooking here syncs everything without touching each save function.
+function scheduleCloudUpload() {
+  if (_syncSuspended || !getSyncMeta()) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => cloudUpload(false), 2500);
+}
+(function hookStorage() {
+  try {
+    const origSet = localStorage.setItem.bind(localStorage);
+    const origDel = localStorage.removeItem.bind(localStorage);
+    Object.defineProperty(localStorage, 'setItem', { value: function(k, v) {
+      origSet(k, v);
+      if (SYNC_KEYS.indexOf(k) !== -1) scheduleCloudUpload();
+    }});
+    Object.defineProperty(localStorage, 'removeItem', { value: function(k) {
+      origDel(k);
+      if (SYNC_KEYS.indexOf(k) !== -1) scheduleCloudUpload();
+    }});
+  } catch(e) { console.warn('Storage hook failed \u2014 auto-sync disabled, manual upload still works.', e); }
+})();
+
+// ── Startup: offer newer cloud data ────────────────────────────
+async function syncStartupCheck() {
+  const meta = getSyncMeta();
+  if (!meta) return;
+  try {
+    const bundle = await fetchCloudBundle(meta);
+    if (!bundle || !bundle.synced_at) return;
+    const cloudTime = Date.parse(bundle.synced_at) || 0;
+    const localTime = Date.parse(meta.lastSyncedAt || '') || 0;
+    if (cloudTime > localTime + 2000) { // cloud is newer than this device's last sync
+      const when = new Date(cloudTime).toLocaleString();
+      if (confirm('\u2601\ufe0f Newer data found in the cloud (from ' + when + ') \u2014 probably from another device.\n\nLoad it on this device? (Cancel keeps this device\u2019s data.)')) {
+        applyCloudBundle(bundle, meta);
+        location.reload();
+      }
+    }
+  } catch(e) { console.warn('Startup sync check failed:', e); }
+}
+window.addEventListener('load', () => { setTimeout(syncStartupCheck, 800); });
+
+// Flush a pending auto-upload right away when the app is closed/backgrounded
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && _syncTimer) {
+    clearTimeout(_syncTimer);
+    _syncTimer = null;
+    cloudUpload(false);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
 // OVERTIME PAY CALCULATOR — DOLE premium rates
 // Hourly rate = daily rate ÷ 8. First 8 hrs paid at the day-type
 // base multiplier; hours beyond 8 at the OT multiplier (base ×
@@ -7941,6 +8248,8 @@ function openSettings() {
   document.getElementById('settingsMsg').textContent = '';
   updateThemeButtons();
   renderWalletQRList();
+  updateSyncUI();
+  setSyncMsg('');
 }
 
 function closeSettings() {
