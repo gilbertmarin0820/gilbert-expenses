@@ -204,7 +204,7 @@
      forcing its track wider than its 1fr share and spilling past the
      right edge. This was only fixed inside the mobile query before, so it
      overflowed on desktop / when zoomed out. Now applied at all widths. */
-  .savings-pl-grid > *, .paylater-grid > * { min-width: 0; }
+  .savings-pl-grid > *, .paylater-grid > *, .sav3-grid > * { min-width: 0; }
   /* Wide tables scroll inside their card instead of pushing the page off-center */
   .nec-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .section-title {
@@ -325,17 +325,18 @@
   .paylater-logo { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .badge-shopee { background: #ff5722; color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
   .badge-tiktok { background: #111; color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 1px solid #444; }
+  .badge-maya { background: #000; color: #16d99a; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; border: 1px solid #16d99a; }
 
-  .pl-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .pl-row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 8px; }
   .month-select {
     background: var(--surface3); border: 1px solid var(--border);
     color: var(--text); font-family: 'Outfit', sans-serif;
     font-size: 13px; padding: 6px 8px; border-radius: var(--radius-sm);
-    cursor: pointer; flex: 0 0 115px;
+    cursor: pointer; flex: 0 0 100px;
   }
   .month-select:focus { outline: none; border-color: var(--blue); }
   .pl-input {
-    flex: 1; min-width: 0; background: var(--surface3); border: 1px solid var(--border);
+    flex: 1 1 110px; min-width: 110px; background: var(--surface3); border: 1px solid var(--border);
     color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px;
     padding: 6px 10px; border-radius: var(--radius-sm); transition: border-color 0.2s;
   }
@@ -806,6 +807,7 @@
     /* Override inline style on the PayLater grid */
     .paylater-grid     { grid-template-columns: 1fr !important; }
     .savings-pl-grid   { grid-template-columns: 1fr !important; }
+    .sav3-grid         { grid-template-columns: 1fr !important; }
 
     /* ── Header ───────────────────────────────────────────── */
     header         { padding: 11px 14px; }
@@ -2097,7 +2099,10 @@
     </div>
   </div>
 
-  <!-- SAVINGS ALLOCATION -->
+  <!-- SAVINGS ALLOCATION + SAVINGS + BONUS — single 3-column row -->
+  <div class="sav3-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; align-items:start;">
+
+  <!-- Savings Allocation -->
   <div>
     <div class="section-title">Savings Allocation</div>
     <div class="card">
@@ -2131,10 +2136,8 @@
     </div>
   </div>
 
-  <!-- SAVINGS + PAYLATER -->
-  <div class="savings-pl-grid" style="display:grid; grid-template-columns:1fr 2fr; gap:20px; align-items:start;">
-    <div style="display:flex; flex-direction:column; gap:16px;">
-      <div>
+  <!-- Savings -->
+  <div>
         <div class="section-title">Savings</div>
         <div class="card">
           <div class="input-block" style="margin-bottom:14px;">
@@ -2184,11 +2187,13 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <div>
+  </div><!-- /sav3-grid -->
+
+  <!-- PAYLATER DEBTS — full width -->
+  <div>
       <div class="section-title">PayLater Debts</div>
-      <div class="paylater-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="paylater-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
         <!-- Shopee -->
         <div class="paylater-card">
           <div class="paylater-logo"><span class="badge-shopee">Shopee</span> SPayLater <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 5th</span></div>
@@ -2249,6 +2254,36 @@
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="tiktokTotal">₱0.00</span>
           </div>
         </div>
+        <!-- Maya -->
+        <div class="paylater-card">
+          <div class="paylater-logo"><span class="badge-maya">Maya</span> Black Credit Card <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 15th</span></div>
+          <div id="mayaRows"></div>
+          <button class="add-btn" onclick="addPLRow('maya')">+ Add month</button>
+          <button class="add-btn" onclick="togglePLPurchase('maya')" style="color:var(--amber-text); border-color:var(--amber);">🛒 New purchase (spread across months)</button>
+          <div class="pl-purchase-form" id="mayaPurchaseForm">
+            <div class="pl-purchase-row">
+              <span style="font-size:12px;color:var(--text3);">₱</span>
+              <input class="pl-input" type="number" id="mayaPurchaseAmt" placeholder="Amount" min="0" step="0.01" inputmode="decimal" style="flex:1;">
+              <select class="nec-inst-select" id="mayaPurchaseMode" title="How to apply the amount across the months">
+                <option value="total">Total — split evenly</option>
+                <option value="per">Per month</option>
+              </select>
+            </div>
+            <div class="pl-purchase-row">
+              <select class="nec-inst-select" id="mayaPurchaseFrom" title="First billing month"></select>
+              <span style="color:var(--text3); font-size:11px;">→</span>
+              <select class="nec-inst-select" id="mayaPurchaseTo" title="Last billing month"></select>
+            </div>
+            <div class="pl-purchase-row">
+              <div id="mayaPurchasePreview" style="flex:1; font-size:10px; color:var(--text3); font-family:'DM Mono',monospace;"></div>
+              <button class="add-btn" style="margin-top:0;" onclick="addPLPurchase('maya')">✓ Add</button>
+            </div>
+          </div>
+          <div class="pl-total-row">
+            <span style="color:var(--text3);">Total</span>
+            <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="mayaTotal">₱0.00</span>
+          </div>
+        </div>
       </div>
 
       <!-- FINANCIAL HEALTH DASHBOARD -->
@@ -2281,7 +2316,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <!-- NECESSITIES -->
   <div>
@@ -2463,6 +2497,7 @@
         <div class="nb-row"><span class="nb-label">− Necessities</span><span class="c-red" id="nb3">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">− SPayLater</span><span class="c-red" id="nb4">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">− TikTok PayLater</span><span class="c-red" id="nb5">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">− Maya Black CC</span><span class="c-red" id="nb-maya">₱0.00</span></div>
         <div class="nb-row" id="nb-subs-row" style="display:none;"><span class="nb-label">− Subscriptions</span><span class="c-red" id="nb-subs">₱0.00</span></div>
         <div class="nb-row" id="nb-insts-row" style="display:none;"><span class="nb-label">− Installments</span><span class="c-red" id="nb-insts">₱0.00</span></div>
         <div class="divider"></div>
@@ -3703,7 +3738,7 @@ function recalcAll() {
   // Only include entries whose billing date falls within the chosen date range.
   const plStart = document.getElementById('dateStart').value;
   const plEnd   = document.getElementById('dateEnd').value;
-  let shopeeSum = 0, tiktokSum = 0;
+  let shopeeSum = 0, tiktokSum = 0, mayaSum = 0;
   plData.shopee.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — excluded from totals
     if (isPLBillingInRange(row.month, 5, plStart, plEnd))
@@ -3714,8 +3749,14 @@ function recalcAll() {
     if (isPLBillingInRange(row.month, 1, plStart, plEnd))
       tiktokSum += parseFloat(row.amt) || 0;
   });
+  plData.maya.forEach(row => {
+    if (!isInc(row)) return;                 // unmarked — excluded from totals
+    if (isPLBillingInRange(row.month, 15, plStart, plEnd))
+      mayaSum += parseFloat(row.amt) || 0;
+  });
   document.getElementById('shopeeTotal').textContent = fPHP(shopeeSum);
   document.getElementById('tiktokTotal').textContent = fPHP(tiktokSum);
+  document.getElementById('mayaTotal').textContent = fPHP(mayaSum);
   refreshPLBadges(plStart, plEnd);
 
   // plan page totals (subscriptions, installments, one-time expenses)
@@ -3728,12 +3769,13 @@ function recalcAll() {
   if (instsRow) { instsRow.style.display = instsSum > 0 ? 'flex' : 'none'; document.getElementById('nb-insts').textContent = fPHP(instsSum); }
 
   // net summary
-  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - subsSum - instsSum;
+  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - mayaSum - subsSum - instsSum;
   document.getElementById('nb1').textContent = fPHP(savings);
   document.getElementById('nb2').textContent = fPHP(netPHP);
   document.getElementById('nb3').textContent = fPHP(necSum);
   document.getElementById('nb4').textContent = fPHP(shopeeSum);
   document.getElementById('nb5').textContent = fPHP(tiktokSum);
+  document.getElementById('nb-maya').textContent = fPHP(mayaSum);
   document.getElementById('nb6').textContent = fPHP(total);
   document.getElementById('netBalance').textContent = fPHP(total);
 
@@ -3835,6 +3877,7 @@ function _saveDataDirect() {
       necData: necData,
       plShopee: plData.shopee,
       plTiktok: plData.tiktok,
+      plMaya: plData.maya,
       savingsItems: savingsItems,
       quickBalances: quickBalances,
     };
@@ -3895,12 +3938,14 @@ function restoreState(data) {
   necData       = Array.isArray(data.necData)   ? data.necData   : [];
   plData.shopee = Array.isArray(data.plShopee)  ? data.plShopee  : [];
   plData.tiktok = Array.isArray(data.plTiktok)  ? data.plTiktok  : [];
+  plData.maya   = Array.isArray(data.plMaya)    ? data.plMaya    : [];
   savingsItems  = Array.isArray(data.savingsItems) ? data.savingsItems : [];
   quickBalances = (data.quickBalances && typeof data.quickBalances === 'object') ? data.quickBalances : {};
   _isLoading = false;
   renderNec();
   renderPL('shopee');
   renderPL('tiktok');
+  renderPL('maya');
   renderSavingsItems();
   recalcAll();
 }
@@ -3947,6 +3992,7 @@ function resetAll() {
   ];
   plData.shopee = [];
   plData.tiktok = [];
+  plData.maya   = [];
   savingsItems  = [];
 
   setMode('weekly');
@@ -3955,6 +4001,7 @@ function resetAll() {
   renderNec();
   renderPL('shopee');
   renderPL('tiktok');
+  renderPL('maya');
   renderSavingsItems();
   recalcAll();
 
@@ -4126,6 +4173,7 @@ function loadData() {
     if (Array.isArray(data.necData) && data.necData.length) necData = data.necData;
     if (Array.isArray(data.plShopee)) plData.shopee = data.plShopee;
     if (Array.isArray(data.plTiktok)) plData.tiktok = data.plTiktok;
+    if (Array.isArray(data.plMaya))   plData.maya   = data.plMaya;
     if (Array.isArray(data.savingsItems)) savingsItems = data.savingsItems;
     if (data.quickBalances && typeof data.quickBalances === 'object') quickBalances = data.quickBalances;
     // Call setMode last: now that all inputs are set, the saveData() it
@@ -4404,9 +4452,9 @@ function addNec() {
 }
 
 // ─── PAYLATER ─────────────────────────────────────────────────
-const plData = { shopee: [], tiktok: [] };
-// Billing days: Shopee = 5th, TikTok = 1st
-const PL_BILLING_DAY = { shopee: 5, tiktok: 1 };
+const plData = { shopee: [], tiktok: [], maya: [] };
+// Billing days: Shopee = 5th, TikTok = 1st, Maya Black CC = 15th
+const PL_BILLING_DAY = { shopee: 5, tiktok: 1, maya: 15 };
 
 function addPLRow(type) {
   const rows = plData[type];
@@ -4427,7 +4475,7 @@ function addPLRow(type) {
 // Populate the from/to month selects for both purchase forms (run once)
 function initPLPurchaseForms() {
   const curM = new Date().getMonth();
-  ['shopee', 'tiktok'].forEach(type => {
+  ['shopee', 'tiktok', 'maya'].forEach(type => {
     ['From', 'To'].forEach(which => {
       const sel = document.getElementById(type + 'Purchase' + which);
       if (!sel || sel.options.length) return;
@@ -4507,7 +4555,7 @@ function addPLPurchase(type) {
 // Lightweight badge refresh — called from recalcAll() so badges stay in sync
 // with the date range without re-rendering the full rows (avoids focus loss).
 function refreshPLBadges(startStr, endStr) {
-  ['shopee', 'tiktok'].forEach(type => {
+  ['shopee', 'tiktok', 'maya'].forEach(type => {
     const billingDay = PL_BILLING_DAY[type];
     const hasRange   = !!(startStr && endStr);
     const rowEls     = document.querySelectorAll('#' + type + 'Rows .pl-row');
@@ -4517,22 +4565,27 @@ function refreshPLBadges(startStr, endStr) {
       const inRange = isPLBillingInRange(row.month, billingDay, startStr, endStr);
       const dimmed  = hasRange && !inRange;
       rowEl.style.opacity = (dimmed || !isInc(row)) ? '0.45' : '';
-      let badge = rowEl.querySelector('.pl-badge');
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'pl-badge';
-        const delBtn = rowEl.querySelector('.del-btn');
-        if (delBtn) rowEl.insertBefore(badge, delBtn);
-        else rowEl.appendChild(badge);
+
+      let wrap = rowEl.querySelector('.pl-badge-wrap');
+      // No date range → remove any badge line entirely
+      if (!hasRange) { if (wrap) wrap.remove(); return; }
+      if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'pl-badge-wrap';
+        Object.assign(wrap.style, { flexBasis: '100%', order: '9', margin: '3px 0 1px 28px' });
+        const span = document.createElement('span');
+        span.className = 'pl-badge';
+        wrap.appendChild(span);
+        rowEl.appendChild(wrap);
       }
+      const badge = wrap.querySelector('.pl-badge');
       Object.assign(badge.style, {
-        display:      hasRange ? '' : 'none',
+        display:      'inline-block',
         fontSize:     '9px',
-        padding:      '1px 6px',
+        padding:      '1px 8px',
         borderRadius: '20px',
         fontFamily:   '\'DM Mono\',monospace',
         whiteSpace:   'nowrap',
-        flexShrink:   '0',
         background:   inRange ? 'var(--green-dim)'  : 'var(--surface3)',
         color:        inRange ? 'var(--green-text)'  : 'var(--text3)',
         border:       inRange ? '1px solid var(--green)' : '1px solid var(--border)',
@@ -4564,7 +4617,7 @@ function renderPL(type) {
     const inRange = isPLBillingInRange(row.month, billingDay, startStr, endStr);
     const dimmed  = hasRange && !inRange;
     const badge   = hasRange
-      ? `<span class="pl-badge" style="font-size:9px;padding:1px 6px;border-radius:20px;font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;background:${inRange?'var(--green-dim)':'var(--surface3)'};color:${inRange?'var(--green-text)':'var(--text3)'};border:1px solid ${inRange?'var(--green)':'var(--border)'};">${inRange?'✓ in range':'⊘ skipped'}</span>`
+      ? `<div class="pl-badge-wrap" style="flex-basis:100%;order:9;margin:3px 0 1px 28px;"><span class="pl-badge" style="display:inline-block;font-size:9px;padding:1px 8px;border-radius:20px;font-family:'DM Mono',monospace;white-space:nowrap;background:${inRange?'var(--green-dim)':'var(--surface3)'};color:${inRange?'var(--green-text)':'var(--text3)'};border:1px solid ${inRange?'var(--green)':'var(--border)'};">${inRange?'✓ in range':'⊘ skipped'}</span></div>`
       : '';
     const div = document.createElement('div');
     div.className = 'pl-row' + (isInc(row) ? '' : ' inc-off');
@@ -4574,8 +4627,8 @@ function renderPL(type) {
       <select class="month-select" onchange="plData['${type}'][${i}].month=+this.value; renderPL('${type}'); recalcAll(); saveData()">${opts}</select>
       <input class="pl-input pl-amt-${type}" type="number" value="${row.amt}" placeholder="₱ 0.00" min="0" step="0.01"
         oninput="plData['${type}'][${i}].amt=this.value; recalcAll(); saveData()">
-      ${badge}
       <button class="del-btn" onclick="plData['${type}'].splice(${i},1); renderPL('${type}'); recalcAll(); saveData()">✕</button>
+      ${badge}
     `;
     c.appendChild(div);
   });
@@ -5985,6 +6038,7 @@ function drawChart() {
   const nec     = readNB('nb3');
   const shopee  = readNB('nb4');
   const tiktok  = readNB('nb5');
+  const maya    = readNB('nb-maya');
   const subs    = getSubsSum();
   const insts   = getInstsMonthlySum();
 
@@ -5996,6 +6050,7 @@ function drawChart() {
     { label: 'Necessities',   value: nec,     color: '#f85149', income: false },
     { label: 'SPayLater',     value: shopee,  color: '#ff5722', income: false },
     { label: 'TikTok',        value: tiktok,  color: '#555',    income: false },
+    { label: 'Maya Black CC',  value: maya,    color: '#16d99a', income: false },
     { label: 'Subscriptions', value: subs,    color: '#d29922', income: false },
     { label: 'Installments',  value: insts,   color: '#e3b341', income: false },
   ].filter(s => s.value > 0.005);
@@ -6084,12 +6139,13 @@ function updateHealthStats() {
   const nec      = readNB('nb3');
   const shopee   = readNB('nb4');
   const tiktok   = readNB('nb5');
+  const maya     = readNB('nb-maya');
   const subs     = getSubsSum();
   const insts    = getInstsMonthlySum();
 
   const totalIncome      = savings + payroll + corp + bonus;
-  const totalExpenses    = nec + shopee + tiktok + subs + insts;
-  const totalObligations = nec + shopee + tiktok + subs + insts;
+  const totalExpenses    = nec + shopee + tiktok + maya + subs + insts;
+  const totalObligations = nec + shopee + tiktok + maya + subs + insts;
 
   // 1. Savings Rate — % of total inflow that isn't consumed
   const srEl  = document.getElementById('statSavingsRate');
@@ -6596,6 +6652,13 @@ function getCashFlowEvents(year, month) {
   if (shopeeAmt > 0)
     events.push({ day: 5, type: 'bill', label: 'SPayLater (Shopee)', amount: shopeeAmt });
 
+  // ── Bills: Maya Black Credit Card on 15th ────────────────
+  const mayaAmt = plData.maya
+    .filter(r => r.month === month && isInc(r))
+    .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
+  if (mayaAmt > 0)
+    events.push({ day: 15, type: 'bill', label: 'Maya Black CC', amount: mayaAmt });
+
   // ── Bills: Necessities with a pay day set ────────────────
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — hidden from cash flow
@@ -6733,6 +6796,7 @@ function renderCalendar() {
   const billDays = new Set();
   if (plData.tiktok.some(r => r.month === calMonth && isInc(r))) billDays.add(1);
   if (plData.shopee.some(r => r.month === calMonth && isInc(r))) billDays.add(5);
+  if (plData.maya.some(r => r.month === calMonth && isInc(r)))   billDays.add(15);
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — hidden from calendar
     const d = parseInt(row.day) || 0;
@@ -6952,6 +7016,7 @@ loadData();
 renderNec();
 renderPL('shopee');
 renderPL('tiktok');
+renderPL('maya');
 initPLPurchaseForms();
 renderSavingsItems();
 loadCachedRate(); // show last known rate immediately while live fetch runs
@@ -7042,6 +7107,8 @@ function renderBillChecklist() {
   if (shopeeAmt > 0) items.push({ key: 'pl_shopee', label: 'SPayLater (Shopee)', amt: shopeeAmt, src: 'pay' });
   const tiktokAmt = plData.tiktok.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
   if (tiktokAmt > 0) items.push({ key: 'pl_tiktok', label: 'TikTok PayLater', amt: tiktokAmt, src: 'pay' });
+  const mayaAmt = plData.maya.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
+  if (mayaAmt > 0) items.push({ key: 'pl_maya', label: 'Maya Black CC', amt: mayaAmt, src: 'pay' });
 
   const done = items.filter(it => billChecks.checks[it.key]).length;
   const progEl = document.getElementById('bclProgress');
