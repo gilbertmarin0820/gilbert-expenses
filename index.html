@@ -198,6 +198,13 @@
   /* Let every direct child shrink instead of forcing the layout wider
      (same fix the mobile media query applies, now at all widths). */
   .main > * { min-width: 0; }
+  /* The savings/paylater grids nest one inside the other, so their grid
+     items also need to be shrinkable — otherwise a PayLater card refuses
+     to shrink below its content (fixed month select + badge + buttons),
+     forcing its track wider than its 1fr share and spilling past the
+     right edge. This was only fixed inside the mobile query before, so it
+     overflowed on desktop / when zoomed out. Now applied at all widths. */
+  .savings-pl-grid > *, .paylater-grid > * { min-width: 0; }
   /* Wide tables scroll inside their card instead of pushing the page off-center */
   .nec-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .section-title {
@@ -328,7 +335,7 @@
   }
   .month-select:focus { outline: none; border-color: var(--blue); }
   .pl-input {
-    flex: 1; background: var(--surface3); border: 1px solid var(--border);
+    flex: 1; min-width: 0; background: var(--surface3); border: 1px solid var(--border);
     color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px;
     padding: 6px 10px; border-radius: var(--radius-sm); transition: border-color 0.2s;
   }
@@ -798,6 +805,7 @@
     .net-card          { grid-template-columns: 1fr; gap: 16px; }
     /* Override inline style on the PayLater grid */
     .paylater-grid     { grid-template-columns: 1fr !important; }
+    .savings-pl-grid   { grid-template-columns: 1fr !important; }
 
     /* ── Header ───────────────────────────────────────────── */
     header         { padding: 11px 14px; }
@@ -2124,7 +2132,7 @@
   </div>
 
   <!-- SAVINGS + PAYLATER -->
-  <div class="two-col">
+  <div class="savings-pl-grid" style="display:grid; grid-template-columns:1fr 2fr; gap:20px; align-items:start;">
     <div style="display:flex; flex-direction:column; gap:16px;">
       <div>
         <div class="section-title">Savings</div>
