@@ -1243,6 +1243,95 @@
   .pl-purchase-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .pl-purchase-form .nec-inst-select { flex: 1; min-width: 0; max-width: none; }
 
+  /* ═══════════════════════════════════════════════════════════
+     COLLAPSIBLE SECTIONS
+     Every .section-title becomes a tap-to-collapse header so the
+     (very long) pages can be folded down. State is remembered per
+     section in localStorage. Enhancement is wired up in JS at the
+     end of <body>; these rules just handle the visuals.
+     ═══════════════════════════════════════════════════════════ */
+  .section-title.collapsible {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* widen the tap zone without shifting the visual baseline */
+    padding-top: 6px; padding-bottom: 6px;
+    margin-top: -6px;
+    transition: color 0.15s;
+  }
+  .section-title.collapsible:hover { color: var(--text2); }
+  .section-title .sec-chevron {
+    flex: 0 0 auto;
+    font-size: 9px;
+    color: var(--text3);
+    transition: transform 0.2s ease;
+    display: inline-block;
+    transform: rotate(0deg);
+  }
+  .section-title.collapsed .sec-chevron { transform: rotate(-90deg); }
+  .section-title.collapsed { margin-bottom: 6px; }
+  /* Hidden section body */
+  .section-collapsed-content { display: none !important; }
+
+  /* ═══════════════════════════════════════════════════════════
+     HORIZONTAL-SCROLL TABLE HINTS
+     A soft fade on whichever edge has more content off-screen, so
+     it's obvious a table can be swiped sideways. Toggled in JS.
+     ═══════════════════════════════════════════════════════════ */
+  .hscroll-outer { position: relative; }
+  .hscroll-outer::before,
+  .hscroll-outer::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 26px;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 3;
+  }
+  .hscroll-outer::after  { right: 0; background: linear-gradient(to right, rgba(0,0,0,0), var(--surface)); }
+  .hscroll-outer::before { left: 0;  background: linear-gradient(to left,  rgba(0,0,0,0), var(--surface)); }
+  .hscroll-outer.more-right::after  { opacity: 1; }
+  .hscroll-outer.more-left::before  { opacity: 1; }
+  /* little "swipe" nudge, shown only while there's more to the right */
+  .hscroll-outer .hscroll-cue {
+    position: absolute; top: 6px; right: 6px; z-index: 4;
+    font-size: 9px; font-family: 'DM Mono', monospace; letter-spacing: 0.5px;
+    color: var(--text2); background: var(--surface3);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 2px 8px; pointer-events: none;
+    opacity: 0; transform: translateX(4px); transition: opacity 0.2s, transform 0.2s;
+  }
+  .hscroll-outer.more-right .hscroll-cue { opacity: 0.9; transform: translateX(0); }
+
+  /* ═══════════════════════════════════════════════════════════
+     MOBILE: BIGGER TAP TARGETS (44px comfortable minimum)
+     ═══════════════════════════════════════════════════════════ */
+  @media (max-width: 700px) {
+    /* Native + custom dropdowns */
+    select,
+    .trkr-select, .month-select, .bank-select { min-height: 46px; }
+    .trkr-select, .month-select { padding-top: 11px; padding-bottom: 11px; }
+    .bank-select-wrap, .bank-icon { min-height: 46px; }
+    .bank-chevron { padding: 0 14px; }
+
+    /* Delete / remove buttons */
+    .del-btn { min-width: 44px; min-height: 44px; font-size: 18px; }
+
+    /* Pills & chips */
+    .preset-btn, .split-chip, .trkr-year-tab, .day-chip.tap,
+    .conv-dir-btn, .debt-type-btn { min-height: 40px; }
+    .conv-dir-btn, .debt-type-btn { display: inline-flex; align-items: center; }
+
+    /* Calendar navigation */
+    .cal-nav-btn { min-height: 44px; min-width: 52px; font-size: 18px; }
+
+    /* Calculator mode + degree toggles */
+    .calc-deg-btn { min-height: 44px; }
+
+    /* Person tags: enlarge the inline remove control */
+    .person-tag .del-btn, .trkr-person-tag .del-btn { min-width: 38px; min-height: 38px; }
+
+    /* Section headers get a roomier hit area on phones */
+    .section-title.collapsible { padding-top: 10px; padding-bottom: 10px; margin-top: -10px; }
+    .section-title.collapsed { margin-bottom: 4px; }
+  }
+
 </style>
 </head>
 <body>
@@ -2177,7 +2266,7 @@
   <div>
     <div class="section-title">Necessities &amp; Expenses (₱)</div>
     <div class="card">
-      <div class="nec-table-wrap">
+      <div class="nec-table-wrap js-hscroll">
         <table class="nec-table">
           <thead>
             <tr>
@@ -2762,7 +2851,7 @@
       <!-- Summary cards (total per person for selected year) -->
       <div class="trkr-summary-grid" id="trkrSummaryCards"></div>
       <!-- Table -->
-      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+      <div class="js-hscroll" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
         <table class="trkr-table" id="trkrTable">
           <thead><tr id="trkrTableHead"></tr></thead>
           <tbody id="trkrTableBody"></tbody>
@@ -8160,6 +8249,117 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// ─── COLLAPSIBLE SECTIONS ──────────────────────────────────────
+// Turns every ".section-title" into a tap-to-collapse header so the
+// long pages can be folded down. Collapsed state is saved per section
+// so it's remembered next time. On the very first load only, a few
+// secondary Expenses sections start collapsed to cut the scroll.
+(function initCollapsibleSections() {
+  const STORE_KEY = 'va_collapsed_sections';
+  let store;
+  try { store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch (e) { store = {}; }
+  const persist = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {} };
+
+  // First-run defaults: fold the heavier/secondary Expenses sections.
+  // Keys are "<pageId>::<section label>". Runs once, then user choices win.
+  const DEFAULT_COLLAPSED = [
+    'pageExpenses::💡 "What If" Rate Simulator',
+    'pageExpenses::Salary History',
+    'pageExpenses::Corporate Salary',
+    'pageExpenses::Savings Allocation',
+    'pageExpenses::Calculator & Currency Converter',
+  ];
+  if (!localStorage.getItem('va_sections_init')) {
+    DEFAULT_COLLAPSED.forEach(k => { store[k] = true; });
+    try { localStorage.setItem('va_sections_init', '1'); } catch (e) {}
+    persist();
+  }
+
+  document.querySelectorAll('.main').forEach(page => {
+    const pageId = page.id || 'page';
+    page.querySelectorAll('.section-title').forEach(title => {
+      if (title.dataset.collapsibleReady) return;
+
+      // Everything after the title, within the same wrapper, is the body.
+      const body = [];
+      let el = title.nextElementSibling;
+      while (el) { body.push(el); el = el.nextElementSibling; }
+      if (!body.length) return; // nothing to fold — leave it alone
+
+      const label = (title.textContent || '').replace(/\s+/g, ' ').trim();
+      const key = pageId + '::' + label;
+
+      title.classList.add('collapsible');
+      title.dataset.collapsibleReady = '1';
+      title.setAttribute('role', 'button');
+      title.setAttribute('tabindex', '0');
+
+      const chev = document.createElement('span');
+      chev.className = 'sec-chevron';
+      chev.setAttribute('aria-hidden', 'true');
+      chev.textContent = '▾';
+      title.insertBefore(chev, title.firstChild);
+
+      const apply = (collapsed) => {
+        title.classList.toggle('collapsed', collapsed);
+        body.forEach(b => b.classList.toggle('section-collapsed-content', collapsed));
+        title.setAttribute('aria-expanded', String(!collapsed));
+      };
+      apply(!!store[key]);
+
+      const toggle = () => {
+        const collapsed = !title.classList.contains('collapsed');
+        apply(collapsed);
+        if (collapsed) store[key] = true; else delete store[key];
+        persist();
+        // A chart/table revealed after being hidden may need a repaint.
+        if (!collapsed) setTimeout(() => { try { drawChart(); } catch (e) {} }, 30);
+      };
+      title.addEventListener('click', toggle);
+      title.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    });
+  });
+})();
+
+// ─── HORIZONTAL-SCROLL TABLE HINTS ─────────────────────────────
+// Wraps each ".js-hscroll" table container and fades whichever edge
+// has more content off-screen, so it's clear the table can be swiped.
+(function initTableScrollHints() {
+  document.querySelectorAll('.js-hscroll').forEach(sc => {
+    if (sc.dataset.hscrollReady) return;
+    sc.dataset.hscrollReady = '1';
+
+    const outer = document.createElement('div');
+    outer.className = 'hscroll-outer';
+    sc.parentNode.insertBefore(outer, sc);
+    outer.appendChild(sc);
+
+    const cue = document.createElement('span');
+    cue.className = 'hscroll-cue';
+    cue.textContent = 'swipe →';
+    outer.appendChild(cue);
+
+    const update = () => {
+      const max = sc.scrollWidth - sc.clientWidth;
+      outer.classList.toggle('more-right', sc.scrollLeft < max - 1);
+      outer.classList.toggle('more-left', sc.scrollLeft > 1);
+    };
+
+    sc.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    // Re-check whenever the table's contents change (rows/columns added).
+    try {
+      const mo = new MutationObserver(() => update());
+      mo.observe(sc, { childList: true, subtree: true, characterData: true });
+    } catch (e) {}
+    // Initial pass after layout settles.
+    setTimeout(update, 120);
+    setTimeout(update, 600);
+  });
+})();
 </script>
 </body>
 </html>
