@@ -831,11 +831,34 @@
       margin: 0 -14px;
       padding: 0 14px;
     }
-    .nec-table         { min-width: 440px; }
+    .nec-table         { min-width: 540px; }
     .nec-table th,
     .nec-table td      { padding: 5px 4px; font-size: 13px; }
     .nec-day-input     { width: 46px; font-size: 14px; }
-    .nec-cat-input     { font-size: 14px; }
+    .nec-cat-input     { font-size: 14px; min-width: 96px; }
+
+    /* Amount cell: keep ✓ toggle + ₱ + input on ONE line
+       (the wrapper div has an inline flex-wrap:wrap, hence !important) */
+    .nec-table td:nth-child(2) > div:first-child { flex-wrap: nowrap !important; }
+    .nec-table .nec-amt-input { width: 84px !important; }
+
+    /* Installment cell: tidy stacked layout instead of one dropdown
+       per line — line 1: mode select (full width) · line 2: From → To
+       · line 3: active/skipped badge */
+    .nec-inst-range {
+      justify-content: center;
+      row-gap: 5px;
+      min-width: 168px;
+    }
+    .nec-inst-range .nec-inst-select:first-child {
+      flex: 1 1 100%;
+      max-width: none;
+      text-align: center;
+      text-align-last: center;
+    }
+    .nec-inst-select { font-size: 12px; padding: 6px 5px; max-width: 72px; }
+    .nec-inst-badge  { flex: 0 0 100%; text-align: center; }
+    .nec-inst-check  { font-size: 12px; }
 
     /* ── Calculator / Spend-log grid ─────────────────────── */
     .spend-calc-grid { grid-template-columns: 1fr !important; }
