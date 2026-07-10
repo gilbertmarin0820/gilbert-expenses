@@ -823,77 +823,42 @@
     .preset-chips  { flex-wrap: wrap; gap: 8px; }
     .preset-btn    { min-height: 36px; padding: 6px 16px; font-size: 13px; }
 
-    /* ── Necessities table — stacked card layout ─────────────
-       No sideways swipe on mobile. Each expense becomes a block:
-         line 1:  category · pay day · delete ✕
-         line 2:  ✓ toggle · ₱ amount · ×N badge (+ effective total)
-         line 3:  installment checkbox + controls (only if used)   */
+    /* ── Necessities table — horizontal scroll inside card ── */
     .nec-table-wrap {
-      overflow-x: visible;
-      margin: 0;
-      padding: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      /* pull to card edges so scroll bar aligns nicely */
+      margin: 0 -14px;
+      padding: 0 14px;
     }
-    .nec-table       { min-width: 0; width: 100%; }
-    .nec-table thead { display: none; }        /* headers not needed in card view */
-    .nec-table,
-    .nec-table tbody { display: block; }
-    .nec-table tr {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      grid-template-areas:
-        "cat  day  del"
-        "amt  amt  amt"
-        "inst inst inst";
-      gap: 8px;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .nec-table td {
-      display: block;
-      padding: 0;
-      border-bottom: none;
-      font-size: 13px;
-      min-width: 0;
-    }
-    .nec-table td:nth-child(1) { grid-area: cat; }
-    .nec-table td:nth-child(2) { grid-area: amt; }
-    .nec-table td:nth-child(3) {
-      grid-area: day;
-      display: flex; align-items: center; gap: 5px;
-      text-align: left;
-    }
-    /* Tiny label replaces the hidden "Pay Day" column header */
-    .nec-table td:nth-child(3)::before {
-      content: 'Day';
-      font-size: 9px; text-transform: uppercase;
-      letter-spacing: 0.6px; color: var(--text3);
-    }
-    .nec-table td:nth-child(4) { grid-area: inst; }
-    .nec-table td:nth-child(5) { grid-area: del; text-align: right; }
+    .nec-table         { min-width: 540px; }
+    .nec-table th,
+    .nec-table td      { padding: 5px 4px; font-size: 13px; }
+    .nec-day-input     { width: 46px; font-size: 14px; }
+    .nec-cat-input     { font-size: 14px; min-width: 96px; }
 
-    .nec-cat-input { font-size: 14px; width: 100%; min-width: 0; }
-    .nec-day-input { width: 48px; font-size: 14px; }
-
-    /* Amount line: keep ✓ toggle + ₱ + input + ×N badge on ONE line
+    /* Amount cell: keep ✓ toggle + ₱ + input on ONE line
        (the wrapper div has an inline flex-wrap:wrap, hence !important) */
     .nec-table td:nth-child(2) > div:first-child { flex-wrap: nowrap !important; }
-    .nec-table .nec-amt-input { width: 100px !important; }
+    .nec-table .nec-amt-input { width: 84px !important; }
 
-    /* Installment controls: full width, left-aligned inside the card
-       (the wrapper div has inline align-items:center, hence !important) */
-    .nec-table td:nth-child(4) > div { align-items: flex-start !important; }
-    .nec-inst-check  { font-size: 12px; }
+    /* Installment cell: tidy stacked layout instead of one dropdown
+       per line — line 1: mode select (full width) · line 2: From → To
+       · line 3: active/skipped badge */
     .nec-inst-range {
-      width: 100%;
-      row-gap: 6px;
+      justify-content: center;
+      row-gap: 5px;
+      min-width: 168px;
     }
     .nec-inst-range .nec-inst-select:first-child {
       flex: 1 1 100%;
       max-width: none;
+      text-align: center;
+      text-align-last: center;
     }
-    .nec-inst-select { font-size: 12px; padding: 6px 5px; max-width: none; flex: 1; }
-    .nec-inst-badge  { flex: 0 0 100%; text-align: left; }
+    .nec-inst-select { font-size: 12px; padding: 6px 5px; max-width: 72px; }
+    .nec-inst-badge  { flex: 0 0 100%; text-align: center; }
+    .nec-inst-check  { font-size: 12px; }
 
     /* ── Calculator / Spend-log grid ─────────────────────── */
     .spend-calc-grid { grid-template-columns: 1fr !important; }
