@@ -2256,7 +2256,7 @@
         </div>
         <!-- Maya -->
         <div class="paylater-card">
-          <div class="paylater-logo"><span class="badge-maya">Maya</span> Black Credit Card <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 15th</span></div>
+          <div class="paylater-logo"><span class="badge-maya">Maya</span> Black Credit Card <span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'DM Mono',monospace;font-weight:400;">bills on 21st</span></div>
           <div id="mayaRows"></div>
           <button class="add-btn" onclick="addPLRow('maya')">+ Add month</button>
           <button class="add-btn" onclick="togglePLPurchase('maya')" style="color:var(--amber-text); border-color:var(--amber);">🛒 New purchase (spread across months)</button>
@@ -2599,7 +2599,7 @@
     <div class="section-title">People</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        Add everyone in your group. Pick who had each drink or dish below — you'll see what each friend owes you back.
+        Add everyone in your group. Pick who shared each item below — you'll see what each friend owes you back.
       </div>
       <div id="hsPeopleList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;"></div>
       <div style="display:flex; gap:8px;">
@@ -2619,18 +2619,11 @@
     </div>
   </div>
 
-  <!-- DRINKS -->
+  <!-- ITEMS (single list, tagged via dropdown) -->
   <div>
-    <div class="section-title">🍹 Drinks</div>
-    <div id="hsDrinksList" class="two-col"></div>
-    <button class="add-btn" onclick="addHSItem('drinks')">+ Add drink</button>
-  </div>
-
-  <!-- FOOD -->
-  <div>
-    <div class="section-title">🍔 Food</div>
-    <div id="hsFoodList" class="two-col"></div>
-    <button class="add-btn" onclick="addHSItem('food')">+ Add food</button>
+    <div class="section-title">🧾 Items</div>
+    <div id="hsItemsList" class="two-col"></div>
+    <button class="add-btn" onclick="addHSItem()">+ Add item</button>
   </div>
 
   <!-- SUMMARY -->
@@ -2640,7 +2633,7 @@
       <div id="hsSummaryList"></div>
       <div class="divider" style="margin:12px 0;"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
-        <span style="color:var(--text2); font-weight:500;">Grand total (drinks + food)</span>
+        <span style="color:var(--text2); font-weight:500;">Grand total</span>
         <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
       <div id="hsUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
@@ -4454,7 +4447,7 @@ function addNec() {
 // ─── PAYLATER ─────────────────────────────────────────────────
 const plData = { shopee: [], tiktok: [], maya: [] };
 // Billing days: Shopee = 5th, TikTok = 1st, Maya Black CC = 15th
-const PL_BILLING_DAY = { shopee: 5, tiktok: 1, maya: 15 };
+const PL_BILLING_DAY = { shopee: 5, tiktok: 1, maya: 21 };
 
 function addPLRow(type) {
   const rows = plData[type];
@@ -5323,15 +5316,42 @@ function loadCC() {
 
 // ════════════════════════════════════════════════════════════════
 // HANGOUT SPLIT — independent of Expenses AND Credit Card Split.
-// Two categories (drinks, food), own people list, own storage key.
+// Single item list; each item carries a tag (food, drink, fare, …),
+// own people list, own storage key.
 // ════════════════════════════════════════════════════════════════
 
 let hsPeople    = [];                  // [{ id, name }]
 let _hsLastTotals = {};                // last computed { personId: amountOwed } — used by Copy message
 let hsPersonSeq = 1;
-let hsItems     = { drinks: [], food: [] }; // each: [{ name, amt, people:[personId,...] }]
+let hsItems     = [];                  // [{ name, amt, tag, people:[personId,...] }]
 
-const HS_CONTAINERS = { drinks: 'hsDrinksList', food: 'hsFoodList' };
+// Tag options for the per-item dropdown
+const HS_TAGS = [
+  { val: 'food',    label: '🍔 Food' },
+  { val: 'drink',   label: '🍹 Drink' },
+  { val: 'fare',    label: '🚗 Fare' },
+  { val: 'service', label: '🧾 Service charge' },
+  { val: 'tip',     label: '💸 Tip' },
+  { val: 'others',  label: '📦 Others' },
+];
+const HS_TAG_LABEL = Object.fromEntries(HS_TAGS.map(t => [t.val, t.label]));
+
+// Convert old saved format ({drinks:[], food:[]}) to the new flat
+// item list so nobody loses previously saved sessions.
+function hsNormalizeData(data) {
+  const out = { people: [], items: [], personSeq: 1 };
+  if (!data || typeof data !== 'object') return out;
+  if (Array.isArray(data.people)) out.people = data.people;
+  if (typeof data.personSeq === 'number') out.personSeq = data.personSeq;
+  if (Array.isArray(data.items)) {
+    out.items = data.items.map(it => ({ ...it, tag: HS_TAG_LABEL[it.tag] ? it.tag : 'others' }));
+  } else {
+    // legacy format: separate drinks & food arrays
+    if (Array.isArray(data.drinks)) data.drinks.forEach(it => out.items.push({ ...it, tag: 'drink' }));
+    if (Array.isArray(data.food))   data.food.forEach(it   => out.items.push({ ...it, tag: 'food' }));
+  }
+  return out;
+}
 
 // ─── PEOPLE ───────────────────────────────────────────────────
 function addHSPerson() {
@@ -5341,19 +5361,16 @@ function addHSPerson() {
   hsPeople.push({ id: hsPersonSeq++, name: name });
   input.value = '';
   renderHSPeople();
-  renderHSItems('drinks');  // every item needs a new chip for this person
-  renderHSItems('food');
+  renderHSItems();  // every item needs a new chip for this person
   saveHS();
   input.focus();
 }
 
 function removeHSPerson(id) {
   hsPeople = hsPeople.filter(p => p.id !== id);
-  hsItems.drinks.forEach(it => { it.people = it.people.filter(pid => pid !== id); });
-  hsItems.food.forEach(it   => { it.people = it.people.filter(pid => pid !== id); });
+  hsItems.forEach(it => { it.people = it.people.filter(pid => pid !== id); });
   renderHSPeople();
-  renderHSItems('drinks');
-  renderHSItems('food');
+  renderHSItems();
   updateHSSummary();
   saveHS();
 }
@@ -5372,142 +5389,153 @@ function renderHSPeople() {
   `).join('');
 }
 
-// ─── ITEMS (drinks / food) ────────────────────────────────────
-function addHSItem(cat) {
-  hsItems[cat].push({ name: '', amt: '', people: [] });
-  renderHSItems(cat);
+// ─── ITEMS (single list, tagged) ──────────────────────────────
+function addHSItem() {
+  hsItems.push({ name: '', amt: '', tag: 'food', people: [] });
+  renderHSItems();
   saveHS();
   setTimeout(() => {
-    const inputs = document.querySelectorAll('#' + HS_CONTAINERS[cat] + ' .nec-cat-input');
+    const inputs = document.querySelectorAll('#hsItemsList .nec-cat-input');
     if (inputs.length) inputs[inputs.length - 1].focus();
   }, 40);
 }
 
-function removeHSItem(cat, i) {
-  hsItems[cat].splice(i, 1);
-  renderHSItems(cat);
+function removeHSItem(i) {
+  hsItems.splice(i, 1);
+  renderHSItems();
   updateHSSummary();
   saveHS();
 }
 
-function toggleHSSplit(cat, i, personId) {
-  const item = hsItems[cat][i];
+function setHSTag(i, val) {
+  const item = hsItems[i];
+  if (!item) return;
+  item.tag = HS_TAG_LABEL[val] ? val : 'others';
+  saveHS();
+}
+
+function toggleHSSplit(i, personId) {
+  const item = hsItems[i];
   if (!item) return;
   const idx = item.people.indexOf(personId);
   if (idx === -1) item.people.push(personId);
   else item.people.splice(idx, 1);
 
-  const chip = document.getElementById('hsChip-' + cat + '-' + i + '-' + personId);
+  const chip = document.getElementById('hsChip-' + i + '-' + personId);
   if (chip) chip.classList.toggle('active', item.people.includes(personId));
 
-  updateHSItemEach(cat, i);
+  updateHSItemEach(i);
   updateHSSummary();
   saveHS();
 }
 
-function updateHSItemEach(cat, i) {
-  const item = hsItems[cat][i];
+function updateHSItemEach(i) {
+  const item = hsItems[i];
   if (!item) return;
   const amt  = parseFloat(item.amt) || 0;
   const n    = item.people.length;
   const each = n > 0 ? amt / n : 0;
-  const eachEl  = document.getElementById('hsEach-' + cat + '-' + i);
-  const countEl = document.getElementById('hsCount-' + cat + '-' + i);
+  const eachEl  = document.getElementById('hsEach-' + i);
+  const countEl = document.getElementById('hsCount-' + i);
   if (eachEl)  eachEl.textContent  = n > 0 ? fPHP(each) + ' each' : '—';
   if (countEl) countEl.textContent = n === 0
     ? 'No one selected yet'
     : (n + (n === 1 ? ' person' : ' people') + ' sharing');
 }
 
-function toggleHSItemInc(cat, i) {
-  const item = hsItems[cat][i];
+function toggleHSItemInc(i) {
+  const item = hsItems[i];
   if (!item) return;
   item.inc = !isInc(item);
-  renderHSItems(cat);
+  renderHSItems();
   updateHSSummary();
   saveHS();
 }
 
-function renderHSItems(cat) {
-  const container = document.getElementById(HS_CONTAINERS[cat]);
+function renderHSItems() {
+  const container = document.getElementById('hsItemsList');
+  if (!container) return;
   container.innerHTML = '';
 
-  if (hsItems[cat].length === 0) {
-    const noun = cat === 'drinks' ? 'drinks' : 'food items';
-    const verb = cat === 'drinks' ? 'drink'  : 'food';
-    container.innerHTML = `<div class="card" style="grid-column:1/-1; text-align:center; color:var(--text3); font-size:13px;">No ${noun} yet — click "+ Add ${verb}" below.</div>`;
+  if (hsItems.length === 0) {
+    container.innerHTML = `<div class="card" style="grid-column:1/-1; text-align:center; color:var(--text3); font-size:13px;">No items yet — click "+ Add item" below.</div>`;
     return;
   }
 
-  const fieldLabel  = cat === 'drinks' ? 'Drink' : 'Food item';
-  const placeholder = cat === 'drinks' ? 'e.g. Margarita, Beer, Iced Tea' : 'e.g. Sisig, Fries, Pizza';
-
-  hsItems[cat].forEach((item, i) => {
+  hsItems.forEach((item, i) => {
     const amt  = parseFloat(item.amt) || 0;
     const itemIncluded = isInc(item);
     const n    = item.people.length;
     const each = n > 0 ? amt / n : 0;
+    const tag  = HS_TAG_LABEL[item.tag] ? item.tag : 'others';
 
     const chipsHtml = hsPeople.length === 0
       ? '<span style="font-size:12px; color:var(--text3);">Add people above to enable splitting.</span>'
       : hsPeople.map(p => `
           <button type="button" class="split-chip${item.people.includes(p.id) ? ' active' : ''}"
-            id="hsChip-${cat}-${i}-${p.id}" onclick="toggleHSSplit('${cat}', ${i}, ${p.id})">${escH(p.name)}</button>
+            id="hsChip-${i}-${p.id}" onclick="toggleHSSplit(${i}, ${p.id})">${escH(p.name)}</button>
         `).join('');
+
+    const tagOptions = HS_TAGS.map(t =>
+      `<option value="${t.val}"${t.val === tag ? ' selected' : ''}>${t.label}</option>`
+    ).join('');
 
     const div = document.createElement('div');
     div.className = 'card' + (itemIncluded ? '' : ' inc-off');
     div.innerHTML = `
       <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;">
-        <div class="input-block" style="flex:1; min-width:160px;">
-          <label class="input-label">${fieldLabel}</label>
-          <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(item.name)}" placeholder="${placeholder}"
-            oninput="hsItems.${cat}[${i}].name=this.value; saveHS()">
+        <div class="input-block" style="flex:1; min-width:150px;">
+          <label class="input-label">Item</label>
+          <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(item.name)}" placeholder="e.g. Sisig, Beer, Grab fare"
+            oninput="hsItems[${i}].name=this.value; saveHS()">
+        </div>
+        <div class="input-block" style="width:150px; flex-shrink:0;">
+          <label class="input-label">Tag</label>
+          <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer;"
+            onchange="setHSTag(${i}, this.value)">${tagOptions}</select>
         </div>
         <div class="input-block" style="width:150px; flex-shrink:0;">
           <label class="input-label">Amount (₱)</label>
           <div class="input-row">
             <div class="input-prefix">₱</div>
             <input class="big-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
-              oninput="hsItems.${cat}[${i}].amt=this.value; updateHSItemEach('${cat}', ${i}); updateHSSummary(); saveHS()">
+              oninput="hsItems[${i}].amt=this.value; updateHSItemEach(${i}); updateHSSummary(); saveHS()">
           </div>
         </div>
-        <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeHSItem('${cat}', ${i})" title="Remove this item">✕</button>
-        <div style="display:flex; align-items:center; height:42px; flex-shrink:0;">${incBtn(item, `toggleHSItemInc('${cat}', ${i})`)}</div>
+        <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeHSItem(${i})" title="Remove this item">✕</button>
+        <div style="display:flex; align-items:center; height:42px; flex-shrink:0;">${incBtn(item, `toggleHSItemInc(${i})`)}</div>
       </div>
 
-      <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Who had this</div>
+      <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Who shared this</div>
       <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${chipsHtml}</div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); gap:10px; flex-wrap:wrap;">
-        <span id="hsCount-${cat}-${i}" style="font-size:12px; color:var(--text3);">${n===0 ? 'No one selected yet' : (n+(n===1?' person':' people')+' sharing')}</span>
-        <span id="hsEach-${cat}-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? fPHP(each)+' each' : '—'}</span>
+        <span id="hsCount-${i}" style="font-size:12px; color:var(--text3);">${n===0 ? 'No one selected yet' : (n+(n===1?' person':' people')+' sharing')}</span>
+        <span id="hsEach-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? fPHP(each)+' each' : '—'}</span>
       </div>
     `;
     container.appendChild(div);
   });
 }
 
-// ─── SUMMARY (combines drinks + food) ─────────────────────────
+// ─── SUMMARY (all items) ──────────────────────────────────────
 function updateHSSummary() {
   const totals = {};
   hsPeople.forEach(p => { totals[p.id] = 0; });
   let grand = 0;
   let unassigned = 0;
 
-  ['drinks', 'food'].forEach(cat => {
-    hsItems[cat].forEach(item => {
-      if (!isInc(item)) return;              // unmarked — excluded from the split
-      const amt = parseFloat(item.amt) || 0;
-      grand += amt;
-      const n = item.people.length;
-      if (n > 0) {
-        const each = amt / n;
-        item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
-      } else {
-        unassigned += amt;
-      }
-    });
+  hsItems.forEach(item => {
+    if (!isInc(item)) return;              // unmarked — excluded from the split
+    const amt = parseFloat(item.amt) || 0;
+    grand += amt;
+    const n = item.people.length;
+    if (n > 0) {
+      const each = amt / n;
+      item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
+    } else {
+      unassigned += amt;
+    }
   });
 
   // Stash for the "Copy message" feature
@@ -5563,7 +5591,7 @@ function saveHS() {
 
   try {
     localStorage.setItem('va_hangout_split_data', JSON.stringify({
-      people: hsPeople, drinks: hsItems.drinks, food: hsItems.food, personSeq: hsPersonSeq,
+      people: hsPeople, items: hsItems, personSeq: hsPersonSeq,
     }));
   } catch(e) { console.warn('HS save failed', e); }
 }
@@ -5585,14 +5613,12 @@ function hsUndo() {
   const raw = hsUndoStack.pop();
   updateHSUndoBtn();
   try {
-    const data = raw ? JSON.parse(raw) : {};
-    hsPeople       = Array.isArray(data.people) ? data.people : [];
-    hsItems.drinks = Array.isArray(data.drinks) ? data.drinks : [];
-    hsItems.food   = Array.isArray(data.food)   ? data.food   : [];
-    hsPersonSeq    = typeof data.personSeq === 'number' ? data.personSeq : 1;
+    const data = hsNormalizeData(raw ? JSON.parse(raw) : {});
+    hsPeople    = data.people;
+    hsItems     = data.items;
+    hsPersonSeq = data.personSeq;
     renderHSPeople();
-    renderHSItems('drinks');
-    renderHSItems('food');
+    renderHSItems();
     updateHSSummary();
     try { localStorage.setItem('va_hangout_split_data', raw || '{}'); } catch(e) {}
     showToast('↩ Hangout Split undone');
@@ -5614,10 +5640,9 @@ function resetHS() {
       updateHSUndoBtn();
     }
   } catch(e) {}
-  hsPeople = []; hsItems.drinks = []; hsItems.food = []; hsPersonSeq = 1;
+  hsPeople = []; hsItems = []; hsPersonSeq = 1;
   renderHSPeople();
-  renderHSItems('drinks');
-  renderHSItems('food');
+  renderHSItems();
   updateHSSummary();
   try { localStorage.removeItem('va_hangout_split_data'); } catch(e) {}
   renderSplitArchive('hsArchiveList', 'hs');
@@ -5628,11 +5653,10 @@ function loadHS() {
   try {
     const raw = localStorage.getItem('va_hangout_split_data');
     if (!raw) return;
-    const data = JSON.parse(raw);
-    if (Array.isArray(data.people)) hsPeople = data.people;
-    if (Array.isArray(data.drinks)) hsItems.drinks = data.drinks;
-    if (Array.isArray(data.food))   hsItems.food   = data.food;
-    if (typeof data.personSeq === 'number') hsPersonSeq = data.personSeq;
+    const data = hsNormalizeData(JSON.parse(raw));
+    hsPeople    = data.people;
+    hsItems     = data.items;
+    hsPersonSeq = data.personSeq;
   } catch(e) { console.warn('HS load failed', e); }
 }
 
@@ -7029,8 +7053,7 @@ updateCCSummary();
 
 loadHS();
 renderHSPeople();
-renderHSItems('drinks');
-renderHSItems('food');
+renderHSItems();
 updateHSSummary();
 
 loadPlanData();
@@ -7162,13 +7185,11 @@ function archiveSplit(type) {
       const totals = {};
       hsPeople.forEach(p => { totals[p.id] = 0; });
       let grand = 0;
-      ['drinks','food'].forEach(cat => {
-        hsItems[cat].forEach(item => {
-          if (!isInc(item)) return;
-          const amt = parseFloat(item.amt) || 0; grand += amt;
-          const n = item.people.length;
-          if (n > 0) item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += amt / n; });
-        });
+      hsItems.forEach(item => {
+        if (!isInc(item)) return;
+        const amt = parseFloat(item.amt) || 0; grand += amt;
+        const n = item.people.length;
+        if (n > 0) item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += amt / n; });
       });
       if (grand < 0.01 || hsPeople.length === 0) return;
       entry = {
@@ -8142,8 +8163,7 @@ function applySquad(id, target) {
       }
     });
     renderHSPeople();
-    renderHSItems('drinks');
-    renderHSItems('food');
+    renderHSItems();
     updateHSSummary();
     saveHS();
   }
