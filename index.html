@@ -1501,6 +1501,19 @@
       <div id="syncMsg" style="font-size:12px; color:var(--text3); margin-top:10px; min-height:16px;"></div>
     </div>
 
+    <!-- Storage usage -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">💾 Storage used</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Everything lives in this browser's local storage (usually capped around ~5&nbsp;MB). Wallet QR images and long histories take the most space — export a backup before it fills up.
+      </div>
+      <div style="height:10px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden;">
+        <div id="storageBarFill" style="height:100%; width:0%; background:var(--green); border-radius:999px; transition:width 0.35s ease;"></div>
+      </div>
+      <div id="storageUsageText" style="font-size:12px; color:var(--text2); margin-top:8px; font-family:'DM Mono',monospace;">—</div>
+      <div id="storageTopKeys" style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.7;"></div>
+    </div>
+
     <!-- Export -->
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📤 Export data</div>
@@ -2575,6 +2588,13 @@
         <span id="ccGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
       <div id="ccUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+      <!-- Session note — saved with the archive entry on reset -->
+      <div class="input-block" style="margin-top:12px;">
+        <label class="input-label">📝 Session note (optional)</label>
+        <input type="text" id="ccSessionNote" class="nec-cat-input" maxlength="80" placeholder="e.g. SM grocery run — July billing"
+          style="height:42px; font-size:13px; width:100%; box-sizing:border-box;"
+          oninput="ccNote=this.value; saveCC()">
+      </div>
       <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
         onclick="copySplitMessage('cc')" title="Copy a plain name — amount breakdown to paste in chat">
         📋 Copy message
@@ -2641,7 +2661,16 @@
         <span style="color:var(--text2); font-weight:500;">Grand total</span>
         <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
+      <!-- Spend breakdown by tag (Food / Drink / Fare / …) -->
+      <div id="hsTagBreakdown" style="display:none; margin-top:10px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text2); line-height:1.9;"></div>
       <div id="hsUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
+      <!-- Session note — saved with the archive entry on reset -->
+      <div class="input-block" style="margin-top:12px;">
+        <label class="input-label">📝 Session note (optional)</label>
+        <input type="text" id="hsSessionNote" class="nec-cat-input" maxlength="80" placeholder="e.g. Samgyup sa Kapitolyo, July 12"
+          style="height:42px; font-size:13px; width:100%; box-sizing:border-box;"
+          oninput="hsNote=this.value; saveHS()">
+      </div>
       <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
         onclick="copySplitMessage('hs')" title="Copy a plain name — amount breakdown to paste in chat">
         📋 Copy message
@@ -2679,6 +2708,68 @@
         <div class="nb-row"><span class="nb-label">Total saved across goals</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="goalsTotalSaved">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Total target</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="goalsTotalTarget">₱0.00</span></div>
       </div>
+    </div>
+  </div>
+
+  <!-- SAVINGS INTEREST CALCULATOR -->
+  <div>
+    <div class="section-title">💹 Savings Interest Calculator</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Estimate how much interest your savings will earn between two dates. Pick how the bank credits interest —
+        digital banks (Maya, GoTyme, MariBank…) usually credit <strong style="color:var(--text2);">daily</strong>, traditional banks monthly or yearly.
+      </div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="input-block" style="flex:1; min-width:160px;">
+          <label class="input-label">Savings total (₱)</label>
+          <div class="input-row amt-row">
+            <div class="input-prefix">₱</div>
+            <input class="big-input" type="number" min="0" step="0.01" id="intPrincipal" placeholder="0.00"
+              oninput="intCalc()">
+          </div>
+        </div>
+        <div class="input-block" style="width:140px; flex-shrink:0;">
+          <label class="input-label">Interest rate (% / yr)</label>
+          <input class="nec-cat-input" type="number" min="0" step="0.01" id="intRate" placeholder="e.g. 4"
+            style="height:42px; font-size:14px;" oninput="intCalc()">
+        </div>
+        <div class="input-block" style="width:170px; flex-shrink:0;">
+          <label class="input-label">Interest is credited</label>
+          <select class="nec-cat-input" id="intFreq" style="height:42px; font-size:14px; cursor:pointer;" onchange="intCalc()">
+            <option value="daily">📅 Daily</option>
+            <option value="monthly">🗓️ Monthly</option>
+            <option value="yearly">📆 Yearly</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="input-block" style="flex:1; min-width:150px;">
+          <label class="input-label">From</label>
+          <input class="nec-cat-input" type="date" id="intStart" style="height:42px; font-size:14px;" onchange="intCalc()">
+        </div>
+        <div class="input-block" style="flex:1; min-width:150px;">
+          <label class="input-label">To</label>
+          <input class="nec-cat-input" type="date" id="intEnd" style="height:42px; font-size:14px;" onchange="intCalc()">
+        </div>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text2); cursor:pointer; margin-bottom:14px; user-select:none;">
+        <input type="checkbox" id="intTax" checked onchange="intCalc()" style="accent-color:var(--blue); width:15px; height:15px; cursor:pointer;">
+        Deduct 20% withholding tax (how PH banks credit interest)
+      </label>
+
+      <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label">Date range</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="intDays">—</span></div>
+        <div class="nb-row"><span class="nb-label">Gross interest</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="intGross">₱0.00</span></div>
+        <div class="nb-row" id="intTaxRow"><span class="nb-label">Withholding tax (20%)</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="intTaxAmt">₱0.00</span></div>
+        <div class="divider" style="margin:10px 0;"></div>
+        <div class="nb-row"><span class="nb-label" style="font-weight:500; color:var(--text);">Interest you'll earn</span><span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500; font-size:16px;" id="intNet">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">Balance at end date</span><span style="font-family:'DM Mono',monospace; color:var(--teal-text);" id="intFinal">₱0.00</span></div>
+        <div id="intPerDay" style="font-size:11px; color:var(--text3); margin-top:8px;"></div>
+      </div>
+      <div id="intCalcNote" style="font-size:11px; color:var(--amber-text); margin-top:8px; min-height:14px;"></div>
     </div>
   </div>
 
@@ -4994,6 +5085,54 @@ function formatSplitAmt(n) {
   return r.toLocaleString('en-PH', { minimumFractionDigits: r % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
 }
 
+// ─── PER-PERSON ITEM BREAKDOWN (CC Split + Hangout) ───────────
+// Tap a person's row in the summary to expand the items/stores they
+// shared and their share of each. State survives re-renders.
+// NOTE: the Copy message below intentionally stays name + total only.
+const _ccOpenPersons = new Set();
+const _hsOpenPersons = new Set();
+
+// Push the ccNote / hsNote variable back into its input field
+// (used after load, undo, and reset so the UI matches the data).
+function syncSessionNoteInput(type) {
+  const el = document.getElementById(type === 'cc' ? 'ccSessionNote' : 'hsSessionNote');
+  if (el) el.value = type === 'cc' ? ccNote : hsNote;
+}
+
+function toggleSplitPerson(type, pid) {
+  const set = type === 'cc' ? _ccOpenPersons : _hsOpenPersons;
+  if (set.has(pid)) set.delete(pid); else set.add(pid);
+  if (type === 'cc') updateCCSummary(); else updateHSSummary();
+}
+
+// Renders one summary row: person name + total, with an expandable
+// sub-list of {label, amt} items underneath when open.
+function splitPersonRowHtml(type, p, total, items, open) {
+  const has   = items.length > 0;
+  const caret = has
+    ? `<span style="display:inline-block; width:14px; color:var(--text3); font-size:10px;">${open ? '▾' : '▸'}</span>`
+    : `<span style="display:inline-block; width:14px;"></span>`;
+  const sub = (open && has)
+    ? `<div style="margin:2px 0 8px 14px; padding:6px 10px; border-left:2px solid var(--border);">` +
+      items.map(it => {
+        const priceHtml = (it.n > 1)
+          ? `<span style="color:var(--text3);">${fPHP(it.total)} ÷ ${it.n} =</span> <span style="color:var(--text2);">${fPHP(it.amt)}</span>`
+          : `<span style="color:var(--text2);">${fPHP(it.amt)}</span>`;
+        return `
+        <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:2px 0;">
+          <span style="color:var(--text3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escH(it.label)}</span>
+          <span style="font-family:'DM Mono',monospace; flex-shrink:0;">${priceHtml}</span>
+        </div>`;
+      }).join('') +
+      `</div>`
+    : '';
+  return `<div>
+    <div class="nb-row" style="${has ? 'cursor:pointer;' : ''}" ${has ? `onclick="toggleSplitPerson('${type}', ${p.id})" title="Tap to ${open ? 'hide' : 'show'} item breakdown"` : ''}>
+      <span class="nb-label">${caret}${escH(p.name)}</span>
+      <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(total)}</span>
+    </div>${sub}</div>`;
+}
+
 function copySplitMessage(type) {
   const people = type === 'cc' ? ccPeople : hsPeople;
   const totals = type === 'cc' ? _ccLastTotals : _hsLastTotals;
@@ -5051,6 +5190,7 @@ let ccPeople     = [];   // [{ id, name }]
 let _ccLastTotals = {};  // last computed { personId: amountOwed } — used by Copy message
 let ccStores     = [];   // [{ name, amt, people:[personId,...] }]
 let ccPersonSeq  = 1;
+let ccNote       = '';   // free-text session note — saved with the archive entry
 
 // ─── PEOPLE ───────────────────────────────────────────────────
 function addPerson() {
@@ -5201,7 +5341,8 @@ function renderCCStores() {
 // ─── SUMMARY ──────────────────────────────────────────────────
 function updateCCSummary() {
   const totals = {};
-  ccPeople.forEach(p => { totals[p.id] = 0; });
+  const personItems = {};                    // { personId: [{label, amt}] } for the expandable breakdown
+  ccPeople.forEach(p => { totals[p.id] = 0; personItems[p.id] = []; });
   let grand = 0;
   let unassigned = 0;
 
@@ -5212,7 +5353,12 @@ function updateCCSummary() {
     const n = store.people.length;
     if (n > 0) {
       const each = amt / n;
-      store.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
+      store.people.forEach(pid => {
+        if (totals[pid] !== undefined) {
+          totals[pid] += each;
+          if (each > 0.005) personItems[pid].push({ label: store.name || 'Unnamed store', amt: each, total: amt, n: n });
+        }
+      });
     } else {
       unassigned += amt;
     }
@@ -5225,12 +5371,9 @@ function updateCCSummary() {
   if (ccPeople.length === 0) {
     listEl.innerHTML = '<div style="font-size:12px; color:var(--text3);">Add people above to see totals.</div>';
   } else {
-    listEl.innerHTML = ccPeople.map(p => `
-      <div class="nb-row">
-        <span class="nb-label">${escH(p.name)}</span>
-        <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(totals[p.id] || 0)}</span>
-      </div>
-    `).join('');
+    listEl.innerHTML = ccPeople.map(p =>
+      splitPersonRowHtml('cc', p, totals[p.id] || 0, personItems[p.id] || [], _ccOpenPersons.has(p.id))
+    ).join('');
   }
 
   document.getElementById('ccGrandTotal').textContent = fPHP(grand);
@@ -5271,7 +5414,7 @@ function saveCC() {
 
   try {
     localStorage.setItem('va_cc_split_data', JSON.stringify({
-      people: ccPeople, stores: ccStores, personSeq: ccPersonSeq,
+      people: ccPeople, stores: ccStores, personSeq: ccPersonSeq, note: ccNote,
     }));
   } catch(e) { console.warn('CC save failed', e); }
 }
@@ -5297,6 +5440,8 @@ function ccUndo() {
     ccPeople    = Array.isArray(data.people) ? data.people : [];
     ccStores    = Array.isArray(data.stores) ? data.stores : [];
     ccPersonSeq = typeof data.personSeq === 'number' ? data.personSeq : 1;
+    ccNote      = typeof data.note === 'string' ? data.note : '';
+    syncSessionNoteInput('cc');
     renderCCPeople();
     renderCCStores();
     updateCCSummary();
@@ -5320,7 +5465,9 @@ function resetCC() {
       updateCCUndoBtn();
     }
   } catch(e) {}
-  ccPeople = []; ccStores = []; ccPersonSeq = 1;
+  ccPeople = []; ccStores = []; ccPersonSeq = 1; ccNote = '';
+  _ccOpenPersons.clear();
+  syncSessionNoteInput('cc');
   renderCCPeople();
   renderCCStores();
   updateCCSummary();
@@ -5337,7 +5484,9 @@ function loadCC() {
     if (Array.isArray(data.people)) ccPeople = data.people;
     if (Array.isArray(data.stores)) ccStores = data.stores;
     if (typeof data.personSeq === 'number') ccPersonSeq = data.personSeq;
+    ccNote = typeof data.note === 'string' ? data.note : '';
   } catch(e) { console.warn('CC load failed', e); }
+  syncSessionNoteInput('cc');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -5350,6 +5499,7 @@ let hsPeople    = [];                  // [{ id, name }]
 let _hsLastTotals = {};                // last computed { personId: amountOwed } — used by Copy message
 let hsPersonSeq = 1;
 let hsItems     = [];                  // [{ name, amt, tag, people:[personId,...] }]
+let hsNote      = '';                  // free-text session note — saved with the archive entry
 
 // Tag options for the per-item dropdown
 const HS_TAGS = [
@@ -5365,10 +5515,11 @@ const HS_TAG_LABEL = Object.fromEntries(HS_TAGS.map(t => [t.val, t.label]));
 // Convert old saved format ({drinks:[], food:[]}) to the new flat
 // item list so nobody loses previously saved sessions.
 function hsNormalizeData(data) {
-  const out = { people: [], items: [], personSeq: 1 };
+  const out = { people: [], items: [], personSeq: 1, note: '' };
   if (!data || typeof data !== 'object') return out;
   if (Array.isArray(data.people)) out.people = data.people;
   if (typeof data.personSeq === 'number') out.personSeq = data.personSeq;
+  if (typeof data.note === 'string') out.note = data.note;
   if (Array.isArray(data.items)) {
     out.items = data.items.map(it => ({ ...it, tag: HS_TAG_LABEL[it.tag] ? it.tag : 'others' }));
   } else {
@@ -5547,18 +5698,28 @@ function renderHSItems() {
 // ─── SUMMARY (all items) ──────────────────────────────────────
 function updateHSSummary() {
   const totals = {};
-  hsPeople.forEach(p => { totals[p.id] = 0; });
+  const personItems = {};                // { personId: [{label, amt}] } for the expandable breakdown
+  hsPeople.forEach(p => { totals[p.id] = 0; personItems[p.id] = []; });
   let grand = 0;
   let unassigned = 0;
+  const tagTotals = {};                  // { tag: sum } for the spend-by-tag breakdown
 
   hsItems.forEach(item => {
     if (!isInc(item)) return;              // unmarked — excluded from the split
     const amt = parseFloat(item.amt) || 0;
     grand += amt;
+    const tg = HS_TAG_LABEL[item.tag] ? item.tag : 'others';
+    if (amt > 0) tagTotals[tg] = (tagTotals[tg] || 0) + amt;
     const n = item.people.length;
     if (n > 0) {
       const each = amt / n;
-      item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += each; });
+      const tagEmoji = (HS_TAG_LABEL[tg] || '').split(' ')[0];
+      item.people.forEach(pid => {
+        if (totals[pid] !== undefined) {
+          totals[pid] += each;
+          if (each > 0.005) personItems[pid].push({ label: tagEmoji + ' ' + (item.name || 'Unnamed item'), amt: each, total: amt, n: n });
+        }
+      });
     } else {
       unassigned += amt;
     }
@@ -5571,15 +5732,27 @@ function updateHSSummary() {
   if (hsPeople.length === 0) {
     listEl.innerHTML = '<div style="font-size:12px; color:var(--text3);">Add people above to see totals.</div>';
   } else {
-    listEl.innerHTML = hsPeople.map(p => `
-      <div class="nb-row">
-        <span class="nb-label">${escH(p.name)}</span>
-        <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(totals[p.id] || 0)}</span>
-      </div>
-    `).join('');
+    listEl.innerHTML = hsPeople.map(p =>
+      splitPersonRowHtml('hs', p, totals[p.id] || 0, personItems[p.id] || [], _hsOpenPersons.has(p.id))
+    ).join('');
   }
 
   document.getElementById('hsGrandTotal').textContent = fPHP(grand);
+
+  // Spend breakdown by tag — "🍔 Food ₱1,200 · 🍹 Drink ₱800 · …"
+  const tagEl = document.getElementById('hsTagBreakdown');
+  if (tagEl) {
+    const parts = HS_TAGS
+      .filter(t => (tagTotals[t.val] || 0) > 0.005)
+      .map(t => `<span style="white-space:nowrap;">${t.label}&nbsp;<span style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${fPHP(tagTotals[t.val])}</span></span>`);
+    if (parts.length > 0) {
+      tagEl.innerHTML = parts.join('<span style="color:var(--text3); margin:0 8px;">·</span>');
+      tagEl.style.display = 'block';
+    } else {
+      tagEl.style.display = 'none';
+      tagEl.innerHTML = '';
+    }
+  }
 
   const noteEl = document.getElementById('hsUnassignedNote');
   noteEl.textContent = unassigned > 0.005
@@ -5617,7 +5790,7 @@ function saveHS() {
 
   try {
     localStorage.setItem('va_hangout_split_data', JSON.stringify({
-      people: hsPeople, items: hsItems, personSeq: hsPersonSeq,
+      people: hsPeople, items: hsItems, personSeq: hsPersonSeq, note: hsNote,
     }));
   } catch(e) { console.warn('HS save failed', e); }
 }
@@ -5643,6 +5816,8 @@ function hsUndo() {
     hsPeople    = data.people;
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
+    hsNote      = data.note;
+    syncSessionNoteInput('hs');
     renderHSPeople();
     renderHSItems();
     updateHSSummary();
@@ -5666,7 +5841,9 @@ function resetHS() {
       updateHSUndoBtn();
     }
   } catch(e) {}
-  hsPeople = []; hsItems = []; hsPersonSeq = 1;
+  hsPeople = []; hsItems = []; hsPersonSeq = 1; hsNote = '';
+  _hsOpenPersons.clear();
+  syncSessionNoteInput('hs');
   renderHSPeople();
   renderHSItems();
   updateHSSummary();
@@ -5683,7 +5860,9 @@ function loadHS() {
     hsPeople    = data.people;
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
+    hsNote      = data.note;
   } catch(e) { console.warn('HS load failed', e); }
+  syncSessionNoteInput('hs');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -7204,6 +7383,7 @@ function archiveSplit(type) {
       if (grand < 0.01 || ccPeople.length === 0) return;
       entry = {
         type: 'cc', date: new Date().toISOString(), total: grand,
+        note: (ccNote || '').trim(),
         people: ccPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2) })),
         stores: ccStores.filter(s => s.name || (parseFloat(s.amt)||0) > 0).map(s => ({ name: s.name, amt: parseFloat(s.amt)||0 })),
       };
@@ -7220,6 +7400,7 @@ function archiveSplit(type) {
       if (grand < 0.01 || hsPeople.length === 0) return;
       entry = {
         type: 'hs', date: new Date().toISOString(), total: grand,
+        note: (hsNote || '').trim(),
         people: hsPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2) })),
       };
     }
@@ -7253,12 +7434,15 @@ function renderSplitArchive(listId, filterType) {
           e.stores.map(s => `<span style="font-size:10px;background:var(--surface3);color:var(--text3);border:1px solid var(--border);border-radius:20px;padding:1px 7px;font-family:'DM Mono',monospace;">${escH(s.name||'—')} ${fPHP(s.amt)}</span>`).join('') +
           '</div>'
         : '';
+      const noteHtml = e.note
+        ? `<div style="font-size:12px; color:var(--text2); font-style:italic; margin:3px 0 5px; line-height:1.4;">📝 ${escH(e.note)}</div>`
+        : '';
       return `<div class="arch-entry">
         <div class="arch-header">
           <span class="arch-badge" style="${badgeStyle}">${e.type === 'cc' ? 'CC Split' : 'Hangout'}</span>
           <span class="arch-date">${dateStr}</span>
           <span class="arch-total">${fPHP(e.total)}</span>
-        </div>
+        </div>${noteHtml}
         <div class="arch-people">${peopleHtml}</div>${storesHtml}
       </div>`;
     }).join('');
@@ -7787,6 +7971,7 @@ const BACKUP_KEYS = [
   'va_salary_history',
   'va_squads',
   'va_ot_calc',
+  'va_interest_calc',
   'va_theme',
   'va_wallet_qrs',
 ];
@@ -8113,6 +8298,105 @@ function loadOTCalc() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SAVINGS INTEREST CALCULATOR (Plan tab)
+// Compound interest between two dates. The crediting frequency is
+// the compounding frequency: n = 365 (daily), 12 (monthly), 1 (yearly).
+// interest = P × ((1 + r/n)^(n·t) − 1), where t = days / 365.
+// PH banks withhold 20% tax on interest, so net is shown by default.
+// ═══════════════════════════════════════════════════════════════
+const INT_FREQ_N = { daily: 365, monthly: 12, yearly: 1 };
+
+function intCalc() {
+  const P     = parseFloat(document.getElementById('intPrincipal').value) || 0;
+  const rate  = parseFloat(document.getElementById('intRate').value) || 0;
+  const freq  = document.getElementById('intFreq').value;
+  const start = document.getElementById('intStart').value;
+  const end   = document.getElementById('intEnd').value;
+  const taxOn = document.getElementById('intTax').checked;
+
+  const daysEl  = document.getElementById('intDays');
+  const grossEl = document.getElementById('intGross');
+  const taxRow  = document.getElementById('intTaxRow');
+  const taxEl   = document.getElementById('intTaxAmt');
+  const netEl   = document.getElementById('intNet');
+  const finalEl = document.getElementById('intFinal');
+  const perEl   = document.getElementById('intPerDay');
+  const noteEl  = document.getElementById('intCalcNote');
+
+  taxRow.style.display = taxOn ? '' : 'none';
+  noteEl.textContent = '';
+
+  let days = 0;
+  if (start && end) {
+    days = Math.round((new Date(end) - new Date(start)) / 86400000);
+  }
+
+  if (!start || !end || days <= 0 || P <= 0 || rate <= 0) {
+    daysEl.textContent  = days > 0 ? days + (days === 1 ? ' day' : ' days') : '—';
+    grossEl.textContent = '₱0.00';
+    taxEl.textContent   = '₱0.00';
+    netEl.textContent   = '₱0.00';
+    finalEl.textContent = fPHP(P);
+    perEl.textContent   = '';
+    if (start && end && days <= 0) noteEl.textContent = '⚠ The "To" date must be after the "From" date.';
+    saveIntCalc();
+    return;
+  }
+
+  const r     = rate / 100;
+  const n     = INT_FREQ_N[freq] || 365;
+  const t     = days / 365;
+  const gross = P * (Math.pow(1 + r / n, n * t) - 1);
+  const tax   = taxOn ? gross * 0.20 : 0;
+  const net   = gross - tax;
+
+  daysEl.textContent  = days + (days === 1 ? ' day' : ' days');
+  grossEl.textContent = fPHP(gross);
+  taxEl.textContent   = '− ' + fPHP(tax);
+  netEl.textContent   = fPHP(net);
+  finalEl.textContent = fPHP(P + net);
+  perEl.textContent   = '≈ ' + fPHP(net / days) + ' per day · ' + fPHP((net / days) * 30.44) + ' per month, on average';
+
+  saveIntCalc();
+}
+
+function saveIntCalc() {
+  try {
+    localStorage.setItem('va_interest_calc', JSON.stringify({
+      p:     document.getElementById('intPrincipal').value,
+      r:     document.getElementById('intRate').value,
+      freq:  document.getElementById('intFreq').value,
+      start: document.getElementById('intStart').value,
+      end:   document.getElementById('intEnd').value,
+      tax:   document.getElementById('intTax').checked,
+    }));
+  } catch(e) {}
+}
+
+function loadIntCalc() {
+  // Sensible defaults: today → +30 days
+  const today = new Date();
+  const plus30 = new Date(today.getTime() + 30 * 86400000);
+  const iso = d => d.toISOString().slice(0, 10);
+  document.getElementById('intStart').value = iso(today);
+  document.getElementById('intEnd').value   = iso(plus30);
+
+  try {
+    const raw = localStorage.getItem('va_interest_calc');
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d.p     != null) document.getElementById('intPrincipal').value = d.p;
+      if (d.r     != null) document.getElementById('intRate').value      = d.r;
+      if (d.freq && INT_FREQ_N[d.freq]) document.getElementById('intFreq').value = d.freq;
+      if (d.start) document.getElementById('intStart').value = d.start;
+      if (d.end)   document.getElementById('intEnd').value   = d.end;
+      if (typeof d.tax === 'boolean') document.getElementById('intTax').checked = d.tax;
+    }
+  } catch(e) {}
+  intCalc();
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SQUADS — reusable named groups of people ("Barkada", "Work
 // Friends", …). Saved once, then one tap loads every name into a
 // CC Split or Hangout session. Shared between both pages; stored
@@ -8263,6 +8547,71 @@ function updateThemeButtons() {
   if (t === 'light') { on(light); off(dark); } else { on(dark); off(light); }
 }
 
+// ─── LOCALSTORAGE USAGE INDICATOR ────────────────────────────
+// Browsers typically allow ~5 MB per origin, counted as UTF-16
+// (2 bytes per character of every key + value).
+const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+const STORAGE_KEY_LABELS = {
+  va_payroll_data:       'Salary & expenses',
+  va_cc_split_data:      'CC Split session',
+  va_hangout_split_data: 'Hangout session',
+  va_plan_data:          'Plan page',
+  va_tracker:            'Monthly tracker',
+  va_split_archive:      'Split history',
+  va_bill_checklist:     'Bill checklist',
+  va_expense_log:        'Expense log',
+  va_spend_log:          'Spend log',
+  va_fx_rate:            'FX rate cache',
+  va_salary_history:     'Salary history',
+  va_squads:             'Squads',
+  va_ot_calc:            'OT calculator',
+  va_interest_calc:      'Interest calculator',
+  va_theme:              'Theme',
+  va_wallet_qrs:         'Wallet QR images',
+};
+
+function fmtBytes(b) {
+  if (b >= 1024 * 1024) return (b / (1024 * 1024)).toFixed(2) + ' MB';
+  if (b >= 1024)        return (b / 1024).toFixed(0) + ' KB';
+  return b + ' B';
+}
+
+function updateStorageIndicator() {
+  const fill  = document.getElementById('storageBarFill');
+  const text  = document.getElementById('storageUsageText');
+  const top   = document.getElementById('storageTopKeys');
+  if (!fill || !text) return;
+
+  let totalBytes = 0;
+  const sizes = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || '';
+      const bytes = (k.length + v.length) * 2;   // UTF-16: 2 bytes per char
+      totalBytes += bytes;
+      sizes.push({ key: k, bytes });
+    }
+  } catch(e) {
+    text.textContent = 'Could not read storage usage.';
+    return;
+  }
+
+  const pct = Math.min(100, (totalBytes / STORAGE_LIMIT_BYTES) * 100);
+  fill.style.width = pct.toFixed(1) + '%';
+  fill.style.background = pct >= 85 ? 'var(--red)' : pct >= 60 ? 'var(--amber)' : 'var(--green)';
+  text.textContent = (totalBytes / (1024 * 1024)).toFixed(2) + ' MB used of ~5 MB (' + pct.toFixed(0) + '%)';
+
+  if (top) {
+    const biggest = sizes.sort((a, b) => b.bytes - a.bytes).slice(0, 3).filter(s => s.bytes >= 5 * 1024);
+    top.innerHTML = biggest.length
+      ? 'Largest: ' + biggest.map(s =>
+          `<span style="white-space:nowrap;">${escH(STORAGE_KEY_LABELS[s.key] || s.key)} <span style="font-family:'DM Mono',monospace; color:var(--text2);">${fmtBytes(s.bytes)}</span></span>`
+        ).join('<span style="margin:0 6px; color:var(--border);">·</span>')
+      : '';
+  }
+}
+
 function openSettings() {
   const modal = document.getElementById('settingsModal');
   modal.style.display = 'flex';
@@ -8271,6 +8620,7 @@ function openSettings() {
   renderWalletQRList();
   updateSyncUI();
   setSyncMsg('');
+  updateStorageIndicator();
 }
 
 function closeSettings() {
@@ -8370,6 +8720,7 @@ function importData() {
 loadSquads();
 renderSquadChips();
 loadOTCalc();
+loadIntCalc();
 updateThemeButtons();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
