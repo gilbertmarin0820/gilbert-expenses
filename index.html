@@ -239,6 +239,11 @@
   }
   .big-input:focus { outline: none; }
 
+  /* Compact amount rows (CC Split + Hangout cards) — narrower ₱ prefix,
+     slightly smaller digits so full amounts stay visible */
+  .amt-row .input-prefix { min-width: auto; padding: 0 9px; }
+  .amt-row .big-input { font-size: 16px !important; padding: 8px 10px; letter-spacing: -0.3px; }
+
   .hours-summary {
     margin-top: 18px; padding: 16px;
     background: var(--surface2); border-radius: var(--radius-sm);
@@ -5169,9 +5174,9 @@ function renderCCStores() {
           <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(store.name)}" placeholder="e.g. SM Supermarket"
             oninput="ccStores[${i}].name=this.value; saveCC()">
         </div>
-        <div class="input-block" style="width:150px; flex-shrink:0;">
+        <div class="input-block" style="width:190px; flex-shrink:0;">
           <label class="input-label">Amount (₱)</label>
-          <div class="input-row">
+          <div class="input-row amt-row">
             <div class="input-prefix">₱</div>
             <input class="big-input" type="number" min="0" step="0.01" value="${store.amt}" placeholder="0.00"
               oninput="ccStores[${i}].amt=this.value; updateStoreEach(${i}); updateCCSummary(); saveCC()">
@@ -5515,9 +5520,9 @@ function renderHSItems() {
           <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer;"
             onchange="setHSTag(${i}, this.value)">${tagOptions}</select>
         </div>
-        <div class="input-block" style="width:150px; flex-shrink:0;">
+        <div class="input-block" style="width:190px; flex-shrink:0;">
           <label class="input-label">Amount (₱)</label>
-          <div class="input-row">
+          <div class="input-row amt-row">
             <div class="input-prefix">₱</div>
             <input class="big-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
               oninput="hsItems[${i}].amt=this.value; updateHSItemEach(${i}); updateHSSummary(); saveHS()">
