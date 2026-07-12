@@ -4714,10 +4714,30 @@ function calcRender() {
     }
   });
 
-  // Allow tab out but not enter (enter = equals)
+  // Allow tab out but not enter (enter = equals).
+  // Also intercept operators here — this fires even while the screen div is
+  // focused, so the numpad's / * - + and Enter work no matter where you
+  // clicked last. (The global handler below skips events when this div has
+  // focus, so without this the operators were silently swallowed.)
   screen.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); calcEquals(); }
-    if (e.key === 'Escape') { e.preventDefault(); calcClear(); }
+    if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calcEquals(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); calcClear(); return; }
+    if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/' || e.key === '^') {
+      e.preventDefault(); calcOp(e.key); return;
+    }
+    if (e.key === '%') { e.preventDefault(); calcPercent(); return; }
+    // Some keyboard layouts send "," for the numpad decimal key
+    if (e.key === ',') { e.preventDefault(); calcDot(); return; }
+    // digits, ".", Backspace, arrows etc. fall through to the contenteditable
+    // default and are synced by the "input" listener above
+  });
+
+  // Blur calculator buttons right after a mouse click. Otherwise the clicked
+  // button keeps focus, and pressing Enter afterwards "re-clicks" that button
+  // (browser default for focused buttons) on top of firing calcEquals() —
+  // e.g. click [5] then hit numpad Enter → you'd get "55 =" instead of "5 =".
+  document.querySelectorAll('.calc-btn, .calc-deg-btn').forEach(btn => {
+    btn.addEventListener('click', () => btn.blur());
   });
 })();
 function calcOperSym(op) {
@@ -4939,7 +4959,8 @@ document.addEventListener('keydown', e => {
   if (isTypingElsewhere) return;
 
   if ('0123456789'.includes(e.key)) calcDigit(e.key);
-  else if (e.key === '.') calcDot();
+  else if (e.key === '.' || e.key === ',') calcDot(); // "," = numpad decimal on some layouts
+  else if (e.key === '%') calcPercent();
   else if (e.key === '+') calcOp('+');
   else if (e.key === '-') calcOp('-');
   else if (e.key === '*') calcOp('*');
