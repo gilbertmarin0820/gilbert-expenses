@@ -727,7 +727,10 @@
   /* BANK SELECTOR */
   .bank-select-wrap {
     position: relative; display: flex; align-items: center;
-    flex: 1; min-width: 0;
+    /* basis of 175px: if the row can't give the selector at least this
+       much room, the other controls wrap to the next line instead of
+       squeezing the bank name into an unreadable sliver */
+    flex: 1 1 175px; min-width: 0;
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s;
   }
@@ -792,7 +795,12 @@
   .split-chip.active:hover { background: var(--green-dim); }
 
   /* SAVINGS ALLOCATION ITEMS */
-  .sav-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  /* flex-wrap lets the bank selector claim the full first line when the
+     column is too narrow — the amount + delete controls drop to line 2,
+     so bank names are never truncated. */
+  .sav-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .sav-item-row .sav-amt-group { display: flex; align-items: center; gap: 4px; flex: 1 1 auto; }
+  .sav-item-row .nec-amt-input { flex: 1 1 90px; min-width: 90px; max-width: 160px; margin-left: auto; }
   .sav-panel-title {
     font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
@@ -4255,11 +4263,10 @@ function renderSavingsItems() {
           : ''}
         <span class="bank-chevron">▾</span>
       </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+      <div class="sav-amt-group">
         ${incBtn(item, `toggleSavInc(${i})`)}
         <span style="font-size:12px;color:var(--text3);">₱</span>
         <input class="nec-amt-input" type="number" value="${item.amt}" placeholder="0.00" min="0" step="0.01"
-          style="width:105px;"
           oninput="savingsItems[${i}].amt=this.value; updateSavingsSummary(); saveData()">
       </div>
       <button class="del-btn" onclick="savingsItems.splice(${i},1); renderSavingsItems(); saveData()">✕</button>
