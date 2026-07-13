@@ -312,14 +312,60 @@
     border: 1px solid var(--border);
   }
   .workdays-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
-  .day-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-  .day-chip {
-    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
-    padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border);
-    color: var(--text3); background: var(--surface3);
+
+  /* Calendar-style strip: months stretch to fill when few, scroll sideways when many */
+  .wd-cal {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(min(100%, 215px), 1fr);
+    gap: 18px 24px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding-bottom: 8px;
   }
-  .day-chip.work { background: var(--green-dim); color: var(--green-text); border-color: var(--green); }
-  .day-chip.off  { background: var(--surface3); color: var(--text3); border-color: var(--border); opacity: 0.5; }
+  .wd-cal::-webkit-scrollbar { height: 8px; }
+  .wd-cal::-webkit-scrollbar-track { background: var(--surface3); border-radius: 4px; }
+  .wd-cal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .wd-cal::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+  .wd-month { min-width: 0; scroll-snap-align: start; }
+  .wd-month-name {
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  .wd-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+  }
+  .wd-dow {
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+    text-align: center; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 2px 0 4px;
+  }
+  .wd-dow.workhdr { color: var(--green-text); opacity: 0.85; }
+  .wd-cell {
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+    height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); border: 1px solid transparent;
+  }
+  .wd-cell.blank { background: none; }
+  .wd-cell.work { background: var(--green-dim); color: var(--green-text); border-color: var(--green); }
+  .wd-cell.off  { background: var(--surface3); color: var(--text3); border-color: var(--border); opacity: 0.55; }
+  .wd-cell.outside { color: var(--text3); opacity: 0.25; }
+  .wd-cell.today { box-shadow: 0 0 0 2px var(--amber); }
+  .wd-legend {
+    display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px;
+    font-size: 11px; color: var(--text3);
+  }
+  .wd-legend .lg { display: flex; align-items: center; gap: 6px; }
+  .wd-legend .sw {
+    display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .wd-legend .sw.work { background: var(--green-dim); border-color: var(--green); }
+  .wd-legend .sw.off  { background: var(--surface3); opacity: 0.55; }
+  .wd-legend .sw.today { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
   .workdays-count { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text2); }
   .workdays-count span { color: var(--green-text); font-weight: 500; }
 
@@ -1701,7 +1747,12 @@
         </div>
         <div class="workdays-bar" id="workdaysBar" style="display:none;">
           <div class="workdays-label">Working days in range (Sun – Thu)</div>
-          <div class="day-chips" id="dayChips"></div>
+          <div class="wd-legend">
+            <span class="lg"><span class="sw work"></span> Working day</span>
+            <span class="lg"><span class="sw off"></span> Day off</span>
+            <span class="lg"><span class="sw today"></span> Today</span>
+          </div>
+          <div class="wd-cal" id="dayChips"></div>
           <div class="workdays-count" id="workdaysCount"></div>
         </div>
       </div>
@@ -3558,25 +3609,90 @@ function renderDayChips(startStr, endStr) {
 
   bar.style.display = 'block';
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  // Build a week-row view (max 42 days shown as chips, rest as count)
   const totalDays = Math.floor((end - start) / 86400000) + 1;
   chips.innerHTML = '';
-  const maxShow = Math.min(totalDays, 35);
-  const cur = new Date(start);
-  for (let i = 0; i < maxShow; i++) {
-    const isWork = WORK_DAYS.has(cur.getDay());
-    const chip = document.createElement('span');
-    chip.className = 'day-chip ' + (isWork ? 'work' : 'off');
-    chip.textContent = dayNames[cur.getDay()] + ' ' + (cur.getMonth()+1) + '/' + cur.getDate();
-    chips.appendChild(chip);
-    cur.setDate(cur.getDate() + 1);
+
+  const today = new Date();
+  const todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
+
+  // All months in the range render into a horizontally scrollable strip.
+  // A high safety cap avoids rendering hundreds of grids for absurd ranges.
+  const MAX_MONTHS = 24;
+
+  // List each (year, month) touched by the range, in order.
+  const months = [];
+  let mCur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const mEnd = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (mCur <= mEnd && months.length < MAX_MONTHS + 1) {
+    months.push(new Date(mCur));
+    mCur.setMonth(mCur.getMonth() + 1);
   }
-  if (totalDays > 35) {
-    const more = document.createElement('span');
-    more.className = 'day-chip';
-    more.textContent = '+' + (totalDays - 35) + ' more';
-    chips.appendChild(more);
+  const clipped = months.length > MAX_MONTHS;
+  const shown = clipped ? months.slice(0, MAX_MONTHS) : months;
+
+  const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  shown.forEach(m => {
+    const y = m.getFullYear(), mo = m.getMonth();
+    const monthEl = document.createElement('div');
+    monthEl.className = 'wd-month';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'wd-month-name';
+    nameEl.textContent = MONTHS_FULL[mo] + ' ' + y;
+    monthEl.appendChild(nameEl);
+
+    const grid = document.createElement('div');
+    grid.className = 'wd-grid';
+
+    // Weekday header row (work days highlighted)
+    dayNames.forEach((dn, di) => {
+      const h = document.createElement('div');
+      h.className = 'wd-dow' + (WORK_DAYS.has(di) ? ' workhdr' : '');
+      h.textContent = dn.slice(0, 2);
+      grid.appendChild(h);
+    });
+
+    // Leading blanks so day 1 lands under its weekday
+    const firstDow = new Date(y, mo, 1).getDay();
+    for (let i = 0; i < firstDow; i++) {
+      const b = document.createElement('div');
+      b.className = 'wd-cell blank';
+      grid.appendChild(b);
+    }
+
+    const daysInMonth = new Date(y, mo + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(y, mo, d);
+      const cell = document.createElement('div');
+      const inRange = date >= start && date <= end;
+      let cls = 'wd-cell ';
+      if (!inRange) {
+        cls += 'outside';
+      } else {
+        cls += WORK_DAYS.has(date.getDay()) ? 'work' : 'off';
+      }
+      if ((y + '-' + mo + '-' + d) === todayKey) cls += ' today';
+      cell.className = cls;
+      cell.textContent = d;
+      grid.appendChild(cell);
+    }
+
+    monthEl.appendChild(grid);
+    chips.appendChild(monthEl);
+  });
+
+  const oldNote = document.getElementById('wdClipNote');
+  if (oldNote) oldNote.remove();
+  if (clipped) {
+    const note = document.createElement('div');
+    note.id = 'wdClipNote';
+    note.className = 'wd-month-name';
+    note.style.marginBottom = '10px';
+    note.textContent = 'Showing first ' + MAX_MONTHS + ' months — counts below cover the full range.';
+    count.parentNode.insertBefore(note, count);
   }
+
   const wdCount = countWorkDays(startStr, endStr);
   const offCount = totalDays - wdCount;
   count.innerHTML = `<span>${wdCount}</span> working days &nbsp;·&nbsp; ${offCount} days off &nbsp;·&nbsp; ${totalDays} total`;
