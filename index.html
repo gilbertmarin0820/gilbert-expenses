@@ -794,6 +794,19 @@
   }
   .split-chip.active:hover { background: var(--green-dim); }
 
+  /* Paid / unpaid toggle pill in the Summary lists (CC Split + Hangout) */
+  .paid-toggle {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text3); font-family: 'Outfit', sans-serif; font-size: 11px;
+    padding: 3px 10px; border-radius: 20px; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap; flex-shrink: 0; line-height: 1.4;
+  }
+  .paid-toggle:hover { border-color: var(--green); color: var(--green-text); }
+  .paid-toggle.paid {
+    background: var(--green-dim); border-color: var(--green);
+    color: var(--green-text); font-weight: 500;
+  }
+
   /* SAVINGS ALLOCATION ITEMS */
   /* flex-wrap lets the bank selector claim the full first line when the
      column is too narrow — the amount + delete controls drop to line 2,
@@ -2646,6 +2659,8 @@
         <span style="color:var(--text2); font-weight:500;">Grand total (all stores)</span>
         <span id="ccGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
+      <!-- Settle-up progress: "2 of 4 paid · ₱X still to collect" -->
+      <div id="ccPaidStatus" style="display:none; font-size:12px; margin-top:8px;"></div>
       <div id="ccUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
       <!-- Session note — saved with the archive entry on reset -->
       <div class="input-block" style="margin-top:12px;">
@@ -2720,6 +2735,8 @@
         <span style="color:var(--text2); font-weight:500;">Grand total</span>
         <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
+      <!-- Settle-up progress: "2 of 4 paid · ₱X still to collect" -->
+      <div id="hsPaidStatus" style="display:none; font-size:12px; margin-top:8px;"></div>
       <!-- Spend breakdown by tag (Food / Drink / Fare / …) -->
       <div id="hsTagBreakdown" style="display:none; margin-top:10px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text2); line-height:1.9;"></div>
       <div id="hsUnassignedNote" style="font-size:11px; color:var(--amber-text); margin-top:8px;"></div>
@@ -5228,6 +5245,40 @@ function toggleSplitPerson(type, pid) {
   if (type === 'cc') updateCCSummary(); else updateHSSummary();
 }
 
+// ─── PAID / UNPAID TRACKING (CC Split + Hangout) ──────────────
+// Each person carries a `paid` flag; toggled from the Summary row.
+// Persists with the session (person objects are saved whole) and is
+// carried into the archive entry on reset.
+function toggleSplitPaid(type, pid) {
+  const people = type === 'cc' ? ccPeople : hsPeople;
+  const p = people.find(x => x.id === pid);
+  if (!p) return;
+  p.paid = !p.paid;
+  if (type === 'cc') { updateCCSummary(); saveCC(); }
+  else               { updateHSSummary(); saveHS(); }
+}
+
+// "2 of 4 paid · ₱350 still to collect" line under the grand total.
+// Only counts people who actually owe something (> ₱0.005).
+function renderPaidStatus(type, people, totals) {
+  const el = document.getElementById(type === 'cc' ? 'ccPaidStatus' : 'hsPaidStatus');
+  if (!el) return;
+  const owing = people.filter(p => (totals[p.id] || 0) > 0.005);
+  if (owing.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const paidCount = owing.filter(p => p.paid).length;
+  const remaining = owing.filter(p => !p.paid).reduce((s, p) => s + (totals[p.id] || 0), 0);
+  el.style.display = 'block';
+  if (paidCount === owing.length) {
+    el.innerHTML = '<span style="color:var(--green-text); font-weight:500;">✓ Everyone has paid — all settled!</span>';
+  } else {
+    el.innerHTML =
+      `<span style="color:var(--text2);">${paidCount} of ${owing.length} paid</span>` +
+      `<span style="color:var(--text3);"> · </span>` +
+      `<span style="color:var(--amber-text); font-family:'DM Mono',monospace;">${fPHP(remaining)}</span>` +
+      `<span style="color:var(--text2);"> still to collect</span>`;
+  }
+}
+
 // Renders one summary row: person name + total, with an expandable
 // sub-list of {label, amt} items underneath when open.
 function splitPersonRowHtml(type, p, total, items, open) {
@@ -5249,10 +5300,20 @@ function splitPersonRowHtml(type, p, total, items, open) {
       }).join('') +
       `</div>`
     : '';
+  const isPaid  = !!p.paid;
+  const payBtn  = (total > 0.005)
+    ? `<button class="paid-toggle${isPaid ? ' paid' : ''}"
+         onclick="event.stopPropagation(); toggleSplitPaid('${type}', ${p.id})"
+         title="${isPaid ? 'Tap to mark as not yet paid' : 'Tap to mark as paid'}">${isPaid ? '✓ Paid' : 'Paid?'}</button>`
+    : '';
+  const amtStyle = isPaid ? 'text-decoration:line-through; opacity:0.55;' : '';
   return `<div>
     <div class="nb-row" style="${has ? 'cursor:pointer;' : ''}" ${has ? `onclick="toggleSplitPerson('${type}', ${p.id})" title="Tap to ${open ? 'hide' : 'show'} item breakdown"` : ''}>
       <span class="nb-label">${caret}${escH(p.name)}</span>
-      <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500;">${fPHP(total)}</span>
+      <span style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        ${payBtn}
+        <span class="c-green" style="font-family:'DM Mono',monospace; font-weight:500; ${amtStyle}">${fPHP(total)}</span>
+      </span>
     </div>${sub}</div>`;
 }
 
@@ -5262,7 +5323,7 @@ function copySplitMessage(type) {
 
   const rows = people
     .filter(p => (totals[p.id] || 0) > 0.005)
-    .map(p => ({ name: p.name, amt: totals[p.id] || 0 }));
+    .map(p => ({ name: p.name, amt: totals[p.id] || 0, paid: !!p.paid }));
 
   if (rows.length === 0) {
     showToast('Nothing to copy yet — add people and amounts first', true);
@@ -5270,7 +5331,9 @@ function copySplitMessage(type) {
   }
 
   const maxLen = Math.max(...rows.map(r => r.name.length));
-  const text = rows.map(r => r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt)).join('\n');
+  const text = rows.map(r =>
+    r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt) + (r.paid ? ' ✓ paid' : '')
+  ).join('\n');
 
   copyTextToClipboard(text, '📋 Message copied — ready to paste');
 }
@@ -5500,6 +5563,8 @@ function updateCCSummary() {
   }
 
   document.getElementById('ccGrandTotal').textContent = fPHP(grand);
+
+  renderPaidStatus('cc', ccPeople, totals);
 
   const noteEl = document.getElementById('ccUnassignedNote');
   noteEl.textContent = unassigned > 0.005
@@ -5861,6 +5926,8 @@ function updateHSSummary() {
   }
 
   document.getElementById('hsGrandTotal').textContent = fPHP(grand);
+
+  renderPaidStatus('hs', hsPeople, totals);
 
   // Spend breakdown by tag — "🍔 Food ₱1,200 · 🍹 Drink ₱800 · …"
   const tagEl = document.getElementById('hsTagBreakdown');
@@ -7507,7 +7574,7 @@ function archiveSplit(type) {
       entry = {
         type: 'cc', date: new Date().toISOString(), total: grand,
         note: (ccNote || '').trim(),
-        people: ccPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2) })),
+        people: ccPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2), paid: !!p.paid })),
         stores: ccStores.filter(s => s.name || (parseFloat(s.amt)||0) > 0).map(s => ({ name: s.name, amt: parseFloat(s.amt)||0 })),
       };
     } else {
@@ -7524,7 +7591,7 @@ function archiveSplit(type) {
       entry = {
         type: 'hs', date: new Date().toISOString(), total: grand,
         note: (hsNote || '').trim(),
-        people: hsPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2) })),
+        people: hsPeople.map(p => ({ name: p.name, owes: +(totals[p.id] || 0).toFixed(2), paid: !!p.paid })),
       };
     }
 
@@ -7550,7 +7617,7 @@ function renderSplitArchive(listId, filterType) {
         ? 'background:var(--teal-dim);color:var(--teal-text);border:1px solid var(--teal);'
         : 'background:var(--purple-dim);color:var(--purple-text);border:1px solid var(--purple);';
       const peopleHtml = e.people.map(p =>
-        `<span class="arch-person">${escH(p.name)} <span class="arch-person-amt">${fPHP(p.owes)}</span></span>`
+        `<span class="arch-person">${escH(p.name)} <span class="arch-person-amt">${fPHP(p.owes)}</span>${p.paid ? ' <span style="color:var(--green-text); font-size:11px;" title="Paid">✓</span>' : ''}</span>`
       ).join('');
       const storesHtml = (e.stores || []).length > 0
         ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
