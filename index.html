@@ -204,7 +204,7 @@
      forcing its track wider than its 1fr share and spilling past the
      right edge. This was only fixed inside the mobile query before, so it
      overflowed on desktop / when zoomed out. Now applied at all widths. */
-  .savings-pl-grid > *, .paylater-grid > *, .sav3-grid > * { min-width: 0; }
+  .savings-pl-grid > *, .paylater-grid > *, .sav3-grid > *, .sav3-right > * { min-width: 0; }
   /* Wide tables scroll inside their card instead of pushing the page off-center */
   .nec-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .section-title {
@@ -2190,7 +2190,7 @@
   </div>
 
   <!-- SAVINGS ALLOCATION + SAVINGS + BONUS — single 3-column row -->
-  <div class="sav3-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; align-items:start;">
+  <div class="sav3-grid" style="display:grid; grid-template-columns:minmax(280px, 1fr) minmax(0, 2fr); gap:20px; align-items:start;">
 
   <!-- Savings Allocation -->
   <div>
@@ -2225,6 +2225,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Right side: Savings + Bonus on top, Personal Debts filling the space below -->
+  <div class="sav3-right" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; align-items:start;">
 
   <!-- Savings -->
   <div>
@@ -2277,6 +2280,26 @@
           </div>
         </div>
       </div>
+
+  <!-- PERSONAL DEBTS — who owes me / who I owe (fills the space under Savings + Bonus) -->
+  <div style="grid-column: 1 / -1;">
+    <div class="section-title">Personal Debts</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Track informal money — "Carlo owes me ₱1,500" or "I owe Mama ₱3,000". Money owed to you is <span class="c-green">added</span> to your Net Summary; money you owe is <span class="c-red">deducted</span>.
+      </div>
+      <div id="debtsContainer"></div>
+      <button class="add-btn" onclick="addDebt()">+ Add entry</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label c-green">Total others owe you</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="debtsLent">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label c-red">Total you owe others</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="debtsOwe">₱0.00</span></div>
+        <div class="divider"></div>
+        <div class="nb-row"><span class="nb-label" id="debtsNetLabel">Net position</span><span style="font-family:'DM Mono',monospace; font-weight:500;" id="debtsNet">₱0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /sav3-right -->
 
   </div><!-- /sav3-grid -->
 
@@ -2583,6 +2606,7 @@
         <div class="nb-row"><span class="nb-label">+ Net payroll</span><span class="c-green" id="nb2">₱0.00</span></div>
         <div class="nb-row" id="nb-corp-row" style="display:none;"><span class="nb-label" style="color:var(--teal-text);">+ Corporate salary</span><span style="color:var(--teal-text);" id="nb-corp">₱0.00</span></div>
         <div class="nb-row" id="nb-bonus-row" style="display:none;"><span class="nb-label" style="color:var(--purple-text);">+ Bonus</span><span style="color:var(--purple-text);" id="nb-bonus">₱0.00</span></div>
+        <div class="nb-row" id="nb-debt-lent-row" style="display:none;"><span class="nb-label c-green">+ Owed to you</span><span class="c-green" id="nb-debt-lent">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row"><span class="nb-label">− Necessities</span><span class="c-red" id="nb3">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">− SPayLater</span><span class="c-red" id="nb4">₱0.00</span></div>
@@ -2590,6 +2614,7 @@
         <div class="nb-row"><span class="nb-label">− Maya Black CC</span><span class="c-red" id="nb-maya">₱0.00</span></div>
         <div class="nb-row" id="nb-subs-row" style="display:none;"><span class="nb-label">− Subscriptions</span><span class="c-red" id="nb-subs">₱0.00</span></div>
         <div class="nb-row" id="nb-insts-row" style="display:none;"><span class="nb-label">− Installments</span><span class="c-red" id="nb-insts">₱0.00</span></div>
+        <div class="nb-row" id="nb-debt-owe-row" style="display:none;"><span class="nb-label">− You owe others</span><span class="c-red" id="nb-debt-owe">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;">
           <span class="nb-label" style="color:var(--text);">= Net balance</span>
@@ -2896,24 +2921,6 @@
           <span class="nb-label" style="color:var(--text3);">Total remaining balance</span>
           <span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="instsTotal">₱0.00</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PERSONAL DEBTS -->
-  <div>
-    <div class="section-title">Personal Debts</div>
-    <div class="card">
-      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        Track informal money — "Carlo owes me ₱1,500" or "I owe Mama ₱3,000". Outside of apps but still affects your real balance.
-      </div>
-      <div id="debtsContainer"></div>
-      <button class="add-btn" onclick="addDebt()">+ Add entry</button>
-      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-        <div class="nb-row"><span class="nb-label c-green">Total others owe you</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="debtsLent">₱0.00</span></div>
-        <div class="nb-row"><span class="nb-label c-red">Total you owe others</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="debtsOwe">₱0.00</span></div>
-        <div class="divider"></div>
-        <div class="nb-row"><span class="nb-label" id="debtsNetLabel">Net position</span><span style="font-family:'DM Mono',monospace; font-weight:500;" id="debtsNet">₱0.00</span></div>
       </div>
     </div>
   </div>
@@ -3998,8 +4005,15 @@ function recalcAll() {
   if (subsRow)  { subsRow.style.display  = subsSum  > 0 ? 'flex' : 'none'; document.getElementById('nb-subs').textContent  = fPHP(subsSum);  }
   if (instsRow) { instsRow.style.display = instsSum > 0 ? 'flex' : 'none'; document.getElementById('nb-insts').textContent = fPHP(instsSum); }
 
+  // personal debts (who owes me / who I owe)
+  const { lent: debtLentSum, owe: debtOweSum } = getDebtTotals();
+  const debtLentRow = document.getElementById('nb-debt-lent-row');
+  const debtOweRow  = document.getElementById('nb-debt-owe-row');
+  if (debtLentRow) { debtLentRow.style.display = debtLentSum > 0 ? 'flex' : 'none'; document.getElementById('nb-debt-lent').textContent = fPHP(debtLentSum); }
+  if (debtOweRow)  { debtOweRow.style.display  = debtOweSum  > 0 ? 'flex' : 'none'; document.getElementById('nb-debt-owe').textContent  = fPHP(debtOweSum);  }
+
   // net summary
-  const total = savings + netPHP + bonusPHP + corpContrib - necSum - shopeeSum - tiktokSum - mayaSum - subsSum - instsSum;
+  const total = savings + netPHP + bonusPHP + corpContrib + debtLentSum - necSum - shopeeSum - tiktokSum - mayaSum - subsSum - instsSum - debtOweSum;
   document.getElementById('nb1').textContent = fPHP(savings);
   document.getElementById('nb2').textContent = fPHP(netPHP);
   document.getElementById('nb3').textContent = fPHP(necSum);
@@ -6419,13 +6433,21 @@ function renderDebts() {
   updateDebtsSummary();
 }
 
-function updateDebtsSummary() {
+function getDebtTotals() {
   let lent = 0, owe = 0;
-  personalDebts.forEach(d => {
-    if (!isInc(d)) return;
-    const a = parseFloat(d.amt) || 0;
-    if (d.type === 'lent') lent += a; else owe += a;
-  });
+  if (typeof personalDebts !== 'undefined' && Array.isArray(personalDebts)) {
+    personalDebts.forEach(d => {
+      if (!isInc(d)) return;
+      const a = parseFloat(d.amt) || 0;
+      if (d.type === 'lent') lent += a; else owe += a;
+    });
+  }
+  return { lent, owe };
+}
+
+let _debtsRecalcLock = false;
+function updateDebtsSummary() {
+  const { lent, owe } = getDebtTotals();
   const net = lent - owe;
   const el = document.getElementById('debtsLent');
   const eo = document.getElementById('debtsOwe');
@@ -6438,6 +6460,12 @@ function updateDebtsSummary() {
     en.style.color = net >= 0 ? 'var(--green-text)' : 'var(--red-text)';
   }
   if (lb) lb.textContent = net >= 0 ? 'Net position (in your favor)' : 'Net position (you owe more)';
+
+  // keep the Net Summary in sync — money owed to you adds, money you owe deducts
+  if (typeof recalcAll === 'function' && !_debtsRecalcLock) {
+    _debtsRecalcLock = true;
+    try { recalcAll(); } finally { _debtsRecalcLock = false; }
+  }
 }
 
 // ─── INCOME VS EXPENSES CHART ─────────────────────────────────
@@ -6460,18 +6488,21 @@ function drawChart() {
   const maya    = readNB('nb-maya');
   const subs    = getSubsSum();
   const insts   = getInstsMonthlySum();
+  const debts   = getDebtTotals();
 
   const segments = [
     { label: 'Savings',       value: savings, color: '#3FB950', income: true  },
     { label: 'VA Payroll',    value: payroll, color: '#388bfd', income: true  },
     { label: 'Corporate',     value: corp,    color: '#0d9488', income: true  },
     { label: 'Bonus',         value: bonus,   color: '#8b5cf6', income: true  },
+    { label: 'Owed to you',   value: debts.lent, color: '#26a641', income: true  },
     { label: 'Necessities',   value: nec,     color: '#f85149', income: false },
     { label: 'SPayLater',     value: shopee,  color: '#ff5722', income: false },
     { label: 'TikTok',        value: tiktok,  color: '#555',    income: false },
     { label: 'Maya Black CC',  value: maya,    color: '#16d99a', income: false },
     { label: 'Subscriptions', value: subs,    color: '#d29922', income: false },
     { label: 'Installments',  value: insts,   color: '#e3b341', income: false },
+    { label: 'You owe',       value: debts.owe, color: '#c93c37', income: false },
   ].filter(s => s.value > 0.005);
 
   const total = segments.reduce((s, seg) => s + seg.value, 0);
@@ -7452,6 +7483,7 @@ renderHSItems();
 updateHSSummary();
 
 loadPlanData();
+renderDebts(); // debts section now lives on the Expenses page — render at startup
 setTimeout(drawChart, 200);
 calInit();
 updateConverter();
