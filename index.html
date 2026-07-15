@@ -23,7 +23,10 @@
 <!-- Apply saved theme BEFORE first paint so there's no dark→light flash -->
 <script>
   try {
-    if (localStorage.getItem('va_theme') === 'light') {
+    var t = localStorage.getItem('va_theme');
+    var light = t === 'light' ||
+      (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+    if (light) {
       document.documentElement.setAttribute('data-theme', 'light');
       var m = document.querySelector('meta[name="theme-color"]');
       if (m) m.setAttribute('content', '#f2f4f8');
@@ -1506,7 +1509,7 @@
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🎨 Appearance</div>
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        Light mode is easier to read outdoors in daylight. Your choice is remembered on this device.
+        Light mode is easier to read outdoors in daylight. <b>Auto</b> follows your phone/PC's system theme. Your choice is remembered on this device.
       </div>
       <div style="display:flex; gap:8px;">
         <button id="themeBtnDark" onclick="setTheme('dark')" style="
@@ -1520,6 +1523,12 @@
           color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
           font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
           ☀️ Light
+        </button>
+        <button id="themeBtnAuto" onclick="setTheme('auto')" style="
+          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+          🌓 Auto
         </button>
       </div>
     </div>
@@ -2005,6 +2014,10 @@
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
         Tap "💾 Log this payroll" above to save a snapshot of the current period — date range, gross USD, net PHP, and the exchange rate used. Builds a record over time for visas, loans, or tracking income trends.
+      </div>
+      <div id="salaryChartWrap" style="display:none; margin-bottom:14px;">
+        <canvas id="salaryHistoryChart" style="width:100%; height:140px; display:block;"></canvas>
+        <div style="font-size:10px; color:var(--text3); margin-top:4px; text-align:center;">Net pay (₱) per logged payroll · oldest → newest</div>
       </div>
       <div id="salaryHistoryList"><div style="font-size:12px;color:var(--text3);padding:8px 0;">No payroll periods logged yet.</div></div>
       <button class="action-btn danger" style="margin-top:10px;" onclick="clearSalaryHistory()" title="Clear all logged payroll periods">✕ Clear history</button>
@@ -2750,10 +2763,16 @@
           style="height:42px; font-size:13px; width:100%; box-sizing:border-box;"
           oninput="ccNote=this.value; saveCC()">
       </div>
-      <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
-        onclick="copySplitMessage('cc')" title="Copy a plain name — amount breakdown to paste in chat">
-        📋 Copy message
-      </button>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
+          onclick="copySplitMessage('cc')" title="Copy a plain name — amount breakdown to paste in chat">
+          📋 Copy message
+        </button>
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
+          onclick="shareSplitMessage('cc')" title="Open the share sheet (Messenger, Viber, SMS…) with the breakdown">
+          📤 Share
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2828,10 +2847,16 @@
           style="height:42px; font-size:13px; width:100%; box-sizing:border-box;"
           oninput="hsNote=this.value; saveHS()">
       </div>
-      <button class="add-btn" style="margin-top:10px; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
-        onclick="copySplitMessage('hs')" title="Copy a plain name — amount breakdown to paste in chat">
-        📋 Copy message
-      </button>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
+          onclick="copySplitMessage('hs')" title="Copy a plain name — amount breakdown to paste in chat">
+          📋 Copy message
+        </button>
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
+          onclick="shareSplitMessage('hs')" title="Open the share sheet (Messenger, Viber, SMS…) with the breakdown">
+          📤 Share
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2981,6 +3006,25 @@
     </div>
   </div>
 
+  <!-- DEBT PAYOFF PLANNER -->
+  <div>
+    <div class="section-title">Debt Payoff Planner</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Interest-bearing debts — credit cards, personal loans, salary loans. Enter each balance, annual interest rate, and minimum payment, set your total monthly payoff budget, and compare <b>Snowball</b> (smallest balance first — quick wins) vs <b>Avalanche</b> (highest interest first — cheapest overall).
+      </div>
+      <div id="payoffContainer"></div>
+      <button class="add-btn" onclick="addPayoffDebt()">+ Add debt</button>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:14px; flex-wrap:wrap;">
+        <span style="font-size:12px; color:var(--text2);">Monthly payoff budget</span>
+        <span style="font-size:12px; color:var(--text3);">₱</span>
+        <input class="nec-amt-input" type="number" id="payoffBudget" placeholder="0.00" min="0" step="0.01" style="width:130px;"
+          oninput="renderPayoffResults(); savePlanData()">
+      </div>
+      <div id="payoffResults" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
   <!-- CASH FLOW CALENDAR -->
   <div>
     <div class="section-title">Cash Flow Calendar</div>
@@ -3028,10 +3072,18 @@
             <div style="font-size:13px; font-weight:500; color:var(--text);" id="cfMonthHeading">—</div>
             <div style="font-size:11px; color:var(--text3); margin-top:2px;">Income &amp; bills in date order · running balance</div>
           </div>
-          <label style="display:flex; align-items:center; gap:7px; cursor:pointer; user-select:none; font-size:12px; color:var(--text2);">
-            <input type="checkbox" id="cfUseSavings" style="width:14px;height:14px;accent-color:var(--green);cursor:pointer;" onchange="renderCashFlow()">
-            Start from savings balance
-          </label>
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; user-select:none; font-size:12px; color:var(--text2);">
+              Start&nbsp;₱
+              <input type="number" id="cfStartBal" placeholder="0.00" min="0" step="0.01"
+                style="width:110px; padding:6px 8px; background:var(--surface3); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:12px;"
+                oninput="renderCashFlow(); savePlanData()">
+            </label>
+            <label style="display:flex; align-items:center; gap:7px; cursor:pointer; user-select:none; font-size:12px; color:var(--text2);">
+              <input type="checkbox" id="cfUseSavings" style="width:14px;height:14px;accent-color:var(--green);cursor:pointer;" onchange="renderCashFlow(); savePlanData()">
+              + savings balance
+            </label>
+          </div>
         </div>
         <!-- Column headers -->
         <div class="cf-hdr">
@@ -5390,7 +5442,7 @@ function splitPersonRowHtml(type, p, total, items, open) {
     </div>${sub}</div>`;
 }
 
-function copySplitMessage(type) {
+function buildSplitMessage(type) {
   const people = type === 'cc' ? ccPeople : hsPeople;
   const totals = type === 'cc' ? _ccLastTotals : _hsLastTotals;
 
@@ -5398,17 +5450,39 @@ function copySplitMessage(type) {
     .filter(p => (totals[p.id] || 0) > 0.005)
     .map(p => ({ name: p.name, amt: totals[p.id] || 0, paid: !!p.paid }));
 
-  if (rows.length === 0) {
+  if (rows.length === 0) return null;
+
+  const maxLen = Math.max(...rows.map(r => r.name.length));
+  return rows.map(r =>
+    r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt) + (r.paid ? ' ✓ paid' : '')
+  ).join('\n');
+}
+
+function copySplitMessage(type) {
+  const text = buildSplitMessage(type);
+  if (!text) {
     showToast('Nothing to copy yet — add people and amounts first', true);
     return;
   }
-
-  const maxLen = Math.max(...rows.map(r => r.name.length));
-  const text = rows.map(r =>
-    r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt) + (r.paid ? ' ✓ paid' : '')
-  ).join('\n');
-
   copyTextToClipboard(text, '📋 Message copied — ready to paste');
+}
+
+// Native share sheet (Messenger, Viber, SMS…) on devices that support
+// it; falls back to the clipboard everywhere else.
+function shareSplitMessage(type) {
+  const text = buildSplitMessage(type);
+  if (!text) {
+    showToast('Nothing to share yet — add people and amounts first', true);
+    return;
+  }
+  if (navigator.share) {
+    navigator.share({ text: text }).catch(e => {
+      // AbortError = user closed the share sheet — not a failure
+      if (!e || e.name !== 'AbortError') copyTextToClipboard(text, '📋 Copied instead — sharing unavailable');
+    });
+  } else {
+    copyTextToClipboard(text, '📋 Copied — sharing not supported on this device');
+  }
 }
 
 function copyTextToClipboard(text, successMsg) {
@@ -6446,6 +6520,172 @@ function addDebt() {
   savePlanData();
 }
 
+// ─── DEBT PAYOFF PLANNER ──────────────────────────────────────
+// Interest-bearing debts, simulated month by month. Interest accrues
+// monthly at APR/12 on the remaining balance; minimums are paid first
+// and the leftover budget goes to the target debt (snowball = smallest
+// balance first, avalanche = highest APR first).
+let payoffDebts = []; // [{ id, name, bal, apr, min }]
+
+function addPayoffDebt() {
+  payoffDebts.push({ id: planId(), name: '', bal: '', apr: '', min: '' });
+  renderPayoffDebts();
+  savePlanData();
+}
+
+function removePayoffDebt(id) {
+  payoffDebts = payoffDebts.filter(d => d.id !== id);
+  renderPayoffDebts();
+  savePlanData();
+}
+
+function renderPayoffDebts() {
+  const c = document.getElementById('payoffContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  payoffDebts.forEach((d, i) => {
+    const div = document.createElement('div');
+    div.className = 'debt-row';
+    div.innerHTML = `
+      <input class="nec-cat-input" value="${escH(d.name)}" placeholder="e.g. Maya CC, SSS loan" style="flex:1; min-width:110px;"
+        oninput="payoffDebts[${i}].name=this.value; savePlanData()">
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:11px; color:var(--text3);">₱</span>
+        <input class="nec-amt-input" type="number" value="${d.bal}" placeholder="Balance" min="0" step="0.01" style="width:100px;"
+          oninput="payoffDebts[${i}].bal=this.value; renderPayoffResults(); savePlanData()">
+      </div>
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <input class="nec-amt-input" type="number" value="${d.apr}" placeholder="APR" min="0" step="0.1" style="width:64px;"
+          oninput="payoffDebts[${i}].apr=this.value; renderPayoffResults(); savePlanData()">
+        <span style="font-size:11px; color:var(--text3);">%/yr</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <span style="font-size:11px; color:var(--text3);">min ₱</span>
+        <input class="nec-amt-input" type="number" value="${d.min}" placeholder="0.00" min="0" step="0.01" style="width:90px;"
+          oninput="payoffDebts[${i}].min=this.value; renderPayoffResults(); savePlanData()">
+      </div>
+      <button class="del-btn" onclick="removePayoffDebt(${d.id})">✕</button>
+    `;
+    c.appendChild(div);
+  });
+  renderPayoffResults();
+}
+
+function simulatePayoff(order) {
+  const debts = payoffDebts
+    .map(d => ({
+      name: (d.name || '').trim() || 'Debt',
+      apr:  parseFloat(d.apr) || 0,
+      min:  parseFloat(d.min) || 0,
+      bal:  parseFloat(d.bal) || 0,
+    }))
+    .filter(d => d.bal > 0);
+  const budget = parseFloat(document.getElementById('payoffBudget')?.value) || 0;
+  if (debts.length === 0 || budget <= 0) return null;
+
+  const balances = debts.map(d => d.bal);
+  let months = 0, totalInterest = 0;
+  const paidOrder = [];
+
+  while (balances.some(b => b > 0.005)) {
+    months++;
+    if (months > 600) return { stuck: true }; // 50 years — never finishing
+    const before = balances.reduce((s, b) => s + Math.max(0, b), 0);
+
+    // 1) monthly interest accrues on every open balance
+    debts.forEach((d, i) => {
+      if (balances[i] > 0.005 && d.apr > 0) {
+        const interest = balances[i] * d.apr / 1200;
+        balances[i] += interest;
+        totalInterest += interest;
+      }
+    });
+
+    // 2) payment order among open debts
+    const idx = debts.map((_, i) => i).filter(i => balances[i] > 0.005);
+    idx.sort(order === 'snowball'
+      ? (a, b) => balances[a] - balances[b]
+      : (a, b) => debts[b].apr - debts[a].apr || balances[a] - balances[b]);
+
+    // 3) minimums first, then all leftover budget to the target debt(s)
+    let left = budget;
+    for (const i of idx) {
+      const pay = Math.min(debts[i].min, balances[i], left);
+      balances[i] -= pay; left -= pay;
+    }
+    for (const i of idx) {
+      if (left <= 0.005) break;
+      if (balances[i] <= 0.005) continue;
+      const pay = Math.min(balances[i], left);
+      balances[i] -= pay; left -= pay;
+    }
+
+    const after = balances.reduce((s, b) => s + Math.max(0, b), 0);
+    if (after >= before - 0.005) return { stuck: true }; // interest outruns the budget
+
+    idx.forEach(i => {
+      if (balances[i] <= 0.005 && paidOrder.indexOf(debts[i].name) === -1) paidOrder.push(debts[i].name);
+    });
+  }
+
+  const end = new Date();
+  end.setMonth(end.getMonth() + months);
+  return { months, totalInterest, endDate: end, paidOrder };
+}
+
+function renderPayoffResults() {
+  const c = document.getElementById('payoffResults');
+  if (!c) return;
+
+  const activeDebts = payoffDebts.filter(d => (parseFloat(d.bal) || 0) > 0);
+  const budget = parseFloat(document.getElementById('payoffBudget')?.value) || 0;
+
+  if (activeDebts.length === 0) { c.innerHTML = ''; return; }
+  if (budget <= 0) {
+    c.innerHTML = '<div style="font-size:12px; color:var(--text3);">Set a monthly payoff budget above to see the projections.</div>';
+    return;
+  }
+
+  const minSum = activeDebts.reduce((s, d) => s + Math.min(parseFloat(d.min) || 0, parseFloat(d.bal) || 0), 0);
+  const minWarn = budget < minSum
+    ? `<div style="font-size:12px; color:var(--amber-text); margin-bottom:10px;">\u26a0 Budget is below the sum of minimum payments (${fPHP(minSum)}) \u2014 minimums get short-paid in this projection.</div>`
+    : '';
+
+  const snow = simulatePayoff('snowball');
+  const aval = simulatePayoff('avalanche');
+  if (!snow || !aval) { c.innerHTML = ''; return; }
+  if (snow.stuck || aval.stuck) {
+    c.innerHTML = minWarn + '<div style="font-size:12px; color:var(--red-text);">\u26a0 At this budget, interest grows faster than your payments \u2014 the debts never get paid off. Increase the monthly budget.</div>';
+    return;
+  }
+
+  const fmtDate = d => CAL_MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  const fmtLen  = m => m >= 12 ? Math.floor(m / 12) + 'y ' + (m % 12 ? (m % 12) + 'mo' : '') : m + ' mo';
+  const box = (title, sub, r, accent) => `
+    <div style="flex:1; min-width:210px; padding:12px 14px; background:var(--surface2); border:1px solid ${accent}; border-radius:var(--radius-sm);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:2px;">${title}</div>
+      <div style="font-size:10px; color:var(--text3); margin-bottom:8px;">${sub}</div>
+      <div class="nb-row"><span class="nb-label">Debt-free by</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);">${fmtDate(r.endDate)}</span></div>
+      <div class="nb-row"><span class="nb-label">Time</span><span style="font-family:'DM Mono',monospace;">${fmtLen(r.months)}</span></div>
+      <div class="nb-row"><span class="nb-label">Total interest</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);">${fPHP(r.totalInterest)}</span></div>
+      <div style="font-size:10px; color:var(--text3); margin-top:8px; line-height:1.6;">Payoff order: ${r.paidOrder.map(escH).join(' \u2192 ')}</div>
+    </div>`;
+
+  const saved = snow.totalInterest - aval.totalInterest;
+  let verdict = '';
+  if (saved > 0.5) {
+    verdict = `<div style="font-size:12px; color:var(--teal-text); margin-top:10px;">\ud83d\udca1 Avalanche saves <b style="font-family:'DM Mono',monospace;">${fPHP(saved)}</b> in interest${aval.months < snow.months ? ' and finishes ' + (snow.months - aval.months) + ' month(s) earlier' : ''}. Snowball's quick wins can be worth it for motivation \u2014 your call.</div>`;
+  } else {
+    verdict = `<div style="font-size:12px; color:var(--text3); margin-top:10px;">Both orders cost about the same here \u2014 pick Snowball for the quicker first win.</div>`;
+  }
+
+  c.innerHTML = minWarn +
+    `<div style="display:flex; gap:10px; flex-wrap:wrap;">` +
+    box('\u2744\ufe0f Snowball', 'smallest balance first', snow, 'var(--blue)') +
+    box('\ud83c\udfd4\ufe0f Avalanche', 'highest interest first', aval, 'var(--teal)') +
+    `</div>` + verdict;
+}
+
 function removeDebt(id) {
   personalDebts = personalDebts.filter(d => d.id !== id);
   renderDebts();
@@ -7099,6 +7339,7 @@ function renderSalaryHistory() {
   const list = loadSalaryHistory();
   if (list.length === 0) {
     c.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">No payroll periods logged yet.</div>';
+    drawSalaryChart(); // hides the chart wrap
     return;
   }
   c.innerHTML = list.map(e => {
@@ -7121,6 +7362,97 @@ function renderSalaryHistory() {
       </div>
     </div>`;
   }).join('');
+  drawSalaryChart();
+}
+
+// ─── SALARY HISTORY CHART ─────────────────────────────────────
+// Bar chart of net PHP per logged payroll, oldest → newest. Reads
+// theme colors via cssVar() so it repaints correctly on theme switch.
+let _salChartLastW = 0;
+function drawSalaryChart() {
+  const wrap   = document.getElementById('salaryChartWrap');
+  const canvas = document.getElementById('salaryHistoryChart');
+  if (!wrap || !canvas || !canvas.getContext) return;
+
+  const list = loadSalaryHistory().slice().reverse(); // stored newest-first → chart oldest-first
+  if (list.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  const cssW = canvas.clientWidth || wrap.clientWidth;
+  if (!cssW) return; // section collapsed — ResizeObserver redraws on expand
+  _salChartLastW = cssW;
+  const cssH = 140;
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const vals   = list.map(e => e.netPHP || 0);
+  const maxV   = Math.max(...vals) || 1;
+  const padT = 18, padB = 16, padL = 4, padR = 4;
+  const plotH  = cssH - padT - padB;
+  const plotW  = cssW - padL - padR;
+  const n      = vals.length;
+  const gap    = Math.min(10, Math.max(3, plotW / n * 0.2));
+  const barW   = Math.max(4, (plotW - gap * (n - 1)) / n);
+
+  const cBar   = cssVar('--teal') || '#0d9488';
+  const cBarHi = cssVar('--teal-text') || '#2dd4bf';
+  const cText  = cssVar('--text3') || '#6e7681';
+  const cGrid  = cssVar('--border') || '#30363d';
+
+  // Average guide line
+  const avg  = vals.reduce((s, v) => s + v, 0) / n;
+  const avgY = padT + plotH * (1 - avg / maxV);
+  ctx.strokeStyle = cGrid;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(padL, avgY);
+  ctx.lineTo(cssW - padR, avgY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = cText;
+  ctx.font = '9px "DM Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('avg ' + fPHP(avg), padL + 2, avgY - 3);
+
+  // Bars (latest one highlighted)
+  vals.forEach((v, i) => {
+    const h = Math.max(2, plotH * (v / maxV));
+    const x = padL + i * (barW + gap);
+    const y = padT + plotH - h;
+    ctx.fillStyle = i === n - 1 ? cBarHi : cBar;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, barW, h, 2); else ctx.rect(x, y, barW, h);
+    ctx.fill();
+    // Value labels only when there's room
+    if (n <= 8) {
+      ctx.fillStyle = cText;
+      ctx.textAlign = 'center';
+      ctx.fillText('\u20b1' + Math.round(v / 1000) + 'k', x + barW / 2, y - 4);
+    }
+  });
+
+  // Month labels under first and last bar
+  const lbl = e => new Date(e.loggedAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  ctx.fillStyle = cText;
+  ctx.textAlign = 'left';
+  ctx.fillText(lbl(list[0]), padL, cssH - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText(lbl(list[n - 1]), cssW - padR, cssH - 4);
+}
+// Redraw when the card's width actually changes (resize, section expand)
+if (window.ResizeObserver) {
+  window.addEventListener('load', () => {
+    const wrap = document.getElementById('salaryChartWrap');
+    if (!wrap) return;
+    new ResizeObserver(() => {
+      const canvas = document.getElementById('salaryHistoryChart');
+      if (canvas && canvas.clientWidth && canvas.clientWidth !== _salChartLastW) drawSalaryChart();
+    }).observe(wrap);
+  });
 }
 
 // ─── PAYDAY CALENDAR ──────────────────────────────────────────
@@ -7212,16 +7544,28 @@ function renderCashFlow() {
     return;
   }
 
-  // Running balance: optionally start from savings balance
-  const useSavings = document.getElementById('cfUseSavings')?.checked;
-  const startBal   = useSavings ? (parseFloat(document.getElementById('savingsInput')?.value) || 0) : 0;
+  // Running balance: manual starting balance + optionally the savings balance
+  const useSavings  = document.getElementById('cfUseSavings')?.checked;
+  const manualStart = parseFloat(document.getElementById('cfStartBal')?.value) || 0;
+  const startBal    = manualStart + (useSavings ? (parseFloat(document.getElementById('savingsInput')?.value) || 0) : 0);
   let runBal = startBal;
   let totalIncome = 0, totalBills = 0;
+  let lowest = startBal, lowestDay = null;
 
-  container.innerHTML = events.map(ev => {
+  const startRow = (startBal !== 0 || useSavings)
+    ? `<div class="cf-row" style="opacity:0.85;">
+        <span class="cf-date">${mon3} 1</span>
+        <span class="cf-label" style="color:var(--text3);">Starting balance</span>
+        <span class="cf-amt"></span>
+        <span class="cf-bal ${startBal >= 0 ? 'pos' : 'neg'}">${fPHP(startBal)}</span>
+      </div>`
+    : '';
+
+  container.innerHTML = startRow + events.map(ev => {
     const isIncome = ev.type === 'income';
     if (isIncome) { runBal += ev.amount; totalIncome += ev.amount; }
     else          { runBal -= ev.amount; totalBills  += ev.amount; }
+    if (runBal < lowest) { lowest = runBal; lowestDay = ev.day; }
 
     const amtStr = (isIncome ? '+' : '−') + (ev.amount > 0 ? fPHP(ev.amount) : '₱—');
     const balCls = runBal >= 0 ? 'pos' : 'neg';
@@ -7235,9 +7579,14 @@ function renderCashFlow() {
   }).join('');
 
   if (summary) {
-    const net    = totalIncome - totalBills;
-    const netCol = net >= 0 ? 'var(--green-text)' : 'var(--red-text)';
-    const endCol = runBal >= 0 ? 'var(--teal-text)' : 'var(--red-text)';
+    const net     = totalIncome - totalBills;
+    const netCol  = net >= 0 ? 'var(--green-text)' : 'var(--red-text)';
+    const endCol  = runBal >= 0 ? 'var(--teal-text)' : 'var(--red-text)';
+    const showBal = startBal !== 0 || useSavings;
+    const lowCol  = lowest >= 0 ? 'var(--text2)' : 'var(--red-text)';
+    const dipWarn = (showBal && lowest < 0 && lowestDay)
+      ? `<div style="flex-basis:100%; font-size:12px; color:var(--red-text); margin-top:4px;">\u26a0 Projected to dip negative on ${mon3} ${lowestDay} \u2014 lowest point ${fPHP(lowest)}.</div>`
+      : '';
     summary.style.display = 'flex';
     summary.innerHTML = `
       <div class="cf-sum-item">
@@ -7252,10 +7601,15 @@ function renderCashFlow() {
         <span class="cf-sum-label">Net this month</span>
         <span class="cf-sum-val" style="color:${netCol};">${net >= 0 ? '+' : '−'}${fPHP(Math.abs(net))}</span>
       </div>
-      ${useSavings ? `<div class="cf-sum-item">
+      ${showBal ? `<div class="cf-sum-item">
+        <span class="cf-sum-label">Lowest balance</span>
+        <span class="cf-sum-val" style="color:${lowCol};">${fPHP(lowest)}${lowestDay ? ' <span style="font-size:10px;color:var(--text3);">(' + mon3 + ' ' + lowestDay + ')</span>' : ''}</span>
+      </div>
+      <div class="cf-sum-item">
         <span class="cf-sum-label">End balance</span>
         <span class="cf-sum-val" style="color:${endCol};">${fPHP(runBal)}</span>
       </div>` : ''}
+      ${dipWarn}
     `;
   }
 }
@@ -7401,6 +7755,10 @@ function savePlanData() {
   try {
     localStorage.setItem('va_plan_data', JSON.stringify({
       savingsGoals, subscriptions, installments, personalDebts, planSeq,
+      payoffDebts,
+      payoffBudget: document.getElementById('payoffBudget')?.value || '',
+      cfStartBal:   document.getElementById('cfStartBal')?.value || '',
+      cfUseSavings: !!document.getElementById('cfUseSavings')?.checked,
     }));
   } catch(e) { console.warn('Plan save failed', e); }
 }
@@ -7416,12 +7774,20 @@ function planUndo() {
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
+    if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
     if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
+    const pb = document.getElementById('payoffBudget');
+    if (pb) pb.value = typeof d.payoffBudget === 'string' ? d.payoffBudget : '';
+    const cs = document.getElementById('cfStartBal');
+    if (cs) cs.value = typeof d.cfStartBal === 'string' ? d.cfStartBal : '';
+    const cu = document.getElementById('cfUseSavings');
+    if (cu) cu.checked = !!d.cfUseSavings;
     // Re-render all Plan sections
     renderGoals();
     renderSubs();
     renderInsts();
     renderDebts();
+    renderPayoffDebts();
     renderCalendar();
     recalcAll();
     try { localStorage.setItem('va_plan_data', raw || '{}'); } catch(e) {}
@@ -7446,12 +7812,17 @@ function resetPlan() {
   subscriptions   = [];
   installments    = [];
   personalDebts   = [];
+  payoffDebts     = [];
   planSeq         = 1;
+  const _pb = document.getElementById('payoffBudget'); if (_pb) _pb.value = '';
+  const _cs = document.getElementById('cfStartBal');   if (_cs) _cs.value = '';
+  const _cu = document.getElementById('cfUseSavings'); if (_cu) _cu.checked = false;
 
   renderGoals();
   renderSubs();
   renderInsts();
   renderDebts();
+  renderPayoffDebts();
   renderCalendar();
   recalcAll();
   try { localStorage.removeItem('va_plan_data'); } catch(e) {}
@@ -7467,7 +7838,14 @@ function loadPlanData() {
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
+    if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
     if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
+    const pb = document.getElementById('payoffBudget');
+    if (pb && typeof d.payoffBudget === 'string') pb.value = d.payoffBudget;
+    const cs = document.getElementById('cfStartBal');
+    if (cs && typeof d.cfStartBal === 'string') cs.value = d.cfStartBal;
+    const cu = document.getElementById('cfUseSavings');
+    if (cu) cu.checked = !!d.cfUseSavings;
   } catch(e) { console.warn('Plan load failed', e); }
 }
 
@@ -7544,6 +7922,7 @@ updateHSSummary();
 
 loadPlanData();
 renderDebts(); // debts section now lives on the Expenses page — render at startup
+renderPayoffDebts();
 setTimeout(drawChart, 200);
 calInit();
 updateConverter();
@@ -8261,8 +8640,13 @@ const BACKUP_KEYS = [
 // ═══════════════════════════════════════════════════════════════
 // CLOUD SYNC (Supabase)
 // All app data (except the per-device theme choice) is bundled into
-// one JSON payload and upserted to the `user_data` table, keyed by a
-// SHA-256 hash of the user's sync code. Last write wins.
+// one JSON payload, AES-256-GCM encrypted with a key derived from the
+// sync code (PBKDF2), and upserted to the `user_data` table keyed by
+// a SHA-256 hash of the code (different salt than the key, so the id
+// reveals nothing about the key). Uploads check the cloud timestamp
+// first and prompt instead of clobbering newer data from another
+// device. Legacy plaintext rows are read fine and become encrypted
+// on the next upload.
 // ═══════════════════════════════════════════════════════════════
 const SUPA_URL = 'https://ghbgxmtdlinjsfifuxyy.supabase.co';
 const SUPA_KEY = 'sb_publishable_1bMoEB7kIEeMdCMZb37Sog_MyF0VNGV';
@@ -8272,6 +8656,8 @@ const SYNC_META_KEY = 'va_sync_meta';
 let _syncSuspended = false;   // true while we're restoring cloud data locally
 let _syncTimer     = null;    // debounce timer for auto-upload
 let _syncBusy      = false;
+let _syncKeyCache  = null;    // imported CryptoKey for this session
+let _lastSyncCheck = 0;       // throttle for the visibility-change cloud check
 
 function getSyncMeta() {
   try { return JSON.parse(localStorage.getItem(SYNC_META_KEY)) || null; } catch(e) { return null; }
@@ -8280,21 +8666,73 @@ function saveSyncMeta(meta) {
   try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta)); } catch(e) {}
 }
 
+// Sync needs WebCrypto (https:// or localhost). We refuse to run on
+// file:// rather than fall back to a weak hash — the payload is now
+// encrypted end-to-end and that requires crypto.subtle anyway.
+function syncCryptoAvailable() {
+  return !!(window.crypto && crypto.subtle && crypto.subtle.digest);
+}
+
 // Hash the sync code so the raw phrase never leaves the device.
+// NOTE: uses a DIFFERENT salt than the encryption key derivation, so
+// knowing the user_id reveals nothing about the encryption key.
 async function hashSyncPhrase(phrase) {
   const text = 'gibsxpenses::' + phrase.trim().toLowerCase();
-  if (window.crypto && crypto.subtle && crypto.subtle.digest) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  // Fallback for non-secure contexts (file://) where crypto.subtle is unavailable
-  let h1 = 0x811c9dc5, h2 = 0x1b873593;
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
-  }
-  return 'fb_' + h1.toString(16) + h2.toString(16) + '_' + text.length;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── End-to-end encryption of the cloud payload ─────────────────
+// The Supabase table is reachable by anyone with the publishable key
+// (it's in this file), so the payload itself is AES-256-GCM encrypted
+// with a key derived from the sync phrase via PBKDF2. The server only
+// ever sees ciphertext. The derived key (not the phrase) is kept in
+// sync meta so uploads don't need to re-ask for the phrase.
+function _b64FromBuf(buf) {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function _bufFromB64(b64) {
+  const s = atob(b64);
+  const bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function deriveSyncKeyB64(phrase) {
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    'raw', enc.encode(phrase.trim().toLowerCase()), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode('gibsxpenses-enc::v1'), iterations: 150000, hash: 'SHA-256' },
+    material, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  const raw = await crypto.subtle.exportKey('raw', key);
+  return _b64FromBuf(raw);
+}
+
+async function getSyncCryptoKey(meta) {
+  if (!meta || !meta.keyB64 || !syncCryptoAvailable()) return null;
+  if (_syncKeyCache) return _syncKeyCache;
+  _syncKeyCache = await crypto.subtle.importKey(
+    'raw', _bufFromB64(meta.keyB64), 'AES-GCM', false, ['encrypt', 'decrypt']);
+  return _syncKeyCache;
+}
+
+// Envelope: { enc:1, iv, ct, synced_at } — synced_at stays in the clear
+// so conflict checks can compare timestamps without decrypting.
+async function encryptSyncBundle(bundle, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(bundle)));
+  return { enc: 1, iv: _b64FromBuf(iv.buffer), ct: _b64FromBuf(ct), synced_at: bundle.synced_at };
+}
+
+async function decryptSyncBundle(envelope, key) {
+  const pt = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(_bufFromB64(envelope.iv)) }, key, _bufFromB64(envelope.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
 }
 
 function supaHeaders(extra) {
@@ -8330,17 +8768,51 @@ function friendlySyncError(status, bodyText) {
 }
 
 // ── Upload (upsert) ────────────────────────────────────────────
-async function cloudUpload(manual) {
+async function cloudUpload(manual, force) {
   const meta = getSyncMeta();
   if (!meta || _syncBusy) return;
   _syncBusy = true;
   if (manual) setSyncMsg('Uploading\u2026');
   try {
+    // Conflict guard: if the cloud copy is newer than the last sync
+    // THIS device did, another device has uploaded since. Blindly
+    // uploading now would clobber it, so ask first. Skipped when
+    // force=true (the user just explicitly chose to overwrite).
+    if (!force) try {
+      const remote = await fetchCloudEnvelope(meta);
+      const remoteTime = remote && remote.synced_at ? (Date.parse(remote.synced_at) || 0) : 0;
+      const localTime  = Date.parse(meta.lastSyncedAt || '') || 0;
+      if (remoteTime > localTime + 2000) {
+        if (document.visibilityState === 'hidden') {
+          // App is backgrounded — can't ask the user. Skip the upload
+          // (never clobber); the on-resume check will sort it out.
+          console.warn('Skipped background upload: cloud has newer data.');
+          return;
+        }
+        const when = new Date(remoteTime).toLocaleString();
+        const loadCloud = confirm(
+          '\u2601\ufe0f The cloud has newer data (from ' + when + ') \u2014 probably from another device.\n\n' +
+          'OK \u2014 load the cloud data on this device (recommended).\n' +
+          'Cancel \u2014 overwrite the cloud with THIS device\u2019s data.');
+        if (loadCloud) {
+          const bundle = await openCloudBundle(remote, meta);
+          if (bundle) {
+            applyCloudBundle(bundle, meta);
+            setSyncMsg('\u2713 Loaded newer cloud data \u2014 reloading\u2026', true);
+            setTimeout(() => location.reload(), 700);
+            return;
+          }
+        }
+      }
+    } catch(e) { console.warn('Pre-upload conflict check failed (continuing):', e); }
+
     const bundle = buildSyncPayload();
+    const key = await getSyncCryptoKey(meta);
+    const payloadObj = key ? await encryptSyncBundle(bundle, key) : bundle;
     const res = await fetch(SUPA_URL + '/rest/v1/user_data?on_conflict=user_id', {
       method: 'POST',
       headers: supaHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
-      body: JSON.stringify([{ user_id: meta.userId, payload: JSON.stringify(bundle) }]),
+      body: JSON.stringify([{ user_id: meta.userId, payload: JSON.stringify(payloadObj) }]),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
@@ -8359,7 +8831,9 @@ async function cloudUpload(manual) {
 }
 
 // ── Download & restore ─────────────────────────────────────────
-async function fetchCloudBundle(meta) {
+// Fetch the raw stored payload: either an encrypted envelope
+// ({enc:1, iv, ct, synced_at}) or a legacy plaintext bundle.
+async function fetchCloudEnvelope(meta) {
   const res = await fetch(
     SUPA_URL + '/rest/v1/user_data?user_id=eq.' + encodeURIComponent(meta.userId) + '&select=payload',
     { headers: supaHeaders() }
@@ -8371,6 +8845,25 @@ async function fetchCloudBundle(meta) {
   const rows = await res.json();
   if (!rows.length) return null;
   try { return JSON.parse(rows[0].payload); } catch(e) { return null; }
+}
+
+// Turn a fetched envelope into a usable bundle, decrypting if needed.
+// Legacy plaintext bundles pass straight through (and get encrypted
+// automatically on this device's next upload).
+async function openCloudBundle(envelope, meta) {
+  if (!envelope) return null;
+  if (envelope.enc === 1) {
+    const key = await getSyncCryptoKey(meta);
+    if (!key) throw new Error('This cloud data is encrypted \u2014 turn sync off and on again with your sync code to unlock it.');
+    try { return await decryptSyncBundle(envelope, key); }
+    catch(e) { throw new Error('Could not decrypt cloud data \u2014 wrong sync code?'); }
+  }
+  return envelope; // legacy plaintext bundle
+}
+
+async function fetchCloudBundle(meta) {
+  const envelope = await fetchCloudEnvelope(meta);
+  return openCloudBundle(envelope, meta);
 }
 
 function applyCloudBundle(bundle, meta) {
@@ -8412,9 +8905,15 @@ async function enableSync() {
   const input = document.getElementById('syncPhraseInput');
   const phrase = (input.value || '').trim();
   if (phrase.length < 8) { setSyncMsg('Sync code must be at least 8 characters.', false); return; }
+  if (!syncCryptoAvailable()) {
+    setSyncMsg('Sync needs a secure connection (https:// or localhost) \u2014 it\u2019s unavailable when opened as a plain file.', false);
+    return;
+  }
   setSyncMsg('Setting up\u2026');
   const userId = await hashSyncPhrase(phrase);
-  const meta = { userId: userId, lastSyncedAt: null };
+  const keyB64 = await deriveSyncKeyB64(phrase);
+  _syncKeyCache = null; // force re-import from the new key
+  const meta = { userId: userId, keyB64: keyB64, lastSyncedAt: null };
   saveSyncMeta(meta);
   input.value = '';
   try {
@@ -8430,8 +8929,8 @@ async function enableSync() {
       }
     }
     updateSyncUI();
-    await cloudUpload(true);
-    setSyncMsg('\u2713 Sync is on \u2014 your data is now in the cloud. Enter the same code on your other devices.', true);
+    await cloudUpload(true, true);
+    setSyncMsg('\u2713 Sync is on \u2014 your data is now encrypted in the cloud. Enter the same code on your other devices.', true);
   } catch (e) {
     updateSyncUI();
     setSyncMsg('\u2717 ' + (e && e.message ? e.message : 'Could not reach the cloud.'), false);
@@ -8441,6 +8940,7 @@ async function enableSync() {
 function disableSync() {
   if (!confirm('Turn off sync on this device?\n\nYour data stays on this device and in the cloud \u2014 this just stops syncing.')) return;
   try { localStorage.removeItem(SYNC_META_KEY); } catch(e) {}
+  _syncKeyCache = null;
   updateSyncUI();
   setSyncMsg('Sync is off on this device.');
 }
@@ -8455,7 +8955,13 @@ function updateSyncUI() {
     setup.style.display = 'none';
     ctrl.style.display  = 'block';
     const last = meta.lastSyncedAt ? new Date(meta.lastSyncedAt).toLocaleString() : 'never';
-    status.innerHTML = '<strong style="color:var(--green-text);">Sync is ON.</strong> Changes upload automatically. Last sync: ' + last + '.';
+    let line = '<strong style="color:var(--green-text);">Sync is ON.</strong> Changes upload automatically. Last sync: ' + last + '.';
+    if (meta.keyB64) {
+      line += ' <span style="color:var(--text3);">\ud83d\udd12 End-to-end encrypted.</span>';
+    } else if (syncCryptoAvailable()) {
+      line += ' <span style="color:var(--amber-text);">\u26a0 Not encrypted yet \u2014 turn sync off and on again with the same code to enable encryption.</span>';
+    }
+    status.innerHTML = line;
   } else {
     setup.style.display = 'block';
     ctrl.style.display  = 'none';
@@ -8490,14 +8996,17 @@ function scheduleCloudUpload() {
 async function syncStartupCheck() {
   const meta = getSyncMeta();
   if (!meta) return;
+  _lastSyncCheck = Date.now();
   try {
-    const bundle = await fetchCloudBundle(meta);
-    if (!bundle || !bundle.synced_at) return;
-    const cloudTime = Date.parse(bundle.synced_at) || 0;
+    const envelope = await fetchCloudEnvelope(meta);
+    if (!envelope || !envelope.synced_at) return;
+    const cloudTime = Date.parse(envelope.synced_at) || 0;
     const localTime = Date.parse(meta.lastSyncedAt || '') || 0;
     if (cloudTime > localTime + 2000) { // cloud is newer than this device's last sync
       const when = new Date(cloudTime).toLocaleString();
       if (confirm('\u2601\ufe0f Newer data found in the cloud (from ' + when + ') \u2014 probably from another device.\n\nLoad it on this device? (Cancel keeps this device\u2019s data.)')) {
+        const bundle = await openCloudBundle(envelope, meta);
+        if (!bundle) return;
         applyCloudBundle(bundle, meta);
         location.reload();
       }
@@ -8505,6 +9014,15 @@ async function syncStartupCheck() {
   } catch(e) { console.warn('Startup sync check failed:', e); }
 }
 window.addEventListener('load', () => { setTimeout(syncStartupCheck, 800); });
+
+// Phones resume the PWA with stale data all the time — re-run the
+// newer-cloud-data check whenever the app comes back into view
+// (throttled so tab-flipping doesn't spam requests).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (Date.now() - _lastSyncCheck < 30000) return;
+  syncStartupCheck();
+});
 
 // ═══════════════════════════════════════════════════════════════
 // PROFILES — completely separate data sets, switchable in header.
@@ -9040,28 +9558,52 @@ function currentTheme() {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
 }
 
+// What the user picked ('dark' | 'light' | 'auto') vs. what's applied
+function savedThemeChoice() {
+  try { return localStorage.getItem('va_theme') || 'dark'; } catch(e) { return 'dark'; }
+}
+function systemPrefersLight() {
+  return !!(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+}
+
 function setTheme(theme) {
-  if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  const effective = theme === 'auto' ? (systemPrefersLight() ? 'light' : 'dark') : theme;
+  if (effective === 'light') document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');
   try { localStorage.setItem('va_theme', theme); } catch(e) {}
 
   // Keep the browser/PWA chrome color in sync
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'light' ? '#f2f4f8' : '#0d1117');
+  if (meta) meta.setAttribute('content', effective === 'light' ? '#f2f4f8' : '#0d1117');
 
   updateThemeButtons();
   // Charts paint theme colors onto canvas — repaint with new palette
-  setTimeout(() => { try { drawChart(); } catch(e) {} }, 30);
+  setTimeout(() => {
+    try { drawChart(); } catch(e) {}
+    try { drawSalaryChart(); } catch(e) {}
+  }, 30);
 }
 
 function updateThemeButtons() {
-  const t = currentTheme();
+  const choice = savedThemeChoice();
   const dark  = document.getElementById('themeBtnDark');
   const light = document.getElementById('themeBtnLight');
+  const auto  = document.getElementById('themeBtnAuto');
   if (!dark || !light) return;
-  const on  = (btn) => { btn.style.background = 'var(--blue-dim)'; btn.style.borderColor = 'var(--blue)'; btn.style.color = 'var(--blue-text)'; };
-  const off = (btn) => { btn.style.background = 'var(--surface3)'; btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text2)'; };
-  if (t === 'light') { on(light); off(dark); } else { on(dark); off(light); }
+  const on  = (btn) => { if (!btn) return; btn.style.background = 'var(--blue-dim)'; btn.style.borderColor = 'var(--blue)'; btn.style.color = 'var(--blue-text)'; };
+  const off = (btn) => { if (!btn) return; btn.style.background = 'var(--surface3)'; btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text2)'; };
+  [dark, light, auto].forEach(off);
+  if (choice === 'auto') on(auto);
+  else if (choice === 'light') on(light);
+  else on(dark);
+}
+
+// In Auto mode, follow the OS when it flips between light and dark
+if (window.matchMedia) {
+  const _mqLight = matchMedia('(prefers-color-scheme: light)');
+  const _onSchemeFlip = () => { if (savedThemeChoice() === 'auto') setTheme('auto'); };
+  if (_mqLight.addEventListener) _mqLight.addEventListener('change', _onSchemeFlip);
+  else if (_mqLight.addListener) _mqLight.addListener(_onSchemeFlip);
 }
 
 // ─── LOCALSTORAGE USAGE INDICATOR ────────────────────────────
@@ -9251,6 +9793,14 @@ if ('serviceWorker' in navigator) {
       console.warn('Service worker registration failed (expected on file:// origins):', err);
     });
   });
+}
+
+// ─── PERSISTENT STORAGE ─────────────────────────────────────────
+// Ask the browser not to evict this origin's storage under disk
+// pressure — everything lives in localStorage, so eviction = data
+// loss. Silently ignored where unsupported (e.g. file://).
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
 }
 
 // ─── COLLAPSIBLE SECTIONS ──────────────────────────────────────
