@@ -763,6 +763,16 @@
   .bank-custom-label:focus { outline: none; }
   .bank-custom-label::placeholder { color: var(--text3); }
 
+  /* Sticky tab bar + FX bar on desktop — stays visible while scrolling */
+  @media (min-width: 701px) {
+    .sticky-nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 150;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+  }
+
   /* PAGE NAV */
   .page-nav {
     background: var(--surface2); border-bottom: 1px solid var(--border);
@@ -828,6 +838,20 @@
     transition: all 0.2s; white-space: nowrap;
   }
   .action-btn:hover { border-color: var(--amber); color: var(--amber-text); }
+
+  /* Profile switcher in the header — each profile keeps separate data */
+  .profile-select {
+    flex-shrink: 0; max-width: 150px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text2); padding: 5px 8px; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 12px; font-family: 'Outfit', sans-serif;
+    transition: all 0.2s;
+  }
+  .profile-select:hover, .profile-select:focus { border-color: var(--blue); color: var(--blue-text); outline: none; }
+  @media (max-width: 700px) {
+    .profile-select { font-size: 11px; max-width: 118px; min-height: 34px; }
+  }
+
   .action-btn.danger { border-color: var(--border2); color: var(--red-text); }
   .action-btn.danger:hover { border-color: var(--red); background: var(--red-dim); }
   .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -1455,6 +1479,9 @@
   <div style="display:none; align-items:center; gap:8px; flex-wrap:wrap;" id="trackerControls">
     <button class="action-btn danger" onclick="resetTracker()" title="Clear all tracker data">✕ Reset Tracker</button>
   </div>
+  <!-- Profile switcher — each profile keeps fully separate data -->
+  <select id="profileSelect" class="profile-select" onchange="onProfileSelectChange(this)"
+    title="Switch profile — each profile has its own separate data"></select>
   <!-- Settings / Backup — always visible on every page -->
   <button class="action-btn" onclick="openSettings()" title="Export / Import data" style="flex-shrink:0; font-size:16px; padding:5px 10px; min-width:36px;">⚙️</button>
 </header>
@@ -1495,6 +1522,21 @@
           ☀️ Light
         </button>
       </div>
+    </div>
+
+    <!-- Profiles -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">👤 Profiles</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Each profile keeps its own <strong style="color:var(--text2);">completely separate data</strong> — expenses, plans, history, even its own Cloud Sync code. Great for a partner's budget or a business wallet. Switch anytime from the dropdown in the header.
+      </div>
+      <div id="profileList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+      <button onclick="addProfile()" style="
+        width:100%; padding:10px; background:var(--blue-dim); border:1px solid var(--blue);
+        color:var(--blue-text); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:13px; font-weight:500;">
+        ＋ Add profile
+      </button>
     </div>
 
     <!-- Payment QR codes -->
@@ -1609,6 +1651,18 @@
       </button>
     </div>
 
+    <!-- Keyboard shortcuts (desktop) -->
+    <div style="margin-top:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">⌨️ Keyboard shortcuts (desktop)</div>
+      <div style="font-size:12px; color:var(--text3); line-height:2;">
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Alt + 1–5</code> switch tabs (Expenses → Tracker)<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">N</code> new entry on the current page<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + Z</code> undo last change<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Esc</code> close this popup<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">0–9 + − × ÷ Enter</code> type into the calculator (Expenses page)
+      </div>
+    </div>
+
     <div id="settingsMsg" style="font-size:12px; color:var(--text3); margin-top:14px; text-align:center; min-height:18px;"></div>
   </div>
 </div>
@@ -1633,7 +1687,8 @@
   </button>
 </div>
 
-<!-- PAGE NAV -->
+<!-- PAGE NAV + FX BAR — sticky on desktop -->
+<div class="sticky-nav-wrap">
 <nav class="page-nav">
   <button class="page-tab active" id="tabExpenses" onclick="switchPage('expenses')">
     <span class="tab-icon">💰</span><span class="tab-label">Expenses</span>
@@ -1673,6 +1728,7 @@
     </button>
   </div>
 </div>
+</div><!-- /sticky-nav-wrap -->
 <!-- Offline warning — shown when browser has no connection -->
 <div id="offlineBanner" style="
   display:none; background:var(--surface2); border-bottom:1px solid var(--border);
@@ -5208,6 +5264,9 @@ document.addEventListener('keydown', e => {
   // so numbers/operators typed elsewhere on the page don't also land in the calculator.
   if (isTypingElsewhere) return;
 
+  // Skip when a shortcut modifier is held (e.g. Alt+1–5 switches tabs, not calc digits)
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+
   if ('0123456789'.includes(e.key)) calcDigit(e.key);
   else if (e.key === '.' || e.key === ',') calcDot(); // "," = numpad decimal on some layouts
   else if (e.key === '%') calcPercent();
@@ -7414,6 +7473,7 @@ function loadPlanData() {
 
 // ─── PAGE SWITCHING ───────────────────────────────────────────
 function switchPage(page) {
+  window._currentPage = page; // tracked for keyboard shortcuts (Alt+1–5, N)
   document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
   document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
   document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
@@ -8446,6 +8506,241 @@ async function syncStartupCheck() {
 }
 window.addEventListener('load', () => { setTimeout(syncStartupCheck, 800); });
 
+// ═══════════════════════════════════════════════════════════════
+// PROFILES — completely separate data sets, switchable in header.
+// The active profile's data lives in the normal va_* keys (so every
+// existing save/load/sync function works untouched). Inactive
+// profiles are stashed under va_profile__<name>__<key>. Switching
+// stashes the current profile, restores the target, and reloads.
+// Theme + FX rate cache stay shared; each profile has its OWN
+// cloud-sync code (va_sync_meta is profile-scoped).
+// ═══════════════════════════════════════════════════════════════
+const PROFILE_META_KEY     = 'va_profiles_meta';
+const PROFILE_STASH_PREFIX = 'va_profile__';
+const PROFILE_SCOPED_KEYS  = BACKUP_KEYS
+  .filter(k => k !== 'va_theme' && k !== 'va_fx_rate')
+  .concat([SYNC_META_KEY]);
+
+function getProfilesMeta() {
+  try {
+    const m = JSON.parse(localStorage.getItem(PROFILE_META_KEY));
+    if (m && Array.isArray(m.list) && m.list.length && m.list.indexOf(m.current) !== -1) return m;
+  } catch(e) {}
+  return { current: 'Personal', list: ['Personal'] };
+}
+function saveProfilesMeta(meta) {
+  try { localStorage.setItem(PROFILE_META_KEY, JSON.stringify(meta)); } catch(e) {}
+}
+function profileStashKey(profile, key) { return PROFILE_STASH_PREFIX + profile + '__' + key; }
+
+function switchProfile(target) {
+  const meta = getProfilesMeta();
+  if (target === meta.current || meta.list.indexOf(target) === -1) { renderProfileUI(); return; }
+  _syncSuspended = true;            // don't auto-upload half-swapped data
+  clearTimeout(_syncTimer);
+  // 1. Stash the current profile's live data
+  PROFILE_SCOPED_KEYS.forEach(k => {
+    try {
+      const v = localStorage.getItem(k);
+      if (v !== null) localStorage.setItem(profileStashKey(meta.current, k), v);
+      else            localStorage.removeItem(profileStashKey(meta.current, k));
+      localStorage.removeItem(k);
+    } catch(e) {}
+  });
+  // 2. Restore the target profile's data into the live keys
+  PROFILE_SCOPED_KEYS.forEach(k => {
+    try {
+      const v = localStorage.getItem(profileStashKey(target, k));
+      if (v !== null) localStorage.setItem(k, v);
+    } catch(e) {}
+  });
+  meta.current = target;
+  saveProfilesMeta(meta);
+  location.reload();                // every module re-inits from the new data
+}
+
+function addProfile() {
+  const meta = getProfilesMeta();
+  let name = prompt('Name for the new profile:\n(e.g. Partner, Business, Sideline)');
+  if (name === null) { renderProfileUI(); return; }
+  name = name.trim().replace(/__/g, '_').slice(0, 24);
+  if (!name) { renderProfileUI(); return; }
+  if (meta.list.some(p => p.toLowerCase() === name.toLowerCase())) {
+    alert('A profile named "' + name + '" already exists.');
+    renderProfileUI(); return;
+  }
+  meta.list.push(name);
+  saveProfilesMeta(meta);
+  renderProfileUI();
+  if (confirm('Profile "' + name + '" created. Switch to it now?\n\nIt starts empty — your current "' + meta.current + '" data stays safe and you can switch back anytime.')) {
+    switchProfile(name);
+  }
+}
+
+function renameProfile(oldName) {
+  const meta = getProfilesMeta();
+  let name = prompt('New name for "' + oldName + '":', oldName);
+  if (name === null) return;
+  name = name.trim().replace(/__/g, '_').slice(0, 24);
+  if (!name || name === oldName) return;
+  if (meta.list.some(p => p.toLowerCase() === name.toLowerCase())) {
+    alert('A profile named "' + name + '" already exists.'); return;
+  }
+  // Move stashed keys (the active profile has no stash — its data is live)
+  if (oldName !== meta.current) {
+    PROFILE_SCOPED_KEYS.forEach(k => {
+      try {
+        const v = localStorage.getItem(profileStashKey(oldName, k));
+        if (v !== null) {
+          localStorage.setItem(profileStashKey(name, k), v);
+          localStorage.removeItem(profileStashKey(oldName, k));
+        }
+      } catch(e) {}
+    });
+  }
+  meta.list = meta.list.map(p => p === oldName ? name : p);
+  if (meta.current === oldName) meta.current = name;
+  saveProfilesMeta(meta);
+  renderProfileUI();
+}
+
+function deleteProfile(name) {
+  const meta = getProfilesMeta();
+  if (name === meta.current) {
+    alert('Switch to another profile first — you can\'t delete the one you\'re currently using.');
+    return;
+  }
+  if (!confirm('Delete profile "' + name + '" and ALL of its data?\n\nThis cannot be undone. (Tip: switch to it and download a backup first if unsure.)')) return;
+  PROFILE_SCOPED_KEYS.forEach(k => {
+    try { localStorage.removeItem(profileStashKey(name, k)); } catch(e) {}
+  });
+  meta.list = meta.list.filter(p => p !== name);
+  saveProfilesMeta(meta);
+  renderProfileUI();
+  showToast('Profile "' + name + '" deleted');
+}
+
+function onProfileSelectChange(sel) {
+  if (sel.value === '__add__') { addProfile(); return; }
+  switchProfile(sel.value);
+}
+
+function renderProfileUI() {
+  const meta = getProfilesMeta();
+  // Header dropdown
+  const sel = document.getElementById('profileSelect');
+  if (sel) {
+    sel.innerHTML = '';
+    meta.list.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = '👤 ' + p;
+      if (p === meta.current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    const addOpt = document.createElement('option');
+    addOpt.value = '__add__';
+    addOpt.textContent = '＋ New profile…';
+    sel.appendChild(addOpt);
+    // Hide the dropdown while there's only one profile — the ＋ option
+    // in Settings is enough, and it keeps the header clean.
+    sel.style.display = meta.list.length > 1 ? '' : 'none';
+  }
+  // Settings modal list
+  const list = document.getElementById('profileList');
+  if (list) {
+    list.innerHTML = '';
+    meta.list.forEach(p => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--surface3); border:1px solid var(--border); border-radius:var(--radius-sm);';
+      const isActive = p === meta.current;
+      const label = document.createElement('div');
+      label.style.cssText = 'flex:1; font-size:13px; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+      label.innerHTML = '👤 ' + p.replace(/</g, '&lt;') +
+        (isActive ? ' <span style="font-size:11px; color:var(--green-text);">— active</span>' : '');
+      row.appendChild(label);
+      if (!isActive) {
+        const useBtn = document.createElement('button');
+        useBtn.textContent = 'Switch';
+        useBtn.style.cssText = 'background:var(--blue-dim); border:1px solid var(--blue); color:var(--blue-text); border-radius:var(--radius-sm); padding:4px 10px; font-size:11px; cursor:pointer; font-family:\'Outfit\',sans-serif;';
+        useBtn.onclick = () => switchProfile(p);
+        row.appendChild(useBtn);
+      }
+      const renBtn = document.createElement('button');
+      renBtn.textContent = '✎';
+      renBtn.title = 'Rename profile';
+      renBtn.style.cssText = 'background:none; border:1px solid var(--border2); color:var(--text2); border-radius:var(--radius-sm); padding:4px 8px; font-size:12px; cursor:pointer;';
+      renBtn.onclick = () => renameProfile(p);
+      row.appendChild(renBtn);
+      if (!isActive) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑';
+        delBtn.title = 'Delete profile and its data';
+        delBtn.style.cssText = 'background:none; border:1px solid var(--border2); color:var(--red-text); border-radius:var(--radius-sm); padding:4px 8px; font-size:12px; cursor:pointer;';
+        delBtn.onclick = () => deleteProfile(p);
+        row.appendChild(delBtn);
+      }
+      list.appendChild(row);
+    });
+  }
+}
+renderProfileUI();
+
+// ═══════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS (desktop)
+//   Alt + 1–5 → switch tabs        N → new entry on current page
+//   Esc       → close popups       (Ctrl+Z undo already exists;
+//   plain digits/operators stay reserved for the calculator)
+// ═══════════════════════════════════════════════════════════════
+const KB_PAGE_ORDER = ['expenses', 'splitter', 'hangout', 'plan', 'tracker'];
+
+function kbNewEntry() {
+  const page = window._currentPage || 'expenses';
+  if      (page === 'expenses') addNec();        // new expense category row
+  else if (page === 'splitter') addStore();      // new store purchase
+  else if (page === 'hangout')  addHSItem();     // new hangout item
+  else if (page === 'plan')     addSavingsItem();// new savings allocation item
+  else if (page === 'tracker') {                 // jump to the entry form
+    const amt = document.getElementById('trkrAmt');
+    if (amt) {
+      amt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => amt.focus(), 300);
+    }
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  // Esc — close settings modal or QR overlay (works even while typing inside them)
+  if (e.key === 'Escape') {
+    const qr = document.getElementById('qrOverlay');
+    const sm = document.getElementById('settingsModal');
+    if (qr && qr.style.display === 'flex')      { closeQROverlay(); return; }
+    else if (sm && sm.style.display === 'flex') { closeSettings();  return; }
+  }
+
+  const el     = document.activeElement;
+  const tag    = el && el.tagName;
+  const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el && el.isContentEditable);
+  if (typing) return;
+
+  // Alt + 1–5 — switch tabs (Alt keeps plain digits free for the calculator)
+  if (e.altKey && !e.ctrlKey && !e.metaKey && e.code && e.code.indexOf('Digit') === 0) {
+    const n = parseInt(e.code.slice(5), 10);
+    if (n >= 1 && n <= 5) {
+      e.preventDefault();
+      switchPage(KB_PAGE_ORDER[n - 1]);
+      return;
+    }
+  }
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+  // N — new entry on the current page
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    kbNewEntry();
+  }
+});
+
 // Flush a pending auto-upload right away when the app is closed/backgrounded
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden' && _syncTimer) {
@@ -8839,6 +9134,7 @@ function openSettings() {
   modal.style.display = 'flex';
   document.getElementById('settingsMsg').textContent = '';
   updateThemeButtons();
+  renderProfileUI();
   renderWalletQRList();
   updateSyncUI();
   setSyncMsg('');
