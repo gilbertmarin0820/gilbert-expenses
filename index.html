@@ -1793,14 +1793,14 @@
             <label class="input-label">Daily hours worked</label>
             <div class="input-row">
               <div class="input-prefix">hrs / day</div>
-              <input class="big-input" type="number" id="dailyHours" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcAll(); saveData()">
+              <input class="big-input" type="number" id="dailyHours" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcSoon(); saveData()">
             </div>
           </div>
           <div class="input-block">
             <label class="input-label">Number of weeks worked</label>
             <div class="input-row">
               <div class="input-prefix">weeks</div>
-              <input class="big-input" type="number" id="weeksWorked" placeholder="1" min="0" step="1" inputmode="numeric" oninput="recalcAll(); saveData()">
+              <input class="big-input" type="number" id="weeksWorked" placeholder="1" min="0" step="1" inputmode="numeric" oninput="recalcSoon(); saveData()">
             </div>
           </div>
         </div>
@@ -1813,14 +1813,14 @@
             <label class="input-label">Start date</label>
             <div class="date-input-wrap">
               <div class="date-prefix">From</div>
-              <input class="date-input" type="date" id="dateStart" oninput="renderNec(); recalcAll(); saveData()">
+              <input class="date-input" type="date" id="dateStart" oninput="renderNec(); saveData()">
             </div>
           </div>
           <div class="input-block">
             <label class="input-label">End date</label>
             <div class="date-input-wrap">
               <div class="date-prefix">To</div>
-              <input class="date-input" type="date" id="dateEnd" oninput="renderNec(); recalcAll(); saveData()">
+              <input class="date-input" type="date" id="dateEnd" oninput="renderNec(); saveData()">
             </div>
           </div>
         </div>
@@ -1828,7 +1828,7 @@
           <label class="input-label">Daily hours worked</label>
           <div class="input-row">
             <div class="input-prefix">hrs / day</div>
-            <input class="big-input" type="number" id="dailyHoursM" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcAll(); saveData()">
+            <input class="big-input" type="number" id="dailyHoursM" placeholder="8" min="0" max="24" step="0.5" inputmode="decimal" oninput="recalcSoon(); saveData()">
           </div>
         </div>
         <div class="workdays-bar" id="workdaysBar" style="display:none;">
@@ -2038,7 +2038,7 @@
           <div class="input-row" style="border-color: var(--teal);">
             <div class="input-prefix" style="color:var(--teal-text);">₱ PHP</div>
             <input class="big-input" type="number" id="corpSalaryInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
-              oninput="recalcAll(); saveData()" style="color:var(--teal-text);">
+              oninput="recalcSoon(); saveData()" style="color:var(--teal-text);">
           </div>
         </div>
 
@@ -2072,14 +2072,14 @@
               <label class="input-label">From</label>
               <div class="date-input-wrap" style="border-color:var(--teal);">
                 <div class="date-prefix" style="color:var(--teal-text);">From</div>
-                <input class="date-input" type="date" id="corpDRStart" oninput="recalcAll(); saveData()">
+                <input class="date-input" type="date" id="corpDRStart" oninput="recalcSoon(); saveData()">
               </div>
             </div>
             <div class="input-block">
               <label class="input-label">To</label>
               <div class="date-input-wrap" style="border-color:var(--teal);">
                 <div class="date-prefix" style="color:var(--teal-text);">To</div>
-                <input class="date-input" type="date" id="corpDREnd" oninput="recalcAll(); saveData()">
+                <input class="date-input" type="date" id="corpDREnd" oninput="recalcSoon(); saveData()">
               </div>
             </div>
           </div>
@@ -2126,7 +2126,7 @@
               <div class="input-prefix" style="color:var(--teal-text);">months</div>
               <input class="big-input" type="number" id="corp13thMonths" placeholder="12"
                 min="1" max="12" step="1" value="12" inputmode="numeric"
-                oninput="recalcAll(); saveData()" style="color:var(--teal-text);">
+                oninput="recalcSoon(); saveData()" style="color:var(--teal-text);">
             </div>
           </div>
           <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px;">
@@ -2306,7 +2306,7 @@
             <label class="input-label">Current savings balance (₱) <span style="color:var(--text3); font-weight:400; text-transform:none;">· auto-synced from allocation items</span></label>
             <div class="input-row">
               <div class="input-prefix">₱</div>
-              <input class="big-input" type="number" id="savingsInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="recalcAll(); saveData()" onblur="updateSavingsSummary()">
+              <input class="big-input" type="number" id="savingsInput" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="recalcSoon(); saveData()" onblur="updateSavingsSummary()">
             </div>
           </div>
           <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
@@ -2330,7 +2330,7 @@
               <div class="input-row" style="border-color: var(--purple);">
                 <div class="input-prefix" style="color:var(--purple-text);">$ USD</div>
                 <input class="big-input" type="number" id="bonusUSD" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
-                  oninput="recalcAll(); saveData()" style="color:var(--purple-text);">
+                  oninput="recalcSoon(); saveData()" style="color:var(--purple-text);">
               </div>
             </div>
             <div class="bonus-preview">
@@ -2537,7 +2537,10 @@
           border-radius:var(--radius-sm); padding:12px 16px;
           margin-bottom:10px; text-align:right; min-height:64px;
           display:flex; flex-direction:column; justify-content:flex-end; gap:4px;">
-          <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); min-height:16px; word-break:break-all;"></div>
+          <div style="display:flex; align-items:center; gap:8px; min-height:16px;">
+            <span id="calcMemInd" style="display:none; font-family:'DM Mono',monospace; font-size:11px; color:var(--amber-text); border:1px solid var(--amber); border-radius:4px; padding:0 5px; flex-shrink:0;" title="A value is stored in memory — MR recalls it">M</span>
+            <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); flex:1; text-align:right; word-break:break-all;"></div>
+          </div>
           <div id="calcScreen"
             contenteditable="true"
             inputmode="decimal"
@@ -2546,6 +2549,7 @@
             style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all; outline:none; cursor:text; caret-color:var(--teal);"
           >0</div>
         </div>
+        <div id="calcKbHint" style="display:none; font-size:10px; color:var(--text3); text-align:right; margin:-4px 0 8px;">&#9000; Keyboard ready &mdash; digits &middot; + &minus; &times; &divide; ^ % &middot; Enter = &middot; Esc AC &middot; Backspace &#9003;</div>
         <!-- 7-column scientific grid -->
         <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">
           <!-- Row 0: Deg/Rad toggle + x! + ( + ) + % + AC -->
@@ -2590,8 +2594,13 @@
           <button class="calc-btn" onclick="calcDot()">.</button>
           <button class="calc-btn calc-eq" onclick="calcEquals()">=</button>
           <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
-          <!-- Row 5: full-width backspace -->
-          <button class="calc-btn calc-fn" style="grid-column:1 / -1;" onclick="calcBackspace()" title="Delete last digit (keyboard: Backspace)">⌫</button>
+          <!-- Row 5: memory keys (MC / MR / M+ / M− / MS) + backspace -->
+          <button class="calc-btn calc-sci" onclick="calcMemClear()" title="Memory Clear — wipe the stored value">MC</button>
+          <button class="calc-btn calc-sci" onclick="calcMemRecall()" title="Memory Recall — bring the stored value back to the screen">MR</button>
+          <button class="calc-btn calc-sci" onclick="calcMemAdd()" title="Memory Add — add the screen value to memory">M+</button>
+          <button class="calc-btn calc-sci" onclick="calcMemSub()" title="Memory Subtract — subtract the screen value from memory">M−</button>
+          <button class="calc-btn calc-sci" onclick="calcMemStore()" title="Memory Store — replace memory with the screen value">MS</button>
+          <button class="calc-btn calc-fn" style="grid-column:span 2;" onclick="calcBackspace()" title="Delete last digit (keyboard: Backspace)">⌫</button>
         </div>
       </div>
 
@@ -2768,6 +2777,10 @@
           onclick="copySplitMessage('cc')" title="Copy a plain name — amount breakdown to paste in chat">
           📋 Copy message
         </button>
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--purple); color:var(--purple-text); border-style:solid;"
+          onclick="copySplitTable('cc')" title="Copy a detailed table (item · who · share) — pastes as real columns in Google Sheets / Excel, readable in Notes and Messenger">
+          ⊞ Copy table
+        </button>
         <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
           onclick="shareSplitMessage('cc')" title="Open the share sheet (Messenger, Viber, SMS…) with the breakdown">
           📤 Share
@@ -2851,6 +2864,10 @@
         <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--blue); color:var(--blue-text); border-style:solid;"
           onclick="copySplitMessage('hs')" title="Copy a plain name — amount breakdown to paste in chat">
           📋 Copy message
+        </button>
+        <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--purple); color:var(--purple-text); border-style:solid;"
+          onclick="copySplitTable('hs')" title="Copy a detailed table (item · who · share) — pastes as real columns in Google Sheets / Excel, readable in Notes and Messenger">
+          ⊞ Copy table
         </button>
         <button class="add-btn" style="flex:1; margin-top:0; border-color:var(--teal); color:var(--teal-text); border-style:solid;"
           onclick="shareSplitMessage('hs')" title="Open the share sheet (Messenger, Viber, SMS…) with the breakdown">
@@ -3901,6 +3918,28 @@ function formatCorpPayday(date) {
   return MONTH_NAMES[date.getMonth()] + ' ' + date.getDate();
 }
 
+// ─── DEBOUNCED RECALC ──────────────────────────────────────────
+// recalcAll() recomputes the whole app (salary, contributions, net
+// summary, chart, health stats, what-if, cash flow) — far too heavy to
+// run on every keystroke. Typing handlers call recalcSoon() instead:
+// the real recalc runs 150ms after the LAST keystroke, so typing stays
+// snappy on older phones. Clicks / toggles still call recalcAll()
+// directly for instant feedback.
+let _recalcTimer = null;
+function recalcSoon() {
+  clearTimeout(_recalcTimer);
+  _recalcTimer = setTimeout(() => { _recalcTimer = null; recalcAll(); }, 150);
+}
+
+// Same idea for the bill checklist: it fully rebuilds its DOM and lives
+// on the Plan tab — no reason to rebuild it mid-keystroke while typing
+// a necessity / PayLater / subscription amount on another tab.
+let _bclTimer = null;
+function bclSoon() {
+  clearTimeout(_bclTimer);
+  _bclTimer = setTimeout(() => { _bclTimer = null; renderBillChecklist(); }, 400);
+}
+
 function recalcAll() {
   let totalDays, totalHours, grossUSD, taxAmt, netUSD, netPHP;
   let dailyNet, dailyNetPHP, weeklyNet, weeklyNetPHP;
@@ -4666,13 +4705,13 @@ function renderNec() {
     if (!isInc(row)) tr.classList.add('inc-off');
     if (row.inst && mult === 0) tr.style.opacity = '0.45';
     tr.innerHTML = `
-      <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; saveData()"></td>
+      <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; bclSoon(); saveData()"></td>
       <td style="text-align:right">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;">
           ${incBtn(row, `toggleNecInc(${i})`)}
           <span style="font-size:12px;color:var(--text3);">₱</span>
           <input class="nec-amt-input nec-amt" type="number" value="${row.amt}" placeholder="0.00" min="0" step="0.01"
-            oninput="necData[${i}].amt=this.value; updateNecBadge(${i}); recalcAll(); saveData()" style="width:100px;">
+            oninput="necData[${i}].amt=this.value; updateNecBadge(${i}); recalcSoon(); bclSoon(); saveData()" style="width:100px;">
           <span class="nec-mult-badge" id="necBadge-${i}" title="${isSplit ? 'Total split evenly across ' + necInstSpanLen(row) + ' months' : 'Paid ' + mult + '× in date range'}" style="${showBadge ? '' : 'display:none;'}">${badgeTxt}</span>
         </div>
         <div id="necEffAmt-${i}" style="font-size:10px;color:var(--teal-text);text-align:right;margin-top:2px;font-family:'DM Mono',monospace;${showBadge ? '' : 'display:none;'}">${effTxt}</div>
@@ -4680,7 +4719,7 @@ function renderNec() {
       <td style="text-align:center;">
         <input class="nec-day-input" type="number" value="${row.day}" placeholder="—" min="1" max="31" step="1"
           title="Day of month this is due (1–31)"
-          oninput="necData[${i}].day=this.value; updateNecBadge(${i}); recalcAll(); saveData()">
+          oninput="necData[${i}].day=this.value; updateNecBadge(${i}); recalcSoon(); bclSoon(); saveData()">
       </td>
       <td>
         <div style="display:flex; flex-direction:column; align-items:center;">
@@ -4977,7 +5016,7 @@ function renderPL(type) {
       ${incBtn(row, `togglePLInc('${type}', ${i})`)}
       <select class="month-select" onchange="plData['${type}'][${i}].month=+this.value; renderPL('${type}'); recalcAll(); saveData()">${opts}</select>
       <input class="pl-input pl-amt-${type}" type="number" value="${row.amt}" placeholder="₱ 0.00" min="0" step="0.01"
-        oninput="plData['${type}'][${i}].amt=this.value; recalcAll(); saveData()">
+        oninput="plData['${type}'][${i}].amt=this.value; recalcSoon(); bclSoon(); saveData()">
       <button class="del-btn" onclick="plData['${type}'].splice(${i},1); renderPL('${type}'); recalcAll(); saveData()">✕</button>
       ${badge}
     `;
@@ -5090,6 +5129,16 @@ function calcRender() {
     // default and are synced by the "input" listener above
   });
 
+  // "⌨ Keyboard ready" hint — desktop only (fine pointer). Appears
+  // while the screen is focused so people know they can just type.
+  if (window.matchMedia && matchMedia('(pointer:fine)').matches) {
+    const kbHint = document.getElementById('calcKbHint');
+    if (kbHint) {
+      screen.addEventListener('focus', () => { kbHint.style.display = 'block'; });
+      screen.addEventListener('blur',  () => { kbHint.style.display = 'none'; });
+    }
+  }
+
   // Blur calculator buttons right after a mouse click. Otherwise the clicked
   // button keeps focus, and pressing Enter afterwards "re-clicks" that button
   // (browser default for focused buttons) on top of firing calcEquals() —
@@ -5178,6 +5227,49 @@ function calcPercent() {
     calcCurrent = String(+(v / 100).toFixed(10));
   }
   calcRender();
+}
+
+// ── Memory (MC / MR / M+ / M− / MS) ───────────────────────────
+// Session-scoped like a physical calculator. The little "M" badge in
+// the display lights up whenever memory holds a value.
+let calcMemory    = 0;
+let calcMemHasVal = false;
+
+function calcMemUpdateInd() {
+  const el = document.getElementById('calcMemInd');
+  if (el) el.style.display = calcMemHasVal ? '' : 'none';
+}
+function _calcScreenVal() { const v = parseFloat(calcCurrent); return isNaN(v) ? 0 : v; }
+function _calcMemFmt()    { return String(+parseFloat(calcMemory.toFixed(10))); }
+
+function calcMemClear() {
+  calcMemory = 0; calcMemHasVal = false;
+  calcMemUpdateInd();
+  showToast('MC — memory cleared');
+}
+function calcMemRecall() {
+  if (!calcMemHasVal) { showToast('Memory is empty — use MS or M+ first', true); return; }
+  calcCurrent = _calcMemFmt();
+  calcJustEq  = true;  // next digit starts fresh, same as after "="
+  calcRender();
+}
+function calcMemAdd() {
+  if (calcCurrent === 'Error') return;
+  calcMemory += _calcScreenVal(); calcMemHasVal = true;
+  calcMemUpdateInd(); calcJustEq = true;
+  showToast('M+ — memory: ' + _calcMemFmt());
+}
+function calcMemSub() {
+  if (calcCurrent === 'Error') return;
+  calcMemory -= _calcScreenVal(); calcMemHasVal = true;
+  calcMemUpdateInd(); calcJustEq = true;
+  showToast('M− — memory: ' + _calcMemFmt());
+}
+function calcMemStore() {
+  if (calcCurrent === 'Error') return;
+  calcMemory = _calcScreenVal(); calcMemHasVal = true;
+  calcMemUpdateInd(); calcJustEq = true;
+  showToast('MS — stored ' + _calcMemFmt());
 }
 
 // ── Scientific functions ──────────────────────────────────────
@@ -5467,6 +5559,46 @@ function copySplitMessage(type) {
   copyTextToClipboard(text, '📋 Message copied — ready to paste');
 }
 
+// "Copy as table" — tab-separated, so it pastes as REAL columns into
+// Google Sheets / Excel, and still reads cleanly in Notes or Messenger.
+// One row per item per person, a total row each, then the grand total.
+function buildSplitTable(type) {
+  const people = type === 'cc' ? ccPeople : hsPeople;
+  const totals = type === 'cc' ? _ccLastTotals : _hsLastTotals;
+  const items  = type === 'cc' ? _ccLastItems  : _hsLastItems;
+  const note   = type === 'cc' ? ccNote : hsNote;
+
+  const owing = people.filter(p => (totals[p.id] || 0) > 0.005);
+  if (owing.length === 0) return null;
+
+  const lines = [];
+  lines.push((type === 'cc' ? 'CC Split' : 'Hangout Split') + (note ? ' — ' + note : ''));
+  lines.push(['Person', 'Item', 'Share'].join('\t'));
+
+  let grand = 0;
+  owing.forEach(p => {
+    const its = items[p.id] || [];
+    its.forEach((it, idx) => {
+      const label = it.label + (it.n > 1 ? ' (' + formatSplitAmt(it.total) + ' ÷ ' + it.n + ')' : '');
+      lines.push([idx === 0 ? p.name : '', label, formatSplitAmt(it.amt)].join('\t'));
+    });
+    const tot = totals[p.id] || 0;
+    grand += tot;
+    lines.push([its.length ? '' : p.name, '— total —', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')].join('\t'));
+  });
+  lines.push(['GRAND TOTAL', '', formatSplitAmt(grand)].join('\t'));
+  return lines.join('\n');
+}
+
+function copySplitTable(type) {
+  const text = buildSplitTable(type);
+  if (!text) {
+    showToast('Nothing to copy yet — add people and amounts first', true);
+    return;
+  }
+  copyTextToClipboard(text, '⊞ Table copied — paste into Sheets, Notes, or chat');
+}
+
 // Native share sheet (Messenger, Viber, SMS…) on devices that support
 // it; falls back to the clipboard everywhere else.
 function shareSplitMessage(type) {
@@ -5521,6 +5653,7 @@ function fallbackCopyText(text, successMsg) {
 
 let ccPeople     = [];   // [{ id, name }]
 let _ccLastTotals = {};  // last computed { personId: amountOwed } — used by Copy message
+let _ccLastItems  = {};  // last computed { personId: [{label, amt, total, n}] } — used by Copy table
 let ccStores     = [];   // [{ name, amt, people:[personId,...] }]
 let ccPersonSeq  = 1;
 let ccNote       = '';   // free-text session note — saved with the archive entry
@@ -5697,8 +5830,9 @@ function updateCCSummary() {
     }
   });
 
-  // Stash for the "Copy message" feature
+  // Stash for the "Copy message" / "Copy table" features
   _ccLastTotals = totals;
+  _ccLastItems  = personItems;
 
   const listEl = document.getElementById('ccSummaryList');
   if (ccPeople.length === 0) {
@@ -5832,6 +5966,7 @@ function loadCC() {
 
 let hsPeople    = [];                  // [{ id, name }]
 let _hsLastTotals = {};                // last computed { personId: amountOwed } — used by Copy message
+let _hsLastItems  = {};                // last computed { personId: [{label, amt, total, n}] } — used by Copy table
 let hsPersonSeq = 1;
 let hsItems     = [];                  // [{ name, amt, tag, people:[personId,...] }]
 let hsNote      = '';                  // free-text session note — saved with the archive entry
@@ -6060,8 +6195,9 @@ function updateHSSummary() {
     }
   });
 
-  // Stash for the "Copy message" feature
+  // Stash for the "Copy message" / "Copy table" features
   _hsLastTotals = totals;
+  _hsLastItems  = personItems;
 
   const listEl = document.getElementById('hsSummaryList');
   if (hsPeople.length === 0) {
@@ -6393,13 +6529,13 @@ function renderSubs() {
     div.className = 'sub-row' + (isInc(s) ? '' : ' inc-off');
     div.innerHTML = `
       <input class="nec-cat-input" value="${escH(s.name)}" placeholder="e.g. Netflix, Spotify, iCloud" style="flex:1; min-width:130px;"
-        oninput="subscriptions[${i}].name=this.value; savePlanData()">
+        oninput="subscriptions[${i}].name=this.value; bclSoon(); savePlanData()">
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
         ${incBtn(s, `toggleSubInc(${s.id})`)}
         <span style="font-size:12px; color:var(--text3);">₱/mo</span>
         <input class="nec-amt-input" type="number" value="${s.amt}" placeholder="0.00" min="0" step="0.01"
           style="width:100px;"
-          oninput="subscriptions[${i}].amt=this.value; updateSubsTotal(); recalcAll(); savePlanData()">
+          oninput="subscriptions[${i}].amt=this.value; updateSubsTotal(); recalcSoon(); bclSoon(); savePlanData()">
       </div>
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
         <span style="font-size:11px; color:var(--text3); white-space:nowrap;">Bill day</span>
@@ -6470,13 +6606,13 @@ function renderInsts() {
           <div style="display:flex; align-items:center; gap:4px;">
             <span style="font-size:12px; color:var(--text3);">₱</span>
             <input class="nec-amt-input" type="number" value="${inst.monthlyAmt}" placeholder="0.00" min="0" step="0.01" style="flex:1;"
-              oninput="installments[${i}].monthlyAmt=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcAll(); savePlanData()">
+              oninput="installments[${i}].monthlyAmt=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcSoon(); savePlanData()">
           </div>
         </div>
         <div style="min-width:110px;">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining months</div>
           <input class="nec-day-input" type="number" value="${inst.remaining}" min="0" step="1" placeholder="0" style="width:80px;"
-            oninput="installments[${i}].remaining=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcAll(); savePlanData()">
+            oninput="installments[${i}].remaining=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcSoon(); savePlanData()">
         </div>
         <div id="inst-balance-${i}" style="flex-shrink:0;${totalRem > 0 ? '' : ' display:none;'}">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining balance</div>
@@ -7850,8 +7986,10 @@ function loadPlanData() {
 }
 
 // ─── PAGE SWITCHING ───────────────────────────────────────────
+const _pageInited = {}; // lazy first-visit renders (CC Split / Hangout)
 function switchPage(page) {
   window._currentPage = page; // tracked for keyboard shortcuts (Alt+1–5, N)
+  try { localStorage.setItem('va_last_tab', page); } catch(e) {} // tab memory — restored on next load
   document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
   document.getElementById('pageSplitter').style.display = page === 'splitter' ? 'grid' : 'none';
   document.getElementById('pageHangout').style.display  = page === 'hangout'  ? 'grid' : 'none';
@@ -7873,12 +8011,19 @@ function switchPage(page) {
     renderSubs();
     renderInsts();
     renderDebts();
+    renderPayoffDebts();
     renderBillChecklist();
-    if (!calYear) calInit();
+    if (!calYear) calInit();     // calendar builds on first Plan visit only
     else renderCalendar();
   }
-  if (page === 'splitter') renderSplitArchive('ccArchiveList', 'cc');
-  if (page === 'hangout')  renderSplitArchive('hsArchiveList', 'hs');
+  if (page === 'splitter') {
+    if (!_pageInited.splitter) { _pageInited.splitter = true; renderCCPeople(); renderCCStores(); updateCCSummary(); }
+    renderSplitArchive('ccArchiveList', 'cc');
+  }
+  if (page === 'hangout') {
+    if (!_pageInited.hangout) { _pageInited.hangout = true; renderHSPeople(); renderHSItems(); updateHSSummary(); }
+    renderSplitArchive('hsArchiveList', 'hs');
+  }
   if (page === 'expenses') {
     setTimeout(drawChart, 60);
   }
@@ -7911,28 +8056,34 @@ loadCachedRate(); // show last known rate immediately while live fetch runs
 fetchRate(false); // then fetch a fresh live rate in the background
 
 loadCC();
-renderCCPeople();
-renderCCStores();
-updateCCSummary();
-
 loadHS();
-renderHSPeople();
-renderHSItems();
-updateHSSummary();
+// CC Split, Hangout, the Plan calendar, the payoff planner, and both
+// session archives are LAZY-RENDERED on first visit to their tab (see
+// switchPage) — data loads now, DOM builds only when needed, which
+// noticeably cuts initial page-load work.
 
 loadPlanData();
 renderDebts(); // debts section now lives on the Expenses page — render at startup
-renderPayoffDebts();
 setTimeout(drawChart, 200);
-calInit();
 updateConverter();
 
 // ─── NEW FEATURE INIT ─────────────────────────────────────────
 loadBillChecks();
-renderSplitArchive('ccArchiveList', 'cc');
-renderSplitArchive('hsArchiveList', 'hs');
 renderSalaryHistory();
 trkrInit();
+
+// ─── TAB MEMORY ────────────────────────────────────────────────
+// Reopen on whatever tab was active last time instead of always
+// landing on Expenses. (Expenses is already visible by default, so
+// only switch when the saved tab is something else.)
+try {
+  const _lastTab = localStorage.getItem('va_last_tab');
+  if (_lastTab && _lastTab !== 'expenses' &&
+      ['splitter', 'hangout', 'plan', 'tracker'].indexOf(_lastTab) !== -1) {
+    switchPage(_lastTab);
+  }
+} catch(e) {}
+
 // (Squads, OT calculator, and theme UI init at the very end of this
 //  script — their state vars are declared later, after this block.)
 
@@ -8673,6 +8824,20 @@ function syncCryptoAvailable() {
   return !!(window.crypto && crypto.subtle && crypto.subtle.digest);
 }
 
+// Profile-aware sync scope: each profile gets its OWN cloud row even
+// when the same sync code is typed on both, by salting the phrase with
+// the profile name before hashing / key derivation. The default
+// "Personal" profile stays unsalted so existing cloud data keeps
+// working with no migration. NOTE: renaming a profile changes its
+// scope — turn sync off and on again (and re-upload) after a rename.
+function syncScopedPhrase(phrase) {
+  try {
+    const prof = getProfilesMeta().current;
+    if (prof && prof !== 'Personal') return phrase + '::profile::' + prof;
+  } catch(e) {}
+  return phrase;
+}
+
 // Hash the sync code so the raw phrase never leaves the device.
 // NOTE: uses a DIFFERENT salt than the encryption key derivation, so
 // knowing the user_id reveals nothing about the encryption key.
@@ -8910,8 +9075,9 @@ async function enableSync() {
     return;
   }
   setSyncMsg('Setting up\u2026');
-  const userId = await hashSyncPhrase(phrase);
-  const keyB64 = await deriveSyncKeyB64(phrase);
+  const scoped = syncScopedPhrase(phrase); // profile-aware — see syncScopedPhrase()
+  const userId = await hashSyncPhrase(scoped);
+  const keyB64 = await deriveSyncKeyB64(scoped);
   _syncKeyCache = null; // force re-import from the new key
   const meta = { userId: userId, keyB64: keyB64, lastSyncedAt: null };
   saveSyncMeta(meta);
@@ -8956,6 +9122,10 @@ function updateSyncUI() {
     ctrl.style.display  = 'block';
     const last = meta.lastSyncedAt ? new Date(meta.lastSyncedAt).toLocaleString() : 'never';
     let line = '<strong style="color:var(--green-text);">Sync is ON.</strong> Changes upload automatically. Last sync: ' + last + '.';
+    try {
+      const pm = getProfilesMeta();
+      if (pm.list.length > 1) line += ' <span style="color:var(--text3);">Profile: ' + escH(pm.current) + ' (each profile syncs to its own cloud copy).</span>';
+    } catch(e) {}
     if (meta.keyB64) {
       line += ' <span style="color:var(--text3);">\ud83d\udd12 End-to-end encrypted.</span>';
     } else if (syncCryptoAvailable()) {
@@ -9789,7 +9959,20 @@ updateThemeButtons();
 // the app still works fully, it just won't be installable from there.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      // sw.js is now network-first for the app shell, so new releases
+      // download in the background. When one finishes installing, nudge
+      // the user instead of silently serving stale code forever.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showToast('⬆ Update downloaded — reload (or reopen the app) to get the new version');
+          }
+        });
+      });
+    }).catch((err) => {
       console.warn('Service worker registration failed (expected on file:// origins):', err);
     });
   });
@@ -9802,6 +9985,110 @@ if ('serviceWorker' in navigator) {
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {});
 }
+
+// ─── SCROLL-TO-TOP BUTTON ──────────────────────────────────────
+// Floating ↑ that fades in after 300px of scroll — the Plan and
+// Tracker tabs get LONG.
+(function () {
+  const btn = document.createElement('button');
+  btn.id = 'scrollTopBtn';
+  btn.textContent = '↑';
+  btn.title = 'Back to top';
+  btn.setAttribute('aria-label', 'Scroll back to top');
+  btn.style.cssText =
+    'position:fixed; right:16px; bottom:calc(20px + env(safe-area-inset-bottom,0px));' +
+    'width:44px; height:44px; border-radius:50%; border:1px solid var(--border);' +
+    'background:var(--surface2); color:var(--text2); font-size:19px; line-height:1;' +
+    'cursor:pointer; z-index:900; box-shadow:0 4px 14px rgba(0,0,0,0.35);' +
+    'opacity:0; pointer-events:none; transform:translateY(8px);' +
+    'transition:opacity .2s ease, transform .2s ease;';
+  btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.body.appendChild(btn);
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const show = window.scrollY > 300;
+      btn.style.opacity = show ? '1' : '0';
+      btn.style.pointerEvents = show ? 'auto' : 'none';
+      btn.style.transform = show ? 'translateY(0)' : 'translateY(8px)';
+      ticking = false;
+    });
+  }, { passive: true });
+})();
+
+// ─── PULL-TO-REFRESH (touch devices) ───────────────────────────
+// Pull down from the very top of the page to force-fetch a fresh
+// exchange rate — no more hunting for the Refresh button hidden under
+// the sticky header. Only fires when the page itself is at scroll 0
+// and the pull didn't start inside an inner scrollable area.
+(function () {
+  if (!('ontouchstart' in window)) return;
+  // Disable the browser's own pull-to-refresh so ours is the only one.
+  try {
+    document.documentElement.style.overscrollBehaviorY = 'contain';
+    document.body.style.overscrollBehaviorY = 'contain';
+  } catch (e) {}
+
+  const ind = document.createElement('div');
+  ind.style.cssText =
+    'position:fixed; top:calc(8px + env(safe-area-inset-top,0px)); left:50%;' +
+    'transform:translate(-50%,-60px); z-index:950; padding:7px 16px;' +
+    'border-radius:20px; border:1px solid var(--border); background:var(--surface2);' +
+    'color:var(--text2); font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,0.35);' +
+    'transition:transform .15s ease; pointer-events:none; white-space:nowrap;';
+  ind.textContent = '↓ Pull to refresh rate';
+  document.body.appendChild(ind);
+
+  const THRESHOLD = 140; // raw finger travel — indicator moves at half speed
+  let startY = 0, dist = 0, pulling = false;
+
+  function inInnerScroller(el) {
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight + 1) {
+        const oy = getComputedStyle(el).overflowY;
+        if (oy === 'auto' || oy === 'scroll') return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    if (window.scrollY > 0 || inInnerScroller(e.target)) { pulling = false; return; }
+    startY  = e.touches[0].clientY;
+    dist    = 0;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    dist = e.touches[0].clientY - startY;
+    if (dist > 15 && window.scrollY === 0) {
+      const shown = Math.min(dist / 2, 80);
+      ind.style.transform = 'translate(-50%,' + (shown - 60) + 'px)';
+      ind.textContent = dist >= THRESHOLD ? '↻ Release to refresh' : '↓ Pull to refresh rate';
+    } else {
+      ind.style.transform = 'translate(-50%,-60px)';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    pulling = false;
+    if (dist >= THRESHOLD && window.scrollY === 0) {
+      ind.textContent = '↻ Refreshing…';
+      ind.style.transform = 'translate(-50%,20px)';
+      fetchRate(true);
+      setTimeout(() => { ind.style.transform = 'translate(-50%,-60px)'; }, 1400);
+    } else {
+      ind.style.transform = 'translate(-50%,-60px)';
+    }
+    dist = 0;
+  }, { passive: true });
+})();
 
 // ─── COLLAPSIBLE SECTIONS ──────────────────────────────────────
 // Turns every ".section-title" into a tap-to-collapse header so the

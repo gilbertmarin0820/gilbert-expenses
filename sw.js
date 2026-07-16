@@ -1,111 +1,92 @@
-/* Gilbert Expenses — Service Worker
-   Strategy:
-   - App shell (HTML/manifest/icons) → cache-first, with a background
-     network update so the next launch picks up new versions.
-   - Google Fonts → cache-first (fonts basically never change).
-   - FX rate APIs (jsdelivr/x-rates/frankfurter/etc.) → network-only,
-     never cached, since exchange rates must always be fresh. The app's
-     own JS already has multiple fallback providers and handles failures.
-*/
-
-const CACHE_NAME = 'gilbert-expenses-v2';
+// ═══════════════════════════════════════════════════════════════
+// Gilbert Expenses — service worker
+//
+// CACHE VERSION: bump this string on EVERY release you push to
+// GitHub. Old caches are deleted automatically on activate, so
+// returning users get a clean fresh download instead of stale files.
+//
+// Update strategy (v3):
+//  • App shell (navigations / index.html) — NETWORK FIRST, falling
+//    back to cache when offline. This means updates on GitHub Pages
+//    arrive on the very next open — no more telling people to clear
+//    their cache manually. Offline still works exactly as before.
+//  • Everything else (icons, manifest) — cache-first with a silent
+//    background refresh.
+//  • skipWaiting + clients.claim so a new SW takes over immediately
+//    instead of waiting for every tab to close.
+// ═══════════════════════════════════════════════════════════════
+const CACHE = 'gilbert-expenses-v3';
 
 const APP_SHELL = [
+  './',
   './index.html',
   './manifest.json',
-  './icon-72.png',
-  './icon-96.png',
-  './icon-128.png',
-  './icon-144.png',
-  './icon-152.png',
-  './icon-192.png',
-  './icon-384.png',
-  './icon-512.png',
-  './icon-maskable-192.png',
-  './icon-maskable-512.png',
+  './favicon-32.png',
+  './favicon-16.png',
   './apple-touch-icon.png',
-];
-
-// Hosts whose responses should NEVER be cached (always go to network).
-const NETWORK_ONLY_HOSTS = [
-  'cdn.jsdelivr.net',
-  'x-rates.com',
-  'www.x-rates.com',
-  'open.er-api.com',
-  'api.frankfurter.app',
-  'api.allorigins.win',
-  'corsproxy.io',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(CACHE)
       .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting()) // don't wait for old tabs to close
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(
-        names
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
+});
+
+// index.html listens for this after showing its "update downloaded" toast.
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return; // never intercept POST etc.
+  if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+  // Cross-origin requests (FX-rate APIs, Supabase sync, fonts) go
+  // straight to the network — never cached, never intercepted.
+  if (url.origin !== self.location.origin) return;
 
-  // 1. FX rate / proxy APIs — always hit the network, never cache.
-  if (NETWORK_ONLY_HOSTS.includes(url.hostname)) {
-    event.respondWith(fetch(req).catch(() => new Response(null, { status: 503 })));
-    return;
-  }
-
-  // 2. Google Fonts — cache-first, long-lived.
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(
-      caches.open(CACHE_NAME).then((cache) =>
-        cache.match(req).then((cached) => {
-          if (cached) return cached;
-          return fetch(req).then((res) => {
-            if (res.ok) cache.put(req, res.clone());
-            return res;
-          }).catch(() => cached);
-        })
-      )
-    );
-    return;
-  }
-
-  // 3. Navigations (the HTML page itself) — network-first so updates
-  //    are picked up immediately when online, cache fallback when offline.
-  if (req.mode === 'navigate') {
+  // ── App shell: NETWORK FIRST ──────────────────────────────────
+  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, res.clone()));
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
           return res;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() =>
+          caches.match(req).then((hit) => hit || caches.match('./index.html'))
+        )
     );
     return;
   }
 
-  // 4. Everything else same-origin (manifest, icons) — cache-first.
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(req).then((cached) => cached || fetch(req))
-    );
-    return;
-  }
-
-  // 5. Any other cross-origin request — just pass through to network.
+  // ── Static assets: cache-first, refresh in the background ────
+  event.respondWith(
+    caches.match(req).then((hit) => {
+      const refresh = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => hit);
+      return hit || refresh;
+    })
+  );
 });
