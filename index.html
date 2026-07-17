@@ -1415,6 +1415,29 @@
   .section-collapsed-content { display: none !important; }
 
   /* ═══════════════════════════════════════════════════════════
+     TAB SWITCH TRANSITION
+     The incoming page slides in from the side you're heading
+     toward (forward → from the right, back → from the left), so a
+     swipe or tab tap visibly "moves" instead of snapping. Kept
+     short (220ms) so rapid tab-hopping never feels laggy. The
+     animation lives on the incoming .main only — pages contain no
+     position:fixed children, so the transform is safe.
+     ═══════════════════════════════════════════════════════════ */
+  @keyframes pageInFromRight {
+    from { opacity: 0; transform: translateX(34px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pageInFromLeft {
+    from { opacity: 0; transform: translateX(-34px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .page-anim-fwd  { animation: pageInFromRight 0.22s cubic-bezier(0.25, 0.7, 0.35, 1) both; }
+  .page-anim-back { animation: pageInFromLeft  0.22s cubic-bezier(0.25, 0.7, 0.35, 1) both; }
+  @media (prefers-reduced-motion: reduce) {
+    .page-anim-fwd, .page-anim-back { animation: none; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
      HORIZONTAL-SCROLL TABLE HINTS
      A soft fade on whichever edge has more content off-screen, so
      it's obvious a table can be swiped sideways. Toggled in JS.
@@ -1520,7 +1543,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-17e</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-17f</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -8007,6 +8030,12 @@ function loadPlanData() {
 // ─── PAGE SWITCHING ───────────────────────────────────────────
 const _pageInited = {}; // lazy first-visit renders (CC Split / Hangout)
 function switchPage(page) {
+  // Directional slide-in: figure out whether we're moving forward or
+  // back along the tab order BEFORE _currentPage is overwritten.
+  // (Local array, not KB_PAGE_ORDER — that const is declared further
+  // down and switchPage can run earlier during init.)
+  const _ORDER = ['expenses', 'splitter', 'hangout', 'plan', 'tracker'];
+  const _prev  = window._currentPage || 'expenses'; // app always starts on Expenses
   window._currentPage = page; // tracked for keyboard shortcuts (Alt+1–5, N)
   try { localStorage.setItem('va_last_tab', page); } catch(e) {} // tab memory — restored on next load
   document.getElementById('pageExpenses').style.display = page === 'expenses' ? 'grid' : 'none';
@@ -8025,6 +8054,22 @@ function switchPage(page) {
   document.getElementById('tabHangout').classList.toggle('active', page === 'hangout');
   document.getElementById('tabPlan').classList.toggle('active', page === 'plan');
   document.getElementById('tabTracker').classList.toggle('active', page === 'tracker');
+  // Animate the incoming page (skip the very first render — no _prev yet,
+  // and skip no-op switches to the same tab).
+  if (_prev && _prev !== page) {
+    const el = document.getElementById(
+      { expenses:'pageExpenses', splitter:'pageSplitter', hangout:'pageHangout',
+        plan:'pagePlan', tracker:'pageTracker' }[page]);
+    if (el) {
+      el.classList.remove('page-anim-fwd', 'page-anim-back');
+      void el.offsetWidth; // reflow so the animation can retrigger back-to-back
+      el.classList.add(_ORDER.indexOf(page) > _ORDER.indexOf(_prev)
+        ? 'page-anim-fwd' : 'page-anim-back');
+      el.addEventListener('animationend',
+        () => el.classList.remove('page-anim-fwd', 'page-anim-back'),
+        { once: true });
+    }
+  }
   if (page === 'plan') {
     renderGoals();
     renderSubs();
