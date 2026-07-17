@@ -723,6 +723,11 @@
     transform: translateY(80px); opacity: 0;
     transition: all 0.3s ease; z-index: 999;
     font-family: 'DM Mono', monospace;
+    /* Purely informational — must NEVER catch touches. Its hidden
+       resting position (slid down 80px, opacity 0) sits exactly on
+       top of the mobile tab bar, and without this it silently eats
+       every tap on the tabs after the first toast has appeared. */
+    pointer-events: none;
   }
   .toast.err { border-color: var(--red); color: var(--red-text); }
   .toast.show { transform: translateY(0); opacity: 1; }
@@ -1515,7 +1520,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup</div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-17e</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -10019,6 +10024,22 @@ if (navigator.storage && navigator.storage.persist) {
   btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   document.body.appendChild(btn);
 
+  // Position: on phones the bottom tab bar (~72px tall) is fixed at the
+  // bottom, so the button must sit ABOVE it or it covers the Tracker
+  // tab. Set from JS (not just CSS) so no style-precedence issue can
+  // ever put it back on top of the bar. Re-checked on resize/rotate.
+  const mq = window.matchMedia('(max-width: 700px)');
+  const placeBtn = () => {
+    btn.style.setProperty('bottom',
+      mq.matches
+        ? 'calc(84px + env(safe-area-inset-bottom, 0px))'
+        : 'calc(20px + env(safe-area-inset-bottom, 0px))',
+      'important');
+  };
+  placeBtn();
+  if (mq.addEventListener) mq.addEventListener('change', placeBtn);
+  else if (mq.addListener) mq.addListener(placeBtn); // older WebViews
+
   let ticking = false;
   window.addEventListener('scroll', () => {
     if (ticking) return;
@@ -10104,6 +10125,70 @@ if (navigator.storage && navigator.storage.persist) {
       ind.style.transform = 'translate(-50%,-60px)';
     }
     dist = 0;
+  }, { passive: true });
+})();
+
+// ─── SWIPE LEFT/RIGHT TO SWITCH TABS (touch devices) ───────────
+// Swipe left anywhere on the page → next tab, swipe right → previous
+// tab (same order as the bottom bar). Deliberately conservative so it
+// never hijacks other gestures:
+//   • only clearly-horizontal swipes count (dx must dominate dy)
+//   • ignored when the swipe starts inside a sideways-scrollable
+//     table, an input/select, an open modal, or a multi-finger touch
+//   • ignored near the screen edges (Android back-gesture zone)
+(function () {
+  if (!('ontouchstart' in window)) return;
+
+  const EDGE_GUARD = 28;   // px from left/right edge reserved for system gestures
+  const MIN_DX     = 65;   // minimum horizontal travel
+  const MAX_TIME   = 600;  // ms — must be a flick, not a slow drag
+
+  let sx = 0, sy = 0, st = 0, active = false;
+
+  function inHorizScroller(el) {
+    while (el && el !== document.body) {
+      if (el.scrollWidth > el.clientWidth + 1) {
+        const ox = getComputedStyle(el).overflowX;
+        if (ox === 'auto' || ox === 'scroll') return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+  function modalOpen() {
+    const sm = document.getElementById('settingsModal');
+    const qr = document.getElementById('qrOverlay');
+    return (sm && sm.style.display === 'flex') || (qr && qr.style.display === 'flex');
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    active = false;
+    if (e.touches.length !== 1 || modalOpen()) return;
+    const t   = e.target;
+    const tag = t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
+    if (inHorizScroller(t)) return;
+    const x = e.touches[0].clientX;
+    if (x < EDGE_GUARD || x > window.innerWidth - EDGE_GUARD) return;
+    sx = x; sy = e.touches[0].clientY; st = Date.now();
+    active = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!active) return;
+    active = false;
+    if (Date.now() - st > MAX_TIME) return;
+    const t  = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // must be decisively horizontal — a diagonal scroll shouldn't switch tabs
+    if (Math.abs(dx) < MIN_DX || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+
+    const cur = KB_PAGE_ORDER.indexOf(window._currentPage || 'expenses');
+    const next = cur + (dx < 0 ? 1 : -1); // swipe left → next tab
+    if (next < 0 || next >= KB_PAGE_ORDER.length) return; // no wrap-around
+    switchPage(KB_PAGE_ORDER[next]);
+    window.scrollTo(0, 0); // land at the top of the new tab
   }, { passive: true });
 })();
 
