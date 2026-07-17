@@ -1032,6 +1032,14 @@
       right: 12px; left: 12px; text-align: center;
     }
 
+    /* Scroll-to-top button above the bottom tab bar — its inline style
+       puts it at bottom:20px which is fine on desktop, but on mobile
+       that lands right on top of the Tracker tab. !important is needed
+       to beat the inline style. */
+    #scrollTopBtn {
+      bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
     /* ── Section titles ───────────────────────────────────── */
     .section-title { font-size: 10px; margin-bottom: 12px; }
 
