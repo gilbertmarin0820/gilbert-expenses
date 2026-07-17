@@ -864,8 +864,13 @@
      MOBILE OPTIMIZATIONS — tested on Redmi Note 12 Pro+ Chrome
      ═══════════════════════════════════════════════════════════ */
 
-  /* Global horizontal-overflow lock — nothing can scroll sideways */
-  html { overflow-x: hidden; }
+  /* Global horizontal-overflow lock — nothing can scroll sideways.
+     `clip` (not `hidden`) is critical: `hidden` turns html/body into
+     scroll containers, and a scroll container that can't actually
+     scroll swallows touch gestures on mobile — the page freezes.
+     `clip` clips without creating a scroll container. The `hidden`
+     line is only a fallback for very old browsers. */
+  html { overflow-x: hidden; overflow-x: clip; }
 
   /* Tap highlight removal for Android Chrome */
   button, input, select { -webkit-tap-highlight-color: transparent; }
@@ -880,7 +885,8 @@
   @media (max-width: 700px) {
 
     /* ── Global overflow + box model ─────────────────────── */
-    body { overflow-x: hidden; }
+    /* clip, not hidden — see the html rule above for why */
+    body { overflow-x: hidden; overflow-x: clip; }
     /* min-width: 0 on all flex/grid children lets them shrink
        below their content size, preventing the most common cause
        of content spilling past the right viewport edge */
@@ -10027,9 +10033,12 @@ if (navigator.storage && navigator.storage.persist) {
 (function () {
   if (!('ontouchstart' in window)) return;
   // Disable the browser's own pull-to-refresh so ours is the only one.
+  // Root element ONLY — never set this on <body>: body computes to a
+  // scroll container on mobile, and overscroll containment on a
+  // scroll container with no scroll range traps every touch scroll
+  // (the "page won't scroll on mobile" bug).
   try {
     document.documentElement.style.overscrollBehaviorY = 'contain';
-    document.body.style.overscrollBehaviorY = 'contain';
   } catch (e) {}
 
   const ind = document.createElement('div');
