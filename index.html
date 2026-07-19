@@ -1543,7 +1543,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-17f</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-19b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1952,12 +1952,12 @@
     </div>
   </div>
 
-  <!-- WHAT IF RATE SIMULATOR -->
+  <!-- WHAT IF DATE RANGE PROJECTION -->
   <div>
-    <div class="section-title">💡 "What If" Rate Simulator</div>
+    <div class="section-title">💡 "What If" Date Range</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        See how a higher rate would change your income — at the current live exchange rate, without touching your actual settings.
+        See how a different rate would change your income over a specific date range — at the live exchange rate, without touching your actual settings. Counts Mon–Fri as working days. Leave rate or hours blank to use your current settings.
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
         <div class="input-block" style="flex:1; min-width:140px;">
@@ -1976,6 +1976,18 @@
               inputmode="decimal" oninput="calcWhatif()" style="color:var(--purple-text);">
           </div>
         </div>
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">From</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <input class="big-input" type="date" id="whatifFrom" oninput="calcWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">To</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <input class="big-input" type="date" id="whatifTo" oninput="calcWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
         <div class="input-block" style="min-width:100px;">
           <label class="input-label">Tax rate (%)</label>
           <div class="input-row" style="border-color:var(--purple);">
@@ -1984,46 +1996,34 @@
               inputmode="decimal" oninput="calcWhatif()" style="color:var(--purple-text);">
           </div>
         </div>
-        <!-- Quick preset chips -->
-        <div style="display:flex; flex-wrap:wrap; gap:6px; align-self:flex-end; padding-bottom:2px;">
-          <button class="preset-btn" onclick="setWhatifRate(4.00)">$4.00</button>
-          <button class="preset-btn" onclick="setWhatifRate(4.50)">$4.50</button>
-          <button class="preset-btn" onclick="setWhatifRate(5.00)">$5.00</button>
-          <button class="preset-btn" onclick="setWhatifRate(6.00)">$6.00</button>
-        </div>
       </div>
-
-      <!-- Results grid — NET values after tax -->
+      <!-- Results grid -->
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px;" id="whatifResults">
         <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Working days</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifDays">—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifDaysSub">—</div>
+        </div>
+        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
           <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per day <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifDay">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifDayUSD">$—</div>
-          <div style="font-size:10px; color:var(--red-text); margin-top:3px;" id="whatifDayTax">tax −₱—</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifPerDay">₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifPerDayUSD">$—</div>
         </div>
         <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per week <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifWeek">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifWeekUSD">$—</div>
-          <div style="font-size:10px; color:var(--red-text); margin-top:3px;" id="whatifWeekTax">tax −₱—</div>
-        </div>
-        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per month <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifMonth">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifMonthUSD">$—</div>
-          <div style="font-size:10px; color:var(--red-text); margin-top:3px;" id="whatifMonthTax">tax −₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Total tax</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--red-text);" id="whatifTaxTotal">−₱—</div>
+          <div style="font-size:11px; color:var(--red-text); margin-top:2px;" id="whatifTaxTotalUSD">−$—</div>
         </div>
         <div style="padding:12px 14px; background:var(--purple-dim); border-radius:var(--radius-sm); border:1px solid var(--purple);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per year <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifYear">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifYearUSD">$—</div>
-          <div style="font-size:10px; color:var(--red-text); margin-top:3px;" id="whatifYearTax">tax −₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Range total <span style="color:var(--green-text);">(net)</span></div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifNet">₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifNetUSD">$—</div>
         </div>
       </div>
 
-      <!-- TAX BREAKDOWN — gross → tax deducted → net (monthly basis) -->
+      <!-- TAX BREAKDOWN — gross → tax deducted → net (for the selected range) -->
       <div id="whatifTaxBreakdown" style="display:block; padding:12px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
-        <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">Monthly tax breakdown</div>
+        <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">Range tax breakdown</div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <div style="text-align:center;">
             <div style="font-size:10px; color:var(--text3); margin-bottom:3px;">Gross</div>
@@ -2039,13 +2039,13 @@
           <div style="color:var(--text3); font-size:18px; font-weight:300;">=</div>
           <div style="text-align:center; flex:1;">
             <div style="font-size:10px; color:var(--green-text); margin-bottom:3px;">Net (take-home)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--green-text);" id="whatifNetMonth">$—</div>
-            <div style="font-size:11px; color:var(--green-text);" id="whatifNetMonthPHP">₱—</div>
+            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--green-text);" id="whatifNetBD">$—</div>
+            <div style="font-size:11px; color:var(--green-text);" id="whatifNetBDPHP">₱—</div>
           </div>
         </div>
       </div>
 
-      <!-- vs current rate delta -->
+      <!-- calculation basis -->
       <div id="whatifDelta" style="margin-top:4px; font-size:12px; color:var(--text3); text-align:center;"></div>
     </div>
   </div>
@@ -3553,125 +3553,120 @@ function setStatus(type, text) {
   if (dot) dot.className = 'fx-conn-dot ' + dotClass;
 }
 
-// ─── "WHAT IF" RATE SIMULATOR ─────────────────────────────────
-const WORK_DAYS_MONTH = 21.67; // standard Philippine BIR basis
-const WORK_DAYS_WEEK  = 5;
+// ─── "WHAT IF" DATE RANGE PROJECTION ─────────────────────
 
-function setWhatifRate(rate) {
-  const inp = document.getElementById('whatifRate');
-  if (inp) { inp.value = rate; calcWhatif(); }
-  document.querySelectorAll('.preset-btn').forEach(b => {
-    b.classList.toggle('active', parseFloat(b.textContent.replace('$','')) === rate);
-  });
+function whatifHoursPerDay() {
+  const el = document.getElementById(payMode === 'weekly' ? 'dailyHours' : 'dailyHoursM');
+  const h = el ? parseFloat(el.value) : NaN;
+  return (h > 0) ? h : 8;
+}
+
+// Count Mon–Fri days between two dates, inclusive
+function countWorkdays(from, to) {
+  let n = 0;
+  const d = new Date(from.getTime());
+  while (d <= to) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) n++;
+    d.setDate(d.getDate() + 1);
+  }
+  return n;
+}
+
+function whatifDateStr(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
 function calcWhatif() {
-  const rate  = parseFloat(document.getElementById('whatifRate').value)  || 0;
-  const hours = parseFloat(document.getElementById('whatifHours').value) || 8;
+  const fEl = document.getElementById('whatifFrom');
+  const tEl = document.getElementById('whatifTo');
+  if (!fEl || !tEl) return;
+
+  // First run: default to today → end of this month
+  if (!fEl.value && !tEl.value) {
+    const today = new Date();
+    fEl.value = whatifDateStr(today);
+    tEl.value = whatifDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  }
+
   // Use the custom tax input if filled, otherwise fall back to current TAX setting
   const taxInput = document.getElementById('whatifTax');
   const tax = taxInput && taxInput.value !== ''
     ? (parseFloat(taxInput.value) || 0) / 100
     : (TAX || 0.15);
-  const fx = fxRate || 0;
+  const fx   = fxRate || 0;
+  const rateInp  = document.getElementById('whatifRate');
+  const hoursInp = document.getElementById('whatifHours');
+  const rate = rateInp && rateInp.value !== '' ? (parseFloat(rateInp.value) || 0) : (HOURLY || 0);
+  const hrs  = hoursInp && hoursInp.value !== '' ? (parseFloat(hoursInp.value) || 0) : whatifHoursPerDay();
 
-  // Gross (before tax)
-  const grossDayUSD   = rate * hours;
-  const grossWeekUSD  = grossDayUSD * WORK_DAYS_WEEK;
-  const grossMonthUSD = grossDayUSD * WORK_DAYS_MONTH;
-  const grossYearUSD  = grossMonthUSD * 12;
-
-  // Tax amount (monthly)
-  const taxMonthUSD = grossMonthUSD * tax;
-
-  // Net (after tax)
-  const dayUSD   = grossDayUSD   * (1 - tax);
-  const weekUSD  = grossWeekUSD  * (1 - tax);
-  const monthUSD = grossMonthUSD * (1 - tax);
-  const yearUSD  = grossYearUSD  * (1 - tax);
+  const from = fEl.value ? new Date(fEl.value + 'T00:00:00') : null;
+  const to   = tEl.value ? new Date(tEl.value + 'T00:00:00') : null;
+  const valid = from && to && !isNaN(from) && !isNaN(to) && from <= to && rate > 0;
 
   const breakdown = document.getElementById('whatifTaxBreakdown');
+  const deltaEl   = document.getElementById('whatifDelta');
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const taxPct = (tax * 100).toFixed(0);
+  set('whatifTaxLabel', 'Tax (' + taxPct + '%)');
 
-  if (rate <= 0) {
-    ['whatifDay','whatifWeek','whatifMonth','whatifYear'].forEach(id => {
-      document.getElementById(id).textContent = '₱—';
-    });
-    ['whatifDayUSD','whatifWeekUSD','whatifMonthUSD','whatifYearUSD'].forEach(id => {
-      document.getElementById(id).textContent = '$—';
-    });
-    ['whatifDayTax','whatifWeekTax','whatifMonthTax','whatifYearTax'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = 'tax −₱—';
-    });
-    // Keep the breakdown visible with placeholders so the tax deduction is always shown
+  if (!valid) {
+    set('whatifDays', '—'); set('whatifDaysSub', from && to && from > to ? 'invalid range' : '—');
+    set('whatifPerDay', '₱—');  set('whatifPerDayUSD', '$—');
+    set('whatifTaxTotal', '−₱—'); set('whatifTaxTotalUSD', '−$—');
+    set('whatifNet', '₱—');     set('whatifNetUSD', '$—');
     if (breakdown) {
-      breakdown.style.display = 'block';
-      const taxPct = (tax * 100).toFixed(0);
-      document.getElementById('whatifTaxLabel').textContent    = 'Tax (' + taxPct + '%)';
-      document.getElementById('whatifGross').textContent       = '$—';
-      document.getElementById('whatifGrossPHP').textContent    = '₱—';
-      document.getElementById('whatifTaxAmt').textContent      = '$—';
-      document.getElementById('whatifTaxAmtPHP').textContent   = '₱—';
-      document.getElementById('whatifNetMonth').textContent    = '$—';
-      document.getElementById('whatifNetMonthPHP').textContent = '₱—';
+      set('whatifGross', '$—');   set('whatifGrossPHP', '₱—');
+      set('whatifTaxAmt', '$—');  set('whatifTaxAmtPHP', '₱—');
+      set('whatifNetBD', '$—');   set('whatifNetBDPHP', '₱—');
     }
-    document.getElementById('whatifDelta').textContent = '';
+    if (deltaEl) deltaEl.textContent = '';
     return;
   }
 
-  // Tax deducted per period (shown on each tile)
-  const taxDayUSD  = grossDayUSD  * tax;
-  const taxWeekUSD = grossWeekUSD * tax;
-  const taxYearUSD = grossYearUSD * tax;
-  const fmtTax = usd => 'tax −' + (fx > 0 ? fPHP(usd * fx) : fUSD(usd));
-  const tDay   = document.getElementById('whatifDayTax');
-  const tWeek  = document.getElementById('whatifWeekTax');
-  const tMonth = document.getElementById('whatifMonthTax');
-  const tYear  = document.getElementById('whatifYearTax');
-  if (tDay)   tDay.textContent   = fmtTax(taxDayUSD);
-  if (tWeek)  tWeek.textContent  = fmtTax(taxWeekUSD);
-  if (tMonth) tMonth.textContent = fmtTax(taxMonthUSD);
-  if (tYear)  tYear.textContent  = fmtTax(taxYearUSD);
+  const workdays  = countWorkdays(from, to);
+  const totalDays = Math.round((to - from) / 86400000) + 1;
 
-  // Net result tiles
-  document.getElementById('whatifDay').textContent    = fx > 0 ? fPHP(dayUSD   * fx) : fUSD(dayUSD);
-  document.getElementById('whatifWeek').textContent   = fx > 0 ? fPHP(weekUSD  * fx) : fUSD(weekUSD);
-  document.getElementById('whatifMonth').textContent  = fx > 0 ? fPHP(monthUSD * fx) : fUSD(monthUSD);
-  document.getElementById('whatifYear').textContent   = fx > 0 ? fPHP(yearUSD  * fx) : fUSD(yearUSD);
-  document.getElementById('whatifDayUSD').textContent   = fUSD(dayUSD);
-  document.getElementById('whatifWeekUSD').textContent  = fUSD(weekUSD);
-  document.getElementById('whatifMonthUSD').textContent = fUSD(monthUSD);
-  document.getElementById('whatifYearUSD').textContent  = fUSD(yearUSD);
+  const grossUSD  = workdays * hrs * rate;
+  const taxUSD    = grossUSD * tax;
+  const netUSD    = grossUSD - taxUSD;
+  const perDayUSD = hrs * rate * (1 - tax);
 
-  // Tax breakdown row (monthly basis)
+  set('whatifDays', String(workdays));
+  set('whatifDaysSub', 'of ' + totalDays + ' day' + (totalDays === 1 ? '' : 's'));
+  set('whatifPerDay',  fx > 0 ? fPHP(perDayUSD * fx) : fUSD(perDayUSD));
+  set('whatifPerDayUSD', fUSD(perDayUSD));
+  set('whatifTaxTotal', '−' + (fx > 0 ? fPHP(taxUSD * fx) : fUSD(taxUSD)));
+  set('whatifTaxTotalUSD', '−' + fUSD(taxUSD));
+  set('whatifNet',    fx > 0 ? fPHP(netUSD * fx) : fUSD(netUSD));
+  set('whatifNetUSD', fUSD(netUSD));
+
   if (breakdown) {
     breakdown.style.display = 'block';
-    const taxPct = (tax * 100).toFixed(0);
-    document.getElementById('whatifTaxLabel').textContent   = 'Tax (' + taxPct + '%)';
-    document.getElementById('whatifGross').textContent      = fUSD(grossMonthUSD);
-    document.getElementById('whatifGrossPHP').textContent   = fx > 0 ? fPHP(grossMonthUSD * fx) : '';
-    document.getElementById('whatifTaxAmt').textContent     = '−' + fUSD(taxMonthUSD);
-    document.getElementById('whatifTaxAmtPHP').textContent  = fx > 0 ? '−' + fPHP(taxMonthUSD * fx) : '';
-    document.getElementById('whatifNetMonth').textContent   = fUSD(monthUSD);
-    document.getElementById('whatifNetMonthPHP').textContent = fx > 0 ? fPHP(monthUSD * fx) : '';
+    set('whatifGross', fUSD(grossUSD));
+    set('whatifGrossPHP', fx > 0 ? fPHP(grossUSD * fx) : '');
+    set('whatifTaxAmt', '−' + fUSD(taxUSD));
+    set('whatifTaxAmtPHP', fx > 0 ? '−' + fPHP(taxUSD * fx) : '');
+    set('whatifNetBD', fUSD(netUSD));
+    set('whatifNetBDPHP', fx > 0 ? fPHP(netUSD * fx) : '');
   }
 
-  // Delta vs current actual rate
-  const deltaEl = document.getElementById('whatifDelta');
-  if (HOURLY > 0 && rate !== HOURLY) {
-    const curMonth  = HOURLY * hours * (1 - (TAX || 0.15)) * WORK_DAYS_MONTH;
-    const diffUSD   = monthUSD - curMonth;
-    const diffPHP   = diffUSD * (fx || 0);
-    const sign      = diffUSD >= 0 ? '+' : '';
-    const col       = diffUSD >= 0 ? 'var(--green-text)' : 'var(--red-text)';
-    deltaEl.innerHTML = `vs your current <strong>$${HOURLY.toFixed(2)}/hr</strong>: `
-      + (fx > 0
-          ? `<span style="color:${col};font-weight:600;">${sign}${fPHP(diffPHP)}/mo</span>`
-            + ` &nbsp;·&nbsp; <span style="color:${col};">${sign}${fPHP(diffPHP * 12)}/yr</span>`
-          : `<span style="color:${col};font-weight:600;">${sign}${fUSD(diffUSD)}/mo</span>`
-            + ` &nbsp;·&nbsp; <span style="color:${col};">${sign}${fUSD(diffUSD * 12)}/yr</span>`);
-  } else {
-    deltaEl.textContent = rate === HOURLY ? '← This is your current rate' : '';
+  if (deltaEl) {
+    let line = 'Basis: <strong>$' + rate.toFixed(2) + '/hr</strong> × '
+      + hrs + ' hrs/day × ' + workdays + ' working days − ' + taxPct + '% tax';
+    if (HOURLY > 0 && rate !== HOURLY) {
+      const curNetUSD = workdays * hrs * HOURLY * (1 - (TAX || 0.15));
+      const diffUSD   = netUSD - curNetUSD;
+      const sign      = diffUSD >= 0 ? '+' : '';
+      const col       = diffUSD >= 0 ? 'var(--green-text)' : 'var(--red-text)';
+      const diffTxt   = fx > 0 ? fPHP(diffUSD * fx) : fUSD(diffUSD);
+      line += '<br>vs your current <strong>$' + HOURLY.toFixed(2) + '/hr</strong>: '
+        + '<span style="color:' + col + ';font-weight:600;">' + sign + diffTxt + '</span> for this range';
+    } else if (rate === HOURLY) {
+      line += '<br>← this is your current rate';
+    }
+    deltaEl.innerHTML = line;
   }
 }
 
