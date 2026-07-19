@@ -1543,7 +1543,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-19b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-19c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -5548,7 +5548,7 @@ function splitPersonRowHtml(type, p, total, items, open) {
           : `<span style="color:var(--text2);">${fPHP(it.amt)}</span>`;
         return `
         <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:2px 0;">
-          <span style="color:var(--text3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escH(it.label)}</span>
+          <span style="color:var(--text3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escH(it.label)}${it.date ? `<span style="font-size:10px; color:var(--text3); opacity:0.75; font-family:'DM Mono',monospace;"> · ${fmtStoreDate(it.date)}</span>` : ''}</span>
           <span style="font-family:'DM Mono',monospace; flex-shrink:0;">${priceHtml}</span>
         </div>`;
       }).join('') +
@@ -5610,20 +5610,28 @@ function buildSplitTable(type) {
 
   const lines = [];
   lines.push((type === 'cc' ? 'CC Split' : 'Hangout Split') + (note ? ' — ' + note : ''));
-  lines.push(['Person', 'Item', 'Share'].join('\t'));
+  // Date column only when at least one item carries a date (Hangout items don't)
+  const hasDates = Object.values(items).some(arr => (arr || []).some(it => it.date));
+  lines.push((hasDates ? ['Person', 'Item', 'Date', 'Share'] : ['Person', 'Item', 'Share']).join('\t'));
 
   let grand = 0;
   owing.forEach(p => {
     const its = items[p.id] || [];
     its.forEach((it, idx) => {
       const label = it.label + (it.n > 1 ? ' (' + formatSplitAmt(it.total) + ' ÷ ' + it.n + ')' : '');
-      lines.push([idx === 0 ? p.name : '', label, formatSplitAmt(it.amt)].join('\t'));
+      const row = hasDates
+        ? [idx === 0 ? p.name : '', label, fmtStoreDate(it.date), formatSplitAmt(it.amt)]
+        : [idx === 0 ? p.name : '', label, formatSplitAmt(it.amt)];
+      lines.push(row.join('\t'));
     });
     const tot = totals[p.id] || 0;
     grand += tot;
-    lines.push([its.length ? '' : p.name, '— total —', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')].join('\t'));
+    const totRow = hasDates
+      ? [its.length ? '' : p.name, '— total —', '', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')]
+      : [its.length ? '' : p.name, '— total —', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')];
+    lines.push(totRow.join('\t'));
   });
-  lines.push(['GRAND TOTAL', '', formatSplitAmt(grand)].join('\t'));
+  lines.push((hasDates ? ['GRAND TOTAL', '', '', formatSplitAmt(grand)] : ['GRAND TOTAL', '', formatSplitAmt(grand)]).join('\t'));
   return lines.join('\n');
 }
 
@@ -5732,8 +5740,22 @@ function renderCCPeople() {
 }
 
 // ─── STORES ───────────────────────────────────────────────────
+// Local-timezone ISO date (toISOString is UTC — wrong before 8 AM in PH)
+function localISODate(d = new Date()) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+// "2026-07-15" → "Jul 15" (adds the year only when it isn't this year)
+function fmtStoreDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return '';
+  const opts = { month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-PH', opts);
+}
+
 function addStore() {
-  ccStores.push({ name: '', amt: '', people: [] });
+  ccStores.push({ name: '', amt: '', date: localISODate(), people: [] });
   renderCCStores();
   saveCC();
   setTimeout(() => {
@@ -5825,6 +5847,11 @@ function renderCCStores() {
               oninput="ccStores[${i}].amt=this.value; updateStoreEach(${i}); updateCCSummary(); saveCC()">
           </div>
         </div>
+        <div class="input-block" style="width:150px; flex-shrink:0;">
+          <label class="input-label">Date</label>
+          <input class="nec-cat-input" type="date" style="height:42px; font-size:13px;" value="${store.date || ''}"
+            oninput="ccStores[${i}].date=this.value; updateCCSummary(); saveCC()">
+        </div>
         <button class="del-btn" style="font-size:18px; flex-shrink:0;" onclick="removeStore(${i})" title="Remove this store">✕</button>
         <div style="display:flex; align-items:center; height:42px; flex-shrink:0;">${incBtn(store, `toggleStoreInc(${i})`)}</div>
       </div>
@@ -5859,7 +5886,7 @@ function updateCCSummary() {
       store.people.forEach(pid => {
         if (totals[pid] !== undefined) {
           totals[pid] += each;
-          if (each > 0.005) personItems[pid].push({ label: store.name || 'Unnamed store', amt: each, total: amt, n: n });
+          if (each > 0.005) personItems[pid].push({ label: store.name || 'Unnamed store', date: store.date || '', amt: each, total: amt, n: n });
         }
       });
     } else {
