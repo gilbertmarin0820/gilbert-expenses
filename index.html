@@ -24,12 +24,17 @@
 <script>
   try {
     var t = localStorage.getItem('va_theme');
-    var light = t === 'light' ||
-      (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
-    if (light) {
-      document.documentElement.setAttribute('data-theme', 'light');
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute('content', '#f2f4f8');
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (t === 'amoled') {
+      document.documentElement.setAttribute('data-theme', 'amoled');
+      if (m) m.setAttribute('content', '#000000');
+    } else {
+      var light = t === 'light' ||
+        (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+      if (light) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        if (m) m.setAttribute('content', '#f2f4f8');
+      }
     }
   } catch(e) {}
 </script>
@@ -103,6 +108,21 @@
     --teal-text: #0c7d73;
     --shadow-card: rgba(140,149,159,0.25);
     --shadow-modal: rgba(31,35,40,0.25);
+  }
+  /* ── AMOLED THEME ────────────────────────────────────────────
+     True-black variant of dark mode. On OLED panels (#000000 pixels
+     are fully off) this saves battery and gives deeper contrast at
+     night. Text + accent colors inherit from the dark :root palette;
+     only the background/surface/border ladder is remapped. */
+  html[data-theme="amoled"] {
+    --bg: #000000;
+    --surface: #0a0a0a;
+    --surface2: #111111;
+    --surface3: #181818;
+    --border: #262626;
+    --border2: #3d3d3d;
+    --shadow-card: rgba(0,0,0,0.7);
+    --shadow-modal: rgba(0,0,0,0.8);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -775,7 +795,10 @@
   @media (min-width: 701px) {
     .sticky-nav-wrap {
       position: sticky;
-      top: 0;
+      /* Pin just below the sticky header, not over it — --hdr-h is the
+         header's measured height, kept current by a ResizeObserver in JS
+         (the header can grow when its controls wrap at mid widths). */
+      top: var(--hdr-h, 0px);
       z-index: 150;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     }
@@ -811,6 +834,9 @@
     background: var(--green-dim); border-color: var(--green); color: var(--green-text); font-weight: 500;
   }
   .split-chip.active:hover { background: var(--green-dim); }
+  /* "Everyone" shortcut chip — selects/clears all people on an item at once */
+  .split-chip-all { border-style: dashed; font-weight: 600; }
+  .split-chip-all.active { border-style: solid; }
 
   /* Paid / unpaid toggle pill in the Summary lists (CC Split + Hangout) */
   .paid-toggle {
@@ -1543,7 +1569,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-19c</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-20f</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1551,23 +1577,29 @@
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🎨 Appearance</div>
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        Light mode is easier to read outdoors in daylight. <b>Auto</b> follows your phone/PC's system theme. Your choice is remembered on this device.
+        Light mode is easier to read outdoors in daylight. <b>AMOLED</b> uses a true-black background — on OLED screens black pixels switch fully off, saving battery at night. <b>Auto</b> follows your phone/PC's system theme. Your choice is remembered on this device.
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button id="themeBtnDark" onclick="setTheme('dark')" style="
-          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          flex:1; min-width:100px; padding:10px; background:var(--surface3); border:1px solid var(--border);
           color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
           font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
           🌙 Dark
         </button>
+        <button id="themeBtnAmoled" onclick="setTheme('amoled')" style="
+          flex:1; min-width:100px; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+          font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+          🖤 AMOLED
+        </button>
         <button id="themeBtnLight" onclick="setTheme('light')" style="
-          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          flex:1; min-width:100px; padding:10px; background:var(--surface3); border:1px solid var(--border);
           color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
           font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
           ☀️ Light
         </button>
         <button id="themeBtnAuto" onclick="setTheme('auto')" style="
-          flex:1; padding:10px; background:var(--surface3); border:1px solid var(--border);
+          flex:1; min-width:100px; padding:10px; background:var(--surface3); border:1px solid var(--border);
           color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
           font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
           🌓 Auto
@@ -2512,7 +2544,10 @@
 
       <!-- FINANCIAL HEALTH DASHBOARD -->
       <div style="margin-top:16px;">
-        <div class="section-title">Financial Health</div>
+        <div class="section-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">Financial Health
+          <span id="srStreakBadge" style="display:none; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--amber-text); background:var(--amber-dim, rgba(245,158,11,0.12)); border:1px solid var(--amber); border-radius:999px; padding:2px 10px; letter-spacing:0.3px; text-transform:none;"
+            title="Consecutive months with a savings rate of 30% or higher"></span>
+        </div>
         <div class="card" style="padding:16px;">
           <!-- 4 stat tiles -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -2536,6 +2571,12 @@
               <div class="stat-tile-value c-red" id="statObligations">—</div>
               <div class="stat-tile-sub" id="statObligationsSub">No obligations logged</div>
             </div>
+          </div>
+          <!-- 3-MONTH EXPENSE FORECAST — fixed commitments projected forward -->
+          <div id="forecastWrap" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">📆 Fixed expenses — next 3 months</div>
+            <div id="forecastRows" style="display:flex; flex-direction:column; gap:6px;"></div>
+            <div style="font-size:10px; color:var(--text3); margin-top:8px; line-height:1.5;">Necessities + subscriptions + installments, assuming current amounts. Installment month ranges and remaining-months counters are respected, so you can see when payments drop off.</div>
           </div>
         </div>
       </div>
@@ -2572,8 +2613,15 @@
     <div class="section-title">Calculator &amp; Currency Converter</div>
     <div class="spend-calc-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:flex-start;">
 
-      <!-- Scientific Calculator -->
+      <!-- Scientific Calculator + Unit Converter -->
       <div class="card calc-card">
+        <!-- Mode toggle: Calculator ↔ Units -->
+        <div class="calc-deg-toggle" style="display:flex; margin-bottom:10px;">
+          <button class="calc-deg-btn active" id="calcModeCalcBtn" onclick="setCalcCardMode('calc')" style="flex:1;">🧮 Calculator</button>
+          <button class="calc-deg-btn" id="calcModeUnitBtn" onclick="setCalcCardMode('units')" style="flex:1;">📐 Units</button>
+        </div>
+
+        <div id="calcMainPanel">
         <div id="calcDisplay" style="
           background:var(--surface2); border:1px solid var(--border);
           border-radius:var(--radius-sm); padding:12px 16px;
@@ -2602,8 +2650,8 @@
           <button class="calc-btn calc-sci" onclick="calcFactorial()" title="x! factorial">x!</button>
           <button class="calc-btn calc-sci" onclick="calcParen('(')"> ( </button>
           <button class="calc-btn calc-sci" onclick="calcParen(')')"> ) </button>
-          <button class="calc-btn calc-fn" onclick="calcPercent()">%</button>
-          <button class="calc-btn calc-fn" onclick="calcClear()">AC</button>
+          <button class="calc-btn calc-fn" onclick="calcClear()" title="All Clear (keyboard: Esc)">AC</button>
+          <button class="calc-btn calc-fn" onclick="calcBackspace()" title="Delete last digit (keyboard: Backspace)">⌫</button>
           <!-- Row 1: Inv + sin + ln + 7 + 8 + 9 + ÷ -->
           <button class="calc-btn calc-sci" id="calcInvBtn" onclick="calcToggleInv()" title="Inverse functions">Inv</button>
           <button class="calc-btn calc-sci" id="calcSinBtn" onclick="calcTrig('sin')">sin</button>
@@ -2642,8 +2690,31 @@
           <button class="calc-btn calc-sci" onclick="calcMemAdd()" title="Memory Add — add the screen value to memory">M+</button>
           <button class="calc-btn calc-sci" onclick="calcMemSub()" title="Memory Subtract — subtract the screen value from memory">M−</button>
           <button class="calc-btn calc-sci" onclick="calcMemStore()" title="Memory Store — replace memory with the screen value">MS</button>
-          <button class="calc-btn calc-fn" style="grid-column:span 2;" onclick="calcBackspace()" title="Delete last digit (keyboard: Backspace)">⌫</button>
+          <button class="calc-btn calc-fn" style="grid-column:span 2;" onclick="calcPercent()">%</button>
         </div>
+        </div><!-- /calcMainPanel -->
+
+        <!-- UNIT CONVERTER PANEL -->
+        <div id="unitConvPanel" style="display:none;">
+          <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Conversion</div>
+          <div id="unitCatChips" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"></div>
+          <div class="input-block" style="margin-bottom:12px;">
+            <label class="input-label" id="unitInputLabel">Kilograms (kg)</label>
+            <div class="input-row" id="unitInputRow" style="border-color:var(--teal);">
+              <div class="input-prefix" style="color:var(--teal-text);" id="unitInputPrefix">kg</div>
+              <input class="big-input" type="number" id="unitInput" placeholder="0" step="any" inputmode="decimal"
+                oninput="convertUnits()" style="color:var(--teal-text);">
+            </div>
+          </div>
+          <div style="text-align:center; margin-bottom:12px;">
+            <button class="conv-swap-btn" onclick="swapUnitDir()" title="Swap conversion direction">⇅</button>
+          </div>
+          <div style="padding:14px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="unitResultLabel">Pounds (lb)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:26px; font-weight:500; color:var(--teal-text);" id="unitResult">—</div>
+            <div style="font-size:11px; color:var(--text3); margin-top:6px; font-family:'DM Mono',monospace;" id="unitRateNote">1 kg = 2.2046 lb</div>
+          </div>
+        </div><!-- /unitConvPanel -->
       </div>
 
       <!-- Currency Converter -->
@@ -2949,6 +3020,19 @@
         <div class="nb-row"><span class="nb-label">Total saved across goals</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="goalsTotalSaved">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Total target</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="goalsTotalTarget">₱0.00</span></div>
       </div>
+    </div>
+  </div>
+
+  <!-- WISHLIST / FUTURE PURCHASE PLANNER -->
+  <div>
+    <div class="section-title">🛍️ Wishlist</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        Things you're planning to buy — AirPods, a lens, a trip. In <b>Save up</b> mode each item shows how many paydays away it is at your current free-to-spend rate. Switch to <b>Installment</b> mode to preview the monthly amount and date range instead — and move it straight into your Installments when you buy.
+      </div>
+      <div id="wishContainer"></div>
+      <button class="add-btn" onclick="addWish()">+ Add item</button>
+      <div id="wishFreeNote" style="display:none; margin-top:12px; padding:10px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); font-size:12px; color:var(--text3); line-height:1.5;"></div>
     </div>
   </div>
 
@@ -4249,6 +4333,7 @@ function recalcAll() {
     ? (parseFloat(document.getElementById('corpSalaryInput').value) || 0)
     : 0;
   renderCashFlow();
+  updateWishlistEtas(); // payday ETAs depend on the CF income cache above
 }
 
 // ─── UNDO SYSTEM ──────────────────────────────────────────────
@@ -5448,6 +5533,11 @@ document.addEventListener('keydown', e => {
   // Skip when a shortcut modifier is held (e.g. Alt+1–5 switches tabs, not calc digits)
   if (e.altKey || e.ctrlKey || e.metaKey) return;
 
+  // Skip while the calculator card is showing the Units panel — otherwise
+  // digits typed on the page would land in the hidden calculator screen.
+  const calcPanel = document.getElementById('calcMainPanel');
+  if (calcPanel && calcPanel.style.display === 'none') return;
+
   if ('0123456789'.includes(e.key)) calcDigit(e.key);
   else if (e.key === '.' || e.key === ',') calcDot(); // "," = numpad decimal on some layouts
   else if (e.key === '%') calcPercent();
@@ -5460,6 +5550,116 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Escape') calcClear();
   else if (e.key === 'Backspace') calcBackspace();
 });
+
+// ─── UNIT CONVERTER (Units tab inside the calculator card) ────
+const UNIT_DEFS = {
+  weight:   { chip: '⚖️ kg ↔ lb',    a: { name: 'Kilograms (kg)',      sym: 'kg'   }, b: { name: 'Pounds (lb)',        sym: 'lb'   }, factor: 2.20462262185 },
+  distance: { chip: '📏 km ↔ mi',    a: { name: 'Kilometers (km)',     sym: 'km'   }, b: { name: 'Miles (mi)',         sym: 'mi'   }, factor: 0.62137119224 },
+  temp:     { chip: '🌡️ °C ↔ °F',   a: { name: 'Celsius (°C)',        sym: '°C'   }, b: { name: 'Fahrenheit (°F)',    sym: '°F'   },
+              toB: c => c * 9 / 5 + 32, toA: f => (f - 32) * 5 / 9,
+              noteAB: '°F = °C × 9⁄5 + 32', noteBA: '°C = (°F − 32) × 5⁄9' },
+  area:     { chip: '🏠 sqm ↔ sqft', a: { name: 'Square meters (sqm)', sym: 'sqm'  }, b: { name: 'Square feet (sqft)', sym: 'sqft' }, factor: 10.7639104167 },
+  // ── Recipe / kitchen measurements ──
+  ozg:      { chip: '🍳 oz ↔ g',     a: { name: 'Ounces (oz)',         sym: 'oz'   }, b: { name: 'Grams (g)',          sym: 'g'    }, factor: 28.349523125 },
+  flozml:   { chip: '🥤 fl oz ↔ ml', a: { name: 'Fluid ounces (fl oz)',sym: 'fl oz'}, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 29.5735295625 },
+  cupml:    { chip: '🥛 cup ↔ ml',   a: { name: 'US cups',             sym: 'cup'  }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 236.5882365 },
+  tbspml:   { chip: '🥄 tbsp ↔ ml',  a: { name: 'Tablespoons (tbsp)',  sym: 'tbsp' }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 14.78676478 },
+  tspml:    { chip: '🫖 tsp ↔ ml',   a: { name: 'Teaspoons (tsp)',     sym: 'tsp'  }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 4.92892159 },
+};
+let unitCat = 'weight';   // which conversion pair is active
+let unitRev = false;      // false = a→b, true = b→a
+
+function setCalcCardMode(mode) {
+  const calcPanel  = document.getElementById('calcMainPanel');
+  const unitPanel  = document.getElementById('unitConvPanel');
+  const calcBtn    = document.getElementById('calcModeCalcBtn');
+  const unitBtn    = document.getElementById('calcModeUnitBtn');
+  if (!calcPanel || !unitPanel) return;
+  const units = mode === 'units';
+  calcPanel.style.display = units ? 'none' : '';
+  unitPanel.style.display = units ? '' : 'none';
+  if (calcBtn) calcBtn.classList.toggle('active', !units);
+  if (unitBtn) unitBtn.classList.toggle('active', units);
+  if (units) {
+    renderUnitCatChips();
+    updateUnitLabels();
+    const inp = document.getElementById('unitInput');
+    if (inp) setTimeout(() => inp.focus(), 40);
+  }
+}
+
+function renderUnitCatChips() {
+  const c = document.getElementById('unitCatChips');
+  if (!c) return;
+  c.innerHTML = Object.keys(UNIT_DEFS).map(key => `
+    <button type="button" class="split-chip${key === unitCat ? ' active' : ''}"
+      onclick="setUnitCat('${key}')">${UNIT_DEFS[key].chip}</button>
+  `).join('');
+}
+
+function setUnitCat(key) {
+  if (!UNIT_DEFS[key]) return;
+  unitCat = key;
+  unitRev = false;
+  renderUnitCatChips();
+  updateUnitLabels();
+}
+
+function swapUnitDir() {
+  unitRev = !unitRev;
+  updateUnitLabels();
+}
+
+function updateUnitLabels() {
+  const def  = UNIT_DEFS[unitCat];
+  const from = unitRev ? def.b : def.a;
+  const to   = unitRev ? def.a : def.b;
+  const lbl  = document.getElementById('unitInputLabel');
+  const pre  = document.getElementById('unitInputPrefix');
+  const rl   = document.getElementById('unitResultLabel');
+  if (lbl) lbl.textContent = from.name;
+  if (pre) pre.textContent = from.sym;
+  if (rl)  rl.textContent  = to.name;
+  convertUnits();
+}
+
+// Trim to 4 decimals, strip trailing zeros, keep thousands separators
+function fmtUnit(v) {
+  if (!isFinite(v)) return '—';
+  const rounded = Math.round(v * 10000) / 10000;
+  return rounded.toLocaleString('en-US', { maximumFractionDigits: 4 });
+}
+
+function convertUnits() {
+  const def   = UNIT_DEFS[unitCat];
+  const inp   = document.getElementById('unitInput');
+  const out   = document.getElementById('unitResult');
+  const note  = document.getElementById('unitRateNote');
+  if (!inp || !out) return;
+  const toSym = (unitRev ? def.a : def.b).sym;
+
+  // Rate/formula note is direction-aware
+  if (note) {
+    if (def.factor !== undefined) {
+      note.textContent = unitRev
+        ? '1 ' + def.b.sym + ' = ' + fmtUnit(1 / def.factor) + ' ' + def.a.sym
+        : '1 ' + def.a.sym + ' = ' + fmtUnit(def.factor) + ' ' + def.b.sym;
+    } else {
+      note.textContent = unitRev ? def.noteBA : def.noteAB;
+    }
+  }
+
+  const raw = parseFloat(inp.value);
+  if (inp.value === '' || isNaN(raw)) { out.textContent = '—'; return; }
+
+  let result;
+  if (def.factor !== undefined) {
+    result = unitRev ? raw / def.factor : raw * def.factor;
+  } else {
+    result = unitRev ? def.toA(raw) : def.toB(raw);
+  }
+  out.textContent = fmtUnit(result) + ' ' + toSym;
+}
 
 // ─── TOAST ────────────────────────────────────────────────────
 function showToast(msg, err=false) {
@@ -5780,6 +5980,36 @@ function toggleSplit(i, personId) {
 
   const chip = document.getElementById('ccChip-' + i + '-' + personId);
   if (chip) chip.classList.toggle('active', store.people.includes(personId));
+  syncCCAllChip(i);
+
+  updateStoreEach(i);
+  updateCCSummary();
+  saveCC();
+}
+
+// Keep the "Everyone" shortcut chip's state in step with individual selections
+function syncCCAllChip(i) {
+  const store = ccStores[i];
+  const allChip = document.getElementById('ccAllChip-' + i);
+  if (!store || !allChip) return;
+  const allIn = ccPeople.length > 0 && ccPeople.every(p => store.people.includes(p.id));
+  allChip.classList.toggle('active', allIn);
+  allChip.textContent = allIn ? '✓ Everyone' : 'Everyone';
+}
+
+// "Everyone" shortcut — selects all people on this store in one tap
+// (or clears them all if everyone is already selected)
+function ccSplitAll(i) {
+  const store = ccStores[i];
+  if (!store) return;
+  const allIn = ccPeople.length > 0 && ccPeople.every(p => store.people.includes(p.id));
+  store.people = allIn ? [] : ccPeople.map(p => p.id);
+
+  ccPeople.forEach(p => {
+    const chip = document.getElementById('ccChip-' + i + '-' + p.id);
+    if (chip) chip.classList.toggle('active', !allIn);
+  });
+  syncCCAllChip(i);
 
   updateStoreEach(i);
   updateCCSummary();
@@ -5823,9 +6053,14 @@ function renderCCStores() {
     const n   = store.people.length;
     const each = n > 0 ? amt / n : 0;
 
+    const allIn = ccPeople.length > 0 && ccPeople.every(p => store.people.includes(p.id));
     const chipsHtml = ccPeople.length === 0
       ? '<span style="font-size:12px; color:var(--text3);">Add people above to enable splitting.</span>'
-      : ccPeople.map(p => `
+      : (ccPeople.length >= 2 ? `
+          <button type="button" class="split-chip split-chip-all${allIn ? ' active' : ''}"
+            id="ccAllChip-${i}" onclick="ccSplitAll(${i})"
+            title="Split evenly among everyone — tap again to clear">${allIn ? '✓ Everyone' : 'Everyone'}</button>
+        ` : '') + ccPeople.map(p => `
           <button type="button" class="split-chip${store.people.includes(p.id) ? ' active' : ''}"
             id="ccChip-${i}-${p.id}" onclick="toggleSplit(${i}, ${p.id})">${escH(p.name)}</button>
         `).join('');
@@ -6134,6 +6369,36 @@ function toggleHSSplit(i, personId) {
 
   const chip = document.getElementById('hsChip-' + i + '-' + personId);
   if (chip) chip.classList.toggle('active', item.people.includes(personId));
+  syncHSAllChip(i);
+
+  updateHSItemEach(i);
+  updateHSSummary();
+  saveHS();
+}
+
+// Keep the "Everyone" shortcut chip's state in step with individual selections
+function syncHSAllChip(i) {
+  const item = hsItems[i];
+  const allChip = document.getElementById('hsAllChip-' + i);
+  if (!item || !allChip) return;
+  const allIn = hsPeople.length > 0 && hsPeople.every(p => item.people.includes(p.id));
+  allChip.classList.toggle('active', allIn);
+  allChip.textContent = allIn ? '✓ Everyone' : 'Everyone';
+}
+
+// "Everyone" shortcut — selects all people on this item in one tap
+// (or clears them all if everyone is already selected)
+function hsSplitAll(i) {
+  const item = hsItems[i];
+  if (!item) return;
+  const allIn = hsPeople.length > 0 && hsPeople.every(p => item.people.includes(p.id));
+  item.people = allIn ? [] : hsPeople.map(p => p.id);
+
+  hsPeople.forEach(p => {
+    const chip = document.getElementById('hsChip-' + i + '-' + p.id);
+    if (chip) chip.classList.toggle('active', !allIn);
+  });
+  syncHSAllChip(i);
 
   updateHSItemEach(i);
   updateHSSummary();
@@ -6180,9 +6445,14 @@ function renderHSItems() {
     const each = n > 0 ? amt / n : 0;
     const tag  = HS_TAG_LABEL[item.tag] ? item.tag : 'others';
 
+    const allIn = hsPeople.length > 0 && hsPeople.every(p => item.people.includes(p.id));
     const chipsHtml = hsPeople.length === 0
       ? '<span style="font-size:12px; color:var(--text3);">Add people above to enable splitting.</span>'
-      : hsPeople.map(p => `
+      : (hsPeople.length >= 2 ? `
+          <button type="button" class="split-chip split-chip-all${allIn ? ' active' : ''}"
+            id="hsAllChip-${i}" onclick="hsSplitAll(${i})"
+            title="Split evenly among everyone — tap again to clear">${allIn ? '✓ Everyone' : 'Everyone'}</button>
+        ` : '') + hsPeople.map(p => `
           <button type="button" class="split-chip${item.people.includes(p.id) ? ' active' : ''}"
             id="hsChip-${i}-${p.id}" onclick="toggleHSSplit(${i}, ${p.id})">${escH(p.name)}</button>
         `).join('');
@@ -6409,6 +6679,7 @@ function loadHS() {
 
 // ─── SHARED PLAN DATA ─────────────────────────────────────────
 let savingsGoals    = [];   // [{id, name, target, saved}]
+let wishlistItems   = [];   // [{id, name, price, mode:'save'|'inst', months, startYM}]
 let subscriptions   = [];   // [{id, name, amt, billingDay}]
 let installments    = [];   // [{id, name, monthlyAmt, remaining}]
 let personalDebts   = [];   // [{id, type:'lent'|'owe', person, amt}]
@@ -6559,6 +6830,183 @@ function renderGoals() {
   const tt = document.getElementById('goalsTotalTarget');
   if (ts) ts.textContent = fPHP(totalSaved);
   if (tt) tt.textContent = fPHP(totalTarget);
+}
+
+// ─── WISHLIST / FUTURE PURCHASE PLANNER ───────────────────────
+// "Save up" mode: shows how many VA paydays (Thursdays) away the item is
+// at your current free-to-spend rate (income minus fixed commitments).
+// "Installment" mode: previews the monthly amount and the month range,
+// with a one-tap move into the real Installments tracker.
+
+function wishDefaultStartYM() {
+  const d = new Date(); d.setMonth(d.getMonth() + 1); // default: start next month
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function addWish() {
+  wishlistItems.push({ id: planId(), name: '', price: '', mode: 'save', months: '6', startYM: wishDefaultStartYM() });
+  renderWishlist();
+  savePlanData();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#wishContainer .nec-cat-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 40);
+}
+
+function removeWish(id) {
+  wishlistItems = wishlistItems.filter(w => w.id !== id);
+  renderWishlist();
+  savePlanData();
+}
+
+function setWishMode(id, mode) {
+  const w = wishlistItems.find(x => x.id === id);
+  if (!w) return;
+  w.mode = mode;
+  renderWishlist();
+  savePlanData();
+}
+
+// Free-to-spend estimate: monthly net income (VA weekly ×52/12 + corp ×2)
+// minus this month's fixed commitments (necessities + subs + installments,
+// same math as the 3-month forecast). Divided across weekly VA paydays.
+function wishMonthlyFree() {
+  const monthlyIncome = _cfVAWeeklyPHP * 52 / 12 + _cfCorpPerCutoff * 2;
+  if (monthlyIncome <= 0) return null; // income not set up yet
+  return monthlyIncome - forecastMonthCommitted(0);
+}
+
+function wishFreePerPayday() {
+  const free = wishMonthlyFree();
+  return free === null ? null : free / (52 / 12); // VA pays every Thursday
+}
+
+function renderWishlist() {
+  const c = document.getElementById('wishContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  wishlistItems.forEach((w, i) => {
+    const isInst = w.mode === 'inst';
+    const div = document.createElement('div');
+    div.className = 'goal-block';
+    div.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input class="nec-cat-input" value="${escH(w.name)}" placeholder="e.g. AirPods Pro, camera lens, Japan trip" style="flex:1;"
+          oninput="wishlistItems[${i}].name=this.value; savePlanData()">
+        <button class="del-btn" onclick="removeWish(${w.id})">✕</button>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+        <div style="flex:1; min-width:130px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Target price (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${w.price}" placeholder="12,000" min="0" step="0.01" style="flex:1;"
+              oninput="wishlistItems[${i}].price=this.value; updateWishlistEtas(); savePlanData()">
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button type="button" class="split-chip${!isInst ? ' active' : ''}" onclick="setWishMode(${w.id}, 'save')">💰 Save up</button>
+          <button type="button" class="split-chip${isInst ? ' active' : ''}" onclick="setWishMode(${w.id}, 'inst')">📅 Installment</button>
+        </div>
+      </div>
+      ${isInst ? `
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <div style="min-width:110px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Months</div>
+          <input class="nec-day-input" type="number" value="${w.months}" min="1" step="1" placeholder="6" style="width:80px;"
+            oninput="wishlistItems[${i}].months=this.value; updateWishlistEtas(); savePlanData()">
+        </div>
+        <div style="min-width:150px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Starting</div>
+          <input class="nec-cat-input" type="month" value="${w.startYM || ''}" style="height:38px; font-size:13px;"
+            oninput="wishlistItems[${i}].startYM=this.value; updateWishlistEtas(); savePlanData()">
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+          <button class="add-btn" style="margin-top:0;" onclick="wishToInstallment(${w.id})"
+            title="Bought it? Move this item into the Installments tracker below">➜ Move to Installments</button>
+        </div>
+      </div>` : ''}
+      <div id="wish-eta-${i}" style="font-size:12px; color:var(--text3); padding:8px 12px; background:var(--surface3); border-radius:var(--radius-sm);"></div>
+    `;
+    c.appendChild(div);
+  });
+  updateWishlistEtas();
+}
+
+function updateWishlistEtas() {
+  const note = document.getElementById('wishFreeNote');
+  const freePerPayday = wishFreePerPayday();
+  const monthlyFree   = wishMonthlyFree();
+
+  if (note) {
+    if (wishlistItems.length === 0) {
+      note.style.display = 'none';
+    } else if (monthlyFree === null) {
+      note.style.display = '';
+      note.innerHTML = 'Set your income on the <b>Expenses</b> page (daily hours + FX rate) to see payday estimates.';
+    } else {
+      note.style.display = '';
+      note.innerHTML = 'Free to spend ≈ <b style="color:var(--teal-text); font-family:\'DM Mono\',monospace;">' + fPHP(Math.max(0, freePerPayday)) + '</b> per payday'
+        + ' <span style="font-size:11px;">(' + fPHP(Math.max(0, monthlyFree)) + '/mo after fixed commitments)</span>';
+    }
+  }
+
+  wishlistItems.forEach((w, i) => {
+    const el = document.getElementById('wish-eta-' + i);
+    if (!el) return;
+    const price = parseFloat(w.price) || 0;
+    if (price <= 0) { el.innerHTML = 'Enter a target price to see an estimate.'; return; }
+
+    if (w.mode === 'inst') {
+      const m = Math.max(1, parseInt(w.months) || 1);
+      const monthly = price / m;
+      let rangeStr = '';
+      if (w.startYM && /^\d{4}-\d{2}$/.test(w.startYM)) {
+        const [y, mo] = w.startYM.split('-').map(Number);
+        const end = new Date(y, mo - 1 + m - 1, 1);
+        rangeStr = ' · ' + MONTH_NAMES[mo - 1] + ' ' + y + ' → ' + MONTH_NAMES[end.getMonth()] + ' ' + end.getFullYear();
+      }
+      el.innerHTML = '📅 <b style="color:var(--amber-text); font-family:\'DM Mono\',monospace;">' + fPHP(monthly) + '/mo</b>'
+        + ' × ' + m + (m === 1 ? ' month' : ' months') + rangeStr;
+      return;
+    }
+
+    // Save-up mode: paydays away at current free-to-spend rate
+    const free = wishFreePerPayday();
+    if (free === null) { el.innerHTML = '🗓️ Set your income on the Expenses page to see how many paydays away this is.'; return; }
+    if (free <= 0)     { el.innerHTML = '🗓️ No free cash per payday right now — fixed commitments eat the whole paycheck.'; return; }
+
+    const n = Math.ceil(price / free);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysToThu = (4 - today.getDay() + 7) % 7; // 0 = today is payday #1
+    const eta = new Date(today);
+    eta.setDate(eta.getDate() + daysToThu + (n - 1) * 7);
+    const yr = eta.getFullYear() !== today.getFullYear() ? ' ' + eta.getFullYear() : '';
+    el.innerHTML = '🗓️ <b style="color:var(--teal-text); font-family:\'DM Mono\',monospace;">' + n + (n === 1 ? ' payday' : ' paydays') + '</b> away'
+      + ' · ~' + MONTH_NAMES[eta.getMonth()] + ' ' + eta.getDate() + yr
+      + ' <span style="font-size:11px;">(at ' + fPHP(free) + '/payday)</span>';
+  });
+}
+
+// Bought it on installment — move the wish into the real Installments tracker
+function wishToInstallment(id) {
+  const w = wishlistItems.find(x => x.id === id);
+  if (!w) return;
+  const price = parseFloat(w.price) || 0;
+  const m = Math.max(1, parseInt(w.months) || 1);
+  if (price <= 0) { showToast('Set a target price first', true); return; }
+  installments.push({
+    id: planId(),
+    name: w.name || 'Wishlist item',
+    monthlyAmt: (price / m).toFixed(2),
+    remaining: String(m),
+  });
+  wishlistItems = wishlistItems.filter(x => x.id !== id);
+  renderWishlist();
+  renderInsts();
+  recalcAll();
+  savePlanData();
+  showToast('✓ Moved to Installments');
 }
 
 // ─── SUBSCRIPTIONS ────────────────────────────────────────────
@@ -7106,6 +7554,7 @@ function updateHealthStats() {
       srEl.textContent = rate.toFixed(1) + '%';
       srEl.style.color = rate >= 30 ? 'var(--green-text)' : rate >= 10 ? 'var(--amber-text)' : 'var(--red-text)';
       if (srSub) srSub.textContent = fPHP(Math.max(0, remaining)) + ' unspent';
+      recordSavingsRate(rate); // snapshot this month's live rate for the streak tracker
     } else {
       srEl.textContent = '—';
       srEl.style.color = 'var(--text2)';
@@ -7192,6 +7641,126 @@ function updateHealthStats() {
       if (obSub) obSub.textContent = 'No obligations logged';
     }
   }
+
+  updateStreakBadge();
+  updateExpenseForecast();
+}
+
+// ─── SAVINGS-RATE STREAK TRACKER ──────────────────────────────
+// One snapshot per calendar month in localStorage. The current month's
+// entry is continuously overwritten while the month is live, then freezes
+// at whatever it last was once the month rolls over — so past months are
+// an honest record of where the rate ended up.
+const SR_HISTORY_KEY   = 'va_sr_history';
+const SR_STREAK_TARGET = 30; // % — matches the green threshold on the Savings Rate tile
+
+function srMonthKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function loadSRHistory() {
+  try { return JSON.parse(localStorage.getItem(SR_HISTORY_KEY)) || {}; } catch(e) { return {}; }
+}
+
+function recordSavingsRate(rate) {
+  const hist = loadSRHistory();
+  hist[srMonthKey(new Date())] = +rate.toFixed(1);
+  // prune to the most recent 24 months so the key never balloons
+  const keys = Object.keys(hist).sort();
+  while (keys.length > 24) delete hist[keys.shift()];
+  try { localStorage.setItem(SR_HISTORY_KEY, JSON.stringify(hist)); } catch(e) {}
+}
+
+function updateStreakBadge() {
+  const badge = document.getElementById('srStreakBadge');
+  if (!badge) return;
+  const hist = loadSRHistory();
+  const now  = new Date();
+
+  let streak = 0;
+  // Current month counts once it's at/above target. Below target it's just
+  // "in progress" — it doesn't extend the streak, but it doesn't break the
+  // run of completed months either (the month isn't over yet).
+  if ((hist[srMonthKey(now)] || 0) >= SR_STREAK_TARGET) streak++;
+  // Walk backwards through completed months
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  while (hist[srMonthKey(d)] !== undefined && hist[srMonthKey(d)] >= SR_STREAK_TARGET) {
+    streak++;
+    d.setMonth(d.getMonth() - 1);
+  }
+
+  if (streak >= 1) {
+    badge.style.display = 'inline-flex';
+    badge.textContent = '🔥 ' + streak + '-month streak';
+    badge.title = streak + (streak === 1 ? ' month' : ' consecutive months') +
+      ' with a savings rate of ' + SR_STREAK_TARGET + '% or higher — keep it going!';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ─── 3-MONTH EXPENSE FORECAST ─────────────────────────────────
+// Projects fixed commitments (necessities + subscriptions + installments)
+// forward, respecting necessities-installment month ranges and Plan-page
+// installment remaining-months counters, so months where a payment drops
+// off show up with a green "less" note.
+function forecastMonthCommitted(offset) { // offset 0 = current month
+  const now = new Date();
+  const mo  = (now.getMonth() + offset) % 12;
+  let total = getSubsSum();
+
+  necData.forEach(row => {
+    if (!isInc(row)) return;
+    const base = necRowBase(row);
+    if (!base) return;
+    if (row.inst && !monthInInstRange(mo, row.instFrom, row.instTo)) return;
+    total += base;
+  });
+
+  installments.forEach(inst => {
+    if (!isInc(inst)) return;
+    const moAmt = parseFloat(inst.monthlyAmt) || 0;
+    const rem   = parseInt(inst.remaining)    || 0;
+    // "remaining" counts the current month as payment #1, so an installment
+    // with N months left still bills in offsets 0 … N-1.
+    if (moAmt > 0 && rem > offset) total += moAmt;
+  });
+
+  return total;
+}
+
+function updateExpenseForecast() {
+  const wrap   = document.getElementById('forecastWrap');
+  const rowsEl = document.getElementById('forecastRows');
+  if (!wrap || !rowsEl) return;
+
+  const months = [];
+  for (let k = 0; k <= 3; k++) months.push(forecastMonthCommitted(k));
+
+  if (!months.some(v => v > 0.005)) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  const now = new Date();
+  let html = '';
+  for (let k = 1; k <= 3; k++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + k, 1);
+    const label = MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    const delta = months[k] - months[k - 1];
+    let note = '';
+    if (delta <= -0.01) {
+      note = '<span style="font-size:11px; color:var(--green-text); font-family:\'DM Mono\',monospace;">↓ ' + fPHP(-delta) + ' less</span>';
+    } else if (delta >= 0.01) {
+      note = '<span style="font-size:11px; color:var(--amber-text); font-family:\'DM Mono\',monospace;">↑ ' + fPHP(delta) + ' more</span>';
+    }
+    html += `
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);">
+        <span style="font-size:13px; color:var(--text); font-weight:500; min-width:76px;">${label}</span>
+        <span style="flex:1; text-align:right;">${note}</span>
+        <span style="font-family:'DM Mono',monospace; font-size:13px; font-weight:500; color:var(--red-text);">${fPHP(months[k])}</span>
+        <span style="font-size:11px; color:var(--text3);">committed</span>
+      </div>`;
+  }
+  rowsEl.innerHTML = html;
 }
 
 // ─── GOVERNMENT CONTRIBUTIONS · 13TH MONTH · BIR TAX ─────────
@@ -7954,7 +8523,7 @@ function savePlanData() {
 
   try {
     localStorage.setItem('va_plan_data', JSON.stringify({
-      savingsGoals, subscriptions, installments, personalDebts, planSeq,
+      savingsGoals, wishlistItems, subscriptions, installments, personalDebts, planSeq,
       payoffDebts,
       payoffBudget: document.getElementById('payoffBudget')?.value || '',
       cfStartBal:   document.getElementById('cfStartBal')?.value || '',
@@ -7971,6 +8540,7 @@ function planUndo() {
   try {
     const d = raw ? JSON.parse(raw) : {};
     if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
+    if (Array.isArray(d.wishlistItems))   wishlistItems   = d.wishlistItems;
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
@@ -7984,6 +8554,7 @@ function planUndo() {
     if (cu) cu.checked = !!d.cfUseSavings;
     // Re-render all Plan sections
     renderGoals();
+    renderWishlist();
     renderSubs();
     renderInsts();
     renderDebts();
@@ -8009,6 +8580,7 @@ function resetPlan() {
   } catch(e) {}
 
   savingsGoals    = [];
+  wishlistItems   = [];
   subscriptions   = [];
   installments    = [];
   personalDebts   = [];
@@ -8019,6 +8591,7 @@ function resetPlan() {
   const _cu = document.getElementById('cfUseSavings'); if (_cu) _cu.checked = false;
 
   renderGoals();
+  renderWishlist();
   renderSubs();
   renderInsts();
   renderDebts();
@@ -8035,6 +8608,7 @@ function loadPlanData() {
     if (!raw) return;
     const d = JSON.parse(raw);
     if (Array.isArray(d.savingsGoals))    savingsGoals    = d.savingsGoals;
+    if (Array.isArray(d.wishlistItems))   wishlistItems   = d.wishlistItems;
     if (Array.isArray(d.subscriptions))   subscriptions   = d.subscriptions;
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
@@ -8094,6 +8668,7 @@ function switchPage(page) {
   }
   if (page === 'plan') {
     renderGoals();
+    renderWishlist();
     renderSubs();
     renderInsts();
     renderDebts();
@@ -9824,13 +10399,15 @@ function systemPrefersLight() {
 
 function setTheme(theme) {
   const effective = theme === 'auto' ? (systemPrefersLight() ? 'light' : 'dark') : theme;
-  if (effective === 'light') document.documentElement.setAttribute('data-theme', 'light');
-  else document.documentElement.removeAttribute('data-theme');
+  if (effective === 'light')       document.documentElement.setAttribute('data-theme', 'light');
+  else if (effective === 'amoled') document.documentElement.setAttribute('data-theme', 'amoled');
+  else                             document.documentElement.removeAttribute('data-theme');
   try { localStorage.setItem('va_theme', theme); } catch(e) {}
 
   // Keep the browser/PWA chrome color in sync
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', effective === 'light' ? '#f2f4f8' : '#0d1117');
+  if (meta) meta.setAttribute('content',
+    effective === 'light' ? '#f2f4f8' : effective === 'amoled' ? '#000000' : '#0d1117');
 
   updateThemeButtons();
   // Charts paint theme colors onto canvas — repaint with new palette
@@ -9842,15 +10419,17 @@ function setTheme(theme) {
 
 function updateThemeButtons() {
   const choice = savedThemeChoice();
-  const dark  = document.getElementById('themeBtnDark');
-  const light = document.getElementById('themeBtnLight');
-  const auto  = document.getElementById('themeBtnAuto');
+  const dark   = document.getElementById('themeBtnDark');
+  const amoled = document.getElementById('themeBtnAmoled');
+  const light  = document.getElementById('themeBtnLight');
+  const auto   = document.getElementById('themeBtnAuto');
   if (!dark || !light) return;
   const on  = (btn) => { if (!btn) return; btn.style.background = 'var(--blue-dim)'; btn.style.borderColor = 'var(--blue)'; btn.style.color = 'var(--blue-text)'; };
   const off = (btn) => { if (!btn) return; btn.style.background = 'var(--surface3)'; btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text2)'; };
-  [dark, light, auto].forEach(off);
+  [dark, amoled, light, auto].forEach(off);
   if (choice === 'auto') on(auto);
   else if (choice === 'light') on(light);
+  else if (choice === 'amoled') on(amoled);
   else on(dark);
 }
 
@@ -10119,6 +10698,22 @@ if (navigator.storage && navigator.storage.persist) {
       ticking = false;
     });
   }, { passive: true });
+})();
+
+// ─── STICKY HEADER HEIGHT ──────────────────────────────────────
+// The tab nav sticks at `top: var(--hdr-h)` so it pins BELOW the sticky
+// header instead of covering it. Measure the real header height (it can
+// change when the Undo/Reset controls wrap, the profile switcher renders,
+// or the window resizes) and keep the CSS variable in sync.
+(function () {
+  const hdr = document.querySelector('header');
+  if (!hdr) return;
+  const setH = () => {
+    document.documentElement.style.setProperty('--hdr-h', hdr.offsetHeight + 'px');
+  };
+  setH();
+  if (window.ResizeObserver) new ResizeObserver(setH).observe(hdr);
+  else window.addEventListener('resize', setH);
 })();
 
 // ─── PULL-TO-REFRESH (touch devices) ───────────────────────────
