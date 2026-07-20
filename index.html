@@ -1608,7 +1608,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-20g</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-20k</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2661,6 +2661,14 @@
         </div>
 
         <div id="calcMainPanel">
+        <!-- History tape: past calculations, tap to reuse the result -->
+        <div id="calcTapeWrap" style="display:none; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div id="calcTape" style="flex:1; display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:3px; scrollbar-width:thin;"></div>
+            <button onclick="clearCalcTape()" title="Clear calculation history"
+              style="flex:0 0 auto; background:var(--surface2); border:1px solid var(--border2); color:var(--text3); border-radius:var(--radius-sm); font-size:11px; padding:5px 8px; cursor:pointer;">✕</button>
+          </div>
+        </div>
         <div id="calcDisplay" style="
           background:var(--surface2); border:1px solid var(--border);
           border-radius:var(--radius-sm); padding:12px 16px;
@@ -2677,6 +2685,10 @@
             autocorrect="off"
             style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all; outline:none; cursor:text; caret-color:var(--teal);"
           >0</div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin:-2px 0 8px;">
+          <button onclick="calcUseAsExpense()" title="Add the current result as a new row in Necessities &amp; Expenses"
+            style="background:var(--surface2); border:1px dashed var(--border2); color:var(--text2); border-radius:var(--radius-sm); font-size:11px; padding:5px 12px; cursor:pointer;">₱ Add as expense</button>
         </div>
         <div id="calcKbHint" style="display:none; font-size:10px; color:var(--text3); text-align:right; margin:-4px 0 8px;">&#9000; Keyboard ready &mdash; digits &middot; + &minus; &times; &divide; ^ % &middot; Enter = &middot; Esc AC &middot; Backspace &#9003;</div>
         <!-- 7-column scientific grid -->
@@ -2736,7 +2748,17 @@
         <!-- UNIT CONVERTER PANEL -->
         <div id="unitConvPanel" style="display:none;">
           <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">Conversion</div>
-          <div id="unitCatChips" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"></div>
+          <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:14px;">
+            <div style="flex:1; min-width:0;">
+              <div class="input-label" style="margin-bottom:5px;">From</div>
+              <select id="unitFromSel" class="conv-currency-select" onchange="onUnitSelChange()"></select>
+            </div>
+            <button class="conv-swap-btn" onclick="swapUnitDir()" title="Swap units">⇄</button>
+            <div style="flex:1; min-width:0;">
+              <div class="input-label" style="margin-bottom:5px;">To</div>
+              <select id="unitToSel" class="conv-currency-select" onchange="onUnitSelChange()"></select>
+            </div>
+          </div>
           <div class="input-block" style="margin-bottom:12px;">
             <label class="input-label" id="unitInputLabel">Kilograms (kg)</label>
             <div class="input-row" id="unitInputRow" style="border-color:var(--teal);">
@@ -2744,9 +2766,6 @@
               <input class="big-input" type="number" id="unitInput" placeholder="0" step="any" inputmode="decimal"
                 oninput="convertUnits()" style="color:var(--teal-text);">
             </div>
-          </div>
-          <div style="text-align:center; margin-bottom:12px;">
-            <button class="conv-swap-btn" onclick="swapUnitDir()" title="Swap conversion direction">⇅</button>
           </div>
           <div style="padding:14px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
             <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="unitResultLabel">Pounds (lb)</div>
@@ -2806,6 +2825,16 @@
           <div style="font-size:11px; color:var(--text3); margin-bottom:4px;" id="convResultLabel">Result (PHP)</div>
           <div style="font-family:'DM Mono',monospace; font-size:26px; font-weight:500; color:var(--amber-text);" id="convResult">₱—</div>
           <div style="font-size:11px; color:var(--text3); margin-top:6px; font-family:'DM Mono',monospace;" id="convRateNote">—</div>
+        </div>
+        <!-- Pinned multi-target: same amount in several currencies at once -->
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px;">📌 Also in</div>
+            <button id="convPinEditBtn" onclick="toggleConvPinEdit()"
+              style="background:var(--surface2); border:1px solid var(--border2); color:var(--text3); border-radius:var(--radius-sm); font-size:11px; padding:3px 10px; cursor:pointer;">Edit</button>
+          </div>
+          <div id="convPinEditRow" style="display:none; gap:6px; flex-wrap:wrap; margin-bottom:8px;"></div>
+          <div id="convPinnedGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
         </div>
         <!-- Quick amounts -->
         <div>
@@ -5512,6 +5541,7 @@ function calcEquals(chain = false) {
     if (!chain) {
       const exprEl = document.getElementById('calcExpr');
       if (exprEl) exprEl.textContent = calcPrev + ' × 10^' + calcCurrent + ' =';
+      if (str !== 'Error') pushCalcTape(calcPrev + ' × 10^' + calcCurrent, str);
       calcLastAns = parseFloat(str) || 0;
       calcOper = null; calcPrev = ''; calcJustEq = true;
     }
@@ -5534,7 +5564,10 @@ function calcEquals(chain = false) {
   if (!chain) {
     const exprEl = document.getElementById('calcExpr');
     if (exprEl) exprEl.textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
-    if (result !== 'Error' && result !== undefined) calcLastAns = parseFloat(str) || 0;
+    if (result !== 'Error' && result !== undefined) {
+      calcLastAns = parseFloat(str) || 0;
+      pushCalcTape(calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent, str);
+    }
     calcOper = null; calcPrev = ''; calcJustEq = true;
   }
   calcCurrent = str;
@@ -5552,6 +5585,81 @@ function calcParen(p) {
     const exprEl = document.getElementById('calcExpr');
     if (exprEl) exprEl.textContent = (exprEl.textContent || '') + ')';
   }
+}
+
+// ─── CALCULATOR HISTORY TAPE ──────────────────────────────────
+// Scrollable strip of past calculations above the display. Tap a chip to
+// put its result back on screen. Newest first, capped at 30, persisted.
+let calcTape = [];
+try {
+  calcTape = JSON.parse(localStorage.getItem('va_calc_tape') || '[]');
+  if (!Array.isArray(calcTape)) calcTape = [];
+} catch (e) { calcTape = []; }
+
+function pushCalcTape(expr, result) {
+  // Skip duplicates of the most recent entry (e.g. repeated = presses)
+  if (calcTape[0] && calcTape[0].e === expr && calcTape[0].r === result) return;
+  calcTape.unshift({ e: expr, r: result });
+  if (calcTape.length > 30) calcTape.length = 30;
+  try { localStorage.setItem('va_calc_tape', JSON.stringify(calcTape)); } catch (e) { /* non-critical */ }
+  renderCalcTape();
+}
+
+function renderCalcTape() {
+  const wrap = document.getElementById('calcTapeWrap');
+  const tape = document.getElementById('calcTape');
+  if (!wrap || !tape) return;
+  if (!calcTape.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  tape.innerHTML = calcTape.map((t, i) => `
+    <button type="button" onclick="calcTapeUse(${i})" title="Tap to reuse ${t.r}"
+      style="flex:0 0 auto; background:var(--surface2); border:1px solid var(--border); color:var(--text3); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:11px; padding:5px 10px; cursor:pointer; white-space:nowrap;">
+      ${t.e} = <span style="color:var(--teal-text); font-weight:500;">${t.r}</span>
+    </button>`).join('');
+  tape.scrollLeft = 0;
+}
+
+function calcTapeUse(i) {
+  const t = calcTape[i];
+  if (!t) return;
+  calcCurrent = String(t.r);
+  calcPrev    = '';
+  calcOper    = null;
+  calcJustEq  = true;
+  calcLastAns = parseFloat(t.r) || 0;
+  const exprEl = document.getElementById('calcExpr');
+  if (exprEl) exprEl.textContent = t.e + ' =';
+  calcRender();
+}
+
+function clearCalcTape() {
+  calcTape = [];
+  try { localStorage.removeItem('va_calc_tape'); } catch (e) { /* non-critical */ }
+  renderCalcTape();
+}
+
+// Add the current calculator result as a new Necessities & Expenses row,
+// pre-filled with the amount — then scroll there and focus the category
+// name so it just needs labeling.
+function calcUseAsExpense() {
+  const val = Math.abs(parseFloat(calcCurrent));
+  if (calcCurrent === 'Error' || isNaN(val) || val <= 0) {
+    showToast('Nothing to add — calculate an amount first', true);
+    return;
+  }
+  const amt = Math.round(val * 100) / 100;
+  necData.push({ cat: '', amt: amt, day: '', inst: false, instMode: 'per',
+    instFrom: new Date().getMonth(), instTo: new Date().getMonth() });
+  renderNec();
+  saveData();
+  if (typeof recalcAll === 'function') recalcAll();
+  const necTable = document.getElementById('necBody');
+  if (necTable) necTable.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => {
+    const all = document.querySelectorAll('.nec-cat-input');
+    if (all.length) all[all.length - 2].focus();
+  }, 350);
+  showToast('Added ₱' + amt.toLocaleString('en-PH', { maximumFractionDigits: 2 }) + ' — name the category');
 }
 
 // keyboard support
@@ -5593,22 +5701,64 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── UNIT CONVERTER (Units tab inside the calculator card) ────
-const UNIT_DEFS = {
-  weight:   { chip: '⚖️ kg ↔ lb',    a: { name: 'Kilograms (kg)',      sym: 'kg'   }, b: { name: 'Pounds (lb)',        sym: 'lb'   }, factor: 2.20462262185 },
-  distance: { chip: '📏 km ↔ mi',    a: { name: 'Kilometers (km)',     sym: 'km'   }, b: { name: 'Miles (mi)',         sym: 'mi'   }, factor: 0.62137119224 },
-  temp:     { chip: '🌡️ °C ↔ °F',   a: { name: 'Celsius (°C)',        sym: '°C'   }, b: { name: 'Fahrenheit (°F)',    sym: '°F'   },
-              toB: c => c * 9 / 5 + 32, toA: f => (f - 32) * 5 / 9,
-              noteAB: '°F = °C × 9⁄5 + 32', noteBA: '°C = (°F − 32) × 5⁄9' },
-  area:     { chip: '🏠 sqm ↔ sqft', a: { name: 'Square meters (sqm)', sym: 'sqm'  }, b: { name: 'Square feet (sqft)', sym: 'sqft' }, factor: 10.7639104167 },
-  // ── Recipe / kitchen measurements ──
-  ozg:      { chip: '🍳 oz ↔ g',     a: { name: 'Ounces (oz)',         sym: 'oz'   }, b: { name: 'Grams (g)',          sym: 'g'    }, factor: 28.349523125 },
-  flozml:   { chip: '🥤 fl oz ↔ ml', a: { name: 'Fluid ounces (fl oz)',sym: 'fl oz'}, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 29.5735295625 },
-  cupml:    { chip: '🥛 cup ↔ ml',   a: { name: 'US cups',             sym: 'cup'  }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 236.5882365 },
-  tbspml:   { chip: '🥄 tbsp ↔ ml',  a: { name: 'Tablespoons (tbsp)',  sym: 'tbsp' }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 14.78676478 },
-  tspml:    { chip: '🫖 tsp ↔ ml',   a: { name: 'Teaspoons (tsp)',     sym: 'tsp'  }, b: { name: 'Milliliters (ml)',   sym: 'ml'   }, factor: 4.92892159 },
+// Each category lists units with a factor `f` = how many BASE units one of
+// this unit equals (base: g, m, sqm, ml). Any unit converts to any other in
+// the same category via  value × from.f ÷ to.f.  Temperature is the odd one
+// out and uses toBase/fromBase functions (base = °C).
+const UNIT_CATS = {
+  weight: { label: '⚖️ Weight / Mass', from: 'kg', to: 'lb', units: {
+    mg:  { name: 'Milligrams (mg)',  sym: 'mg',  f: 0.001 },
+    g:   { name: 'Grams (g)',        sym: 'g',   f: 1 },
+    kg:  { name: 'Kilograms (kg)',   sym: 'kg',  f: 1000 },
+    t:   { name: 'Metric tons (t)',  sym: 't',   f: 1e6 },
+    oz:  { name: 'Ounces (oz)',      sym: 'oz',  f: 28.349523125 },
+    lb:  { name: 'Pounds (lb)',      sym: 'lb',  f: 453.59237 },
+    st:  { name: 'Stones (st)',      sym: 'st',  f: 6350.29318 },
+  }},
+  length: { label: '📏 Length / Distance', from: 'km', to: 'mi', units: {
+    mm:  { name: 'Millimeters (mm)', sym: 'mm',  f: 0.001 },
+    cm:  { name: 'Centimeters (cm)', sym: 'cm',  f: 0.01 },
+    m:   { name: 'Meters (m)',       sym: 'm',   f: 1 },
+    km:  { name: 'Kilometers (km)',  sym: 'km',  f: 1000 },
+    inch:{ name: 'Inches (in)',      sym: 'in',  f: 0.0254 },
+    ft:  { name: 'Feet (ft)',        sym: 'ft',  f: 0.3048 },
+    yd:  { name: 'Yards (yd)',       sym: 'yd',  f: 0.9144 },
+    mi:  { name: 'Miles (mi)',       sym: 'mi',  f: 1609.344 },
+  }},
+  temp: { label: '🌡️ Temperature', from: 'c', to: 'f', units: {
+    c: { name: 'Celsius (°C)',    sym: '°C', toBase: v => v,                fromBase: v => v },
+    f: { name: 'Fahrenheit (°F)', sym: '°F', toBase: v => (v - 32) * 5 / 9, fromBase: v => v * 9 / 5 + 32 },
+    k: { name: 'Kelvin (K)',      sym: 'K',  toBase: v => v - 273.15,       fromBase: v => v + 273.15 },
+  }},
+  area: { label: '🏠 Area', from: 'sqm', to: 'sqft', units: {
+    sqcm: { name: 'Square centimeters (sqcm)', sym: 'sqcm', f: 0.0001 },
+    sqm:  { name: 'Square meters (sqm)',       sym: 'sqm',  f: 1 },
+    sqft: { name: 'Square feet (sqft)',        sym: 'sqft', f: 0.09290304 },
+    sqyd: { name: 'Square yards (sqyd)',       sym: 'sqyd', f: 0.83612736 },
+    ha:   { name: 'Hectares (ha)',             sym: 'ha',   f: 10000 },
+    ac:   { name: 'Acres (ac)',                sym: 'ac',   f: 4046.8564224 },
+    sqkm: { name: 'Square kilometers (sqkm)',  sym: 'sqkm', f: 1e6 },
+    sqmi: { name: 'Square miles (sqmi)',       sym: 'sqmi', f: 2589988.110336 },
+  }},
+  volume: { label: '🍳 Volume / Kitchen', from: 'cup', to: 'ml', units: {
+    ml:   { name: 'Milliliters (ml)',        sym: 'ml',    f: 1 },
+    l:    { name: 'Liters (l)',              sym: 'l',     f: 1000 },
+    tsp:  { name: 'Teaspoons (tsp)',         sym: 'tsp',   f: 4.92892159 },
+    tbsp: { name: 'Tablespoons (tbsp)',      sym: 'tbsp',  f: 14.78676478 },
+    floz: { name: 'Fluid ounces (fl oz)',    sym: 'fl oz', f: 29.5735295625 },
+    cup:  { name: 'US cups',                 sym: 'cup',   f: 236.5882365 },
+    pt:   { name: 'US pints (pt)',           sym: 'pt',    f: 473.176473 },
+    qt:   { name: 'US quarts (qt)',          sym: 'qt',    f: 946.352946 },
+    gal:  { name: 'US gallons (gal)',        sym: 'gal',   f: 3785.411784 },
+  }},
 };
-let unitCat = 'weight';   // which conversion pair is active
-let unitRev = false;      // false = a→b, true = b→a
+// Temperature relation notes (from>to). Same-unit pairs fall through to 1:1.
+const TEMP_NOTES = {
+  'c>f': '°F = °C × 9⁄5 + 32',            'f>c': '°C = (°F − 32) × 5⁄9',
+  'c>k': 'K = °C + 273.15',               'k>c': '°C = K − 273.15',
+  'f>k': 'K = (°F − 32) × 5⁄9 + 273.15',  'k>f': '°F = (K − 273.15) × 9⁄5 + 32',
+};
+let unitFrom = 'kg', unitTo = 'lb';
 
 function setCalcCardMode(mode) {
   const calcPanel  = document.getElementById('calcMainPanel');
@@ -5622,45 +5772,89 @@ function setCalcCardMode(mode) {
   if (calcBtn) calcBtn.classList.toggle('active', !units);
   if (unitBtn) unitBtn.classList.toggle('active', units);
   if (units) {
-    renderUnitCatChips();
+    initUnitSelectors();
     updateUnitLabels();
     const inp = document.getElementById('unitInput');
     if (inp) setTimeout(() => inp.focus(), 40);
   }
 }
 
-function renderUnitCatChips() {
-  const c = document.getElementById('unitCatChips');
-  if (!c) return;
-  c.innerHTML = Object.keys(UNIT_DEFS).map(key => `
-    <button type="button" class="split-chip${key === unitCat ? ' active' : ''}"
-      onclick="setUnitCat('${key}')">${UNIT_DEFS[key].chip}</button>
-  `).join('');
+// Both From and To dropdowns are one flat list of every unit — no category
+// grouping. Any pair converts if the quantities are compatible; weight and
+// volume bridge through water density (1 g = 1 ml), so ml → g works. Truly
+// incompatible pairs (e.g. km → °C) show a "can't convert" note instead.
+let unitSelReady = false;
+
+function unitCatOf(key) {
+  for (const c in UNIT_CATS) if (UNIT_CATS[c].units[key]) return c;
+  return null;
+}
+function unitDef(key) {
+  const c = unitCatOf(key);
+  return c ? UNIT_CATS[c].units[key] : null;
 }
 
-function setUnitCat(key) {
-  if (!UNIT_DEFS[key]) return;
-  unitCat = key;
-  unitRev = false;
-  renderUnitCatChips();
+function initUnitSelectors() {
+  const from = document.getElementById('unitFromSel');
+  const to   = document.getElementById('unitToSel');
+  if (!from || !to) return;
+  if (!unitSelReady) {
+    // Restore last-used selection, if any (accepts the older {cat,from,to} shape too)
+    try {
+      const saved = JSON.parse(localStorage.getItem('va_unit_sel') || 'null');
+      if (saved) {
+        if (unitDef(saved.from)) unitFrom = saved.from;
+        if (unitDef(saved.to))   unitTo   = saved.to;
+      }
+    } catch (e) { /* ignore corrupt saved state */ }
+    const opts = Object.keys(UNIT_CATS).map(cat =>
+      Object.keys(UNIT_CATS[cat].units).map(key =>
+        `<option value="${key}">${UNIT_CATS[cat].units[key].name}</option>`
+      ).join('')
+    ).join('');
+    from.innerHTML = opts;
+    to.innerHTML   = opts;
+    unitSelReady = true;
+  }
+  from.value = unitFrom;
+  to.value   = unitTo;
+}
+
+function onUnitSelChange() {
+  const from = document.getElementById('unitFromSel');
+  const to   = document.getElementById('unitToSel');
+  if (!from || !to) return;
+  unitFrom = from.value;
+  unitTo   = to.value;
   updateUnitLabels();
 }
 
 function swapUnitDir() {
-  unitRev = !unitRev;
+  const tmp = unitFrom; unitFrom = unitTo; unitTo = tmp;
+  const from = document.getElementById('unitFromSel');
+  const to   = document.getElementById('unitToSel');
+  if (from) from.value = unitFrom;
+  if (to)   to.value   = unitTo;
   updateUnitLabels();
 }
 
+function saveUnitSel() {
+  try {
+    localStorage.setItem('va_unit_sel', JSON.stringify({ from: unitFrom, to: unitTo }));
+  } catch (e) { /* storage full/blocked — non-critical */ }
+}
+
 function updateUnitLabels() {
-  const def  = UNIT_DEFS[unitCat];
-  const from = unitRev ? def.b : def.a;
-  const to   = unitRev ? def.a : def.b;
-  const lbl  = document.getElementById('unitInputLabel');
-  const pre  = document.getElementById('unitInputPrefix');
-  const rl   = document.getElementById('unitResultLabel');
+  const from = unitDef(unitFrom);
+  const to   = unitDef(unitTo);
+  if (!from || !to) return;
+  const lbl = document.getElementById('unitInputLabel');
+  const pre = document.getElementById('unitInputPrefix');
+  const rl  = document.getElementById('unitResultLabel');
   if (lbl) lbl.textContent = from.name;
   if (pre) pre.textContent = from.sym;
   if (rl)  rl.textContent  = to.name;
+  saveUnitSel();
   convertUnits();
 }
 
@@ -5672,34 +5866,48 @@ function fmtUnit(v) {
 }
 
 function convertUnits() {
-  const def   = UNIT_DEFS[unitCat];
-  const inp   = document.getElementById('unitInput');
-  const out   = document.getElementById('unitResult');
-  const note  = document.getElementById('unitRateNote');
+  const inp  = document.getElementById('unitInput');
+  const out  = document.getElementById('unitResult');
+  const note = document.getElementById('unitRateNote');
   if (!inp || !out) return;
-  const toSym = (unitRev ? def.a : def.b).sym;
+  const catF = unitCatOf(unitFrom), catT = unitCatOf(unitTo);
+  const from = unitDef(unitFrom),   to   = unitDef(unitTo);
+  if (!from || !to) return;
 
-  // Rate/formula note is direction-aware
+  const sameCat = catF === catT;
+  const isTemp  = sameCat && catF === 'temp';
+  // Weight ↔ volume bridges through water density: 1 ml of water = 1 g,
+  // and both categories already share the same base scale (g and ml).
+  const bridge  = !sameCat &&
+    ((catF === 'weight' && catT === 'volume') || (catF === 'volume' && catT === 'weight'));
+
+  // Incompatible quantities (e.g. km → °C): explain instead of converting
+  if (!sameCat && !bridge) {
+    out.textContent = '—';
+    if (note) note.textContent = "Can't convert " + from.sym + ' → ' + to.sym + ' (different quantities)';
+    return;
+  }
+
+  // Rate/formula note for the selected pair
   if (note) {
-    if (def.factor !== undefined) {
-      note.textContent = unitRev
-        ? '1 ' + def.b.sym + ' = ' + fmtUnit(1 / def.factor) + ' ' + def.a.sym
-        : '1 ' + def.a.sym + ' = ' + fmtUnit(def.factor) + ' ' + def.b.sym;
+    if (unitFrom === unitTo) {
+      note.textContent = '1 ' + from.sym + ' = 1 ' + to.sym;
+    } else if (isTemp) {
+      note.textContent = TEMP_NOTES[unitFrom + '>' + unitTo] || '';
+    } else if (bridge) {
+      note.textContent = '1 ' + from.sym + ' ≈ ' + fmtUnit(from.f / to.f) + ' ' + to.sym + ' · assumes water (1 g = 1 ml)';
     } else {
-      note.textContent = unitRev ? def.noteBA : def.noteAB;
+      note.textContent = '1 ' + from.sym + ' = ' + fmtUnit(from.f / to.f) + ' ' + to.sym;
     }
   }
 
   const raw = parseFloat(inp.value);
   if (inp.value === '' || isNaN(raw)) { out.textContent = '—'; return; }
 
-  let result;
-  if (def.factor !== undefined) {
-    result = unitRev ? raw / def.factor : raw * def.factor;
-  } else {
-    result = unitRev ? def.toA(raw) : def.toB(raw);
-  }
-  out.textContent = fmtUnit(result) + ' ' + toSym;
+  const result = isTemp
+    ? to.fromBase(from.toBase(raw))   // via °C
+    : raw * from.f / to.f;            // via base unit (g / m / sqm / ml; g↔ml are 1:1)
+  out.textContent = (bridge ? '≈ ' : '') + fmtUnit(result) + ' ' + to.sym;
 }
 
 // ─── TOAST ────────────────────────────────────────────────────
@@ -7741,19 +7949,23 @@ function updateStreakBadge() {
 }
 
 // ─── 3-MONTH EXPENSE FORECAST ─────────────────────────────────
-// Projects fixed commitments (necessities + subscriptions + installments)
-// forward, respecting necessities-installment month ranges and Plan-page
-// installment remaining-months counters, so months where a payment drops
-// off show up with a green "less" note.
-function forecastMonthCommitted(offset) { // offset 0 = current month
+// Two modes:
+//  • instOnly=true  (the "Fixed expenses — next 3 months" display): counts
+//    ONLY installments — necessities rows flagged as installments (within
+//    their month range) plus Plan-page installments. Regular necessities
+//    and subscriptions are excluded, since they don't change month to month.
+//  • instOnly=false (default; used by free-to-spend / wishlist math): full
+//    committed total — necessities + subscriptions + installments.
+function forecastMonthCommitted(offset, instOnly = false) { // offset 0 = current month
   const now = new Date();
   const mo  = (now.getMonth() + offset) % 12;
-  let total = getSubsSum();
+  let total = instOnly ? 0 : getSubsSum();
 
   necData.forEach(row => {
     if (!isInc(row)) return;
     const base = necRowBase(row);
     if (!base) return;
+    if (instOnly && !row.inst) return;                                  // non-installments don't count here
     if (row.inst && !monthInInstRange(mo, row.instFrom, row.instTo)) return;
     total += base;
   });
@@ -7776,7 +7988,7 @@ function updateExpenseForecast() {
   if (!wrap || !rowsEl) return;
 
   const months = [];
-  for (let k = 0; k <= 3; k++) months.push(forecastMonthCommitted(k));
+  for (let k = 0; k <= 3; k++) months.push(forecastMonthCommitted(k, true)); // installments only
 
   if (!months.some(v => v > 0.005)) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
@@ -8027,6 +8239,7 @@ function convertCurrency() {
   if (!fromRate || !toRate || fromRate <= 0) {
     resultEl.textContent = '—';
     if (rateEl) rateEl.textContent = 'Exchange rate loading…';
+    renderConvPins();
     return;
   }
 
@@ -8039,6 +8252,8 @@ function convertCurrency() {
 
   // Rate note: 1 FROM = X TO
   if (rateEl) rateEl.textContent = `1 ${convFrom} = ${convFormat(crossRate, convTo)}`;
+
+  renderConvPins();
 }
 
 function updateConvQuickBtns() {
@@ -8052,6 +8267,83 @@ function updateConvQuickBtns() {
       ${sym}${a.toLocaleString()}
     </button>
   `).join('');
+}
+
+// ─── PINNED MULTI-TARGET CURRENCIES ──────────────────────────
+// Shows the entered amount in several pinned currencies at once, so you
+// don't have to flip the To dropdown. Pins persist in va_conv_pins.
+let convPins = ['USD', 'PHP', 'JPY', 'EUR'];
+try {
+  const savedPins = JSON.parse(localStorage.getItem('va_conv_pins') || 'null');
+  if (Array.isArray(savedPins) && savedPins.length) {
+    convPins = savedPins.filter(c => CURRENCY_META[c]);
+  }
+} catch (e) { /* keep defaults */ }
+
+function saveConvPins() {
+  try { localStorage.setItem('va_conv_pins', JSON.stringify(convPins)); } catch (e) { /* non-critical */ }
+}
+
+function toggleConvPin(code) {
+  const i = convPins.indexOf(code);
+  if (i >= 0) convPins.splice(i, 1);
+  else {
+    if (convPins.length >= 6) { showToast('Up to 6 pinned currencies', true); return; }
+    convPins.push(code);
+  }
+  saveConvPins();
+  renderConvPinEdit();
+  renderConvPins();
+}
+
+function toggleConvPinEdit() {
+  const row = document.getElementById('convPinEditRow');
+  const btn = document.getElementById('convPinEditBtn');
+  if (!row) return;
+  const open = row.style.display === 'none';
+  row.style.display = open ? 'flex' : 'none';
+  if (btn) btn.textContent = open ? 'Done' : 'Edit';
+  if (open) renderConvPinEdit();
+}
+
+function renderConvPinEdit() {
+  const row = document.getElementById('convPinEditRow');
+  if (!row) return;
+  row.innerHTML = Object.keys(CURRENCY_META).map(code => {
+    const on = convPins.includes(code);
+    return `<button type="button" class="split-chip${on ? ' active' : ''}" onclick="toggleConvPin('${code}')">${convSymbol(code)} ${code}</button>`;
+  }).join('');
+}
+
+function renderConvPins() {
+  const grid = document.getElementById('convPinnedGrid');
+  if (!grid) return;
+  const shown = convPins.filter(c => c !== convFrom);
+  if (!shown.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--text3); text-align:center; padding:8px;">No pinned currencies — tap Edit to pick some.</div>';
+    return;
+  }
+  const input    = parseFloat(document.getElementById('convInput')?.value) || 0;
+  const fromRate = fxRates[convFrom];
+  grid.innerHTML = shown.map(code => {
+    const toRate = fxRates[code];
+    let valTxt = '—', rateTxt = '';
+    if (fromRate > 0 && toRate > 0) {
+      const cross = toRate / fromRate;
+      valTxt  = input > 0 ? convFormat(input * cross, code) : convSymbol(code) + '—';
+      rateTxt = '1 ' + convFrom + ' = ' + convFormat(cross, code);
+    } else {
+      rateTxt = 'rate loading…';
+    }
+    return `
+      <div style="padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+          <span style="font-size:11px; color:var(--text3);">${code} · ${(CURRENCY_META[code] || {}).name || ''}</span>
+        </div>
+        <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--amber-text); margin-top:2px;">${valTxt}</div>
+        <div style="font-size:10px; color:var(--text3); font-family:'DM Mono',monospace; margin-top:2px;">${rateTxt}</div>
+      </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -8768,6 +9060,7 @@ loadPlanData();
 renderDebts(); // debts section now lives on the Expenses page — render at startup
 setTimeout(drawChart, 200);
 updateConverter();
+renderCalcTape();
 
 // ─── NEW FEATURE INIT ─────────────────────────────────────────
 loadBillChecks();
