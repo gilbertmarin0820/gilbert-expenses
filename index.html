@@ -456,6 +456,22 @@
   .whatif-sav-amt { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
   .whatif-sav-amt .nec-amt-input { width: 110px; }
 
+  /* "What If" planned-purchase rows, with installment mode (Plan tab) */
+  .whatif-buy-row { padding: 10px 12px; background: var(--surface3); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 8px; }
+  .whatif-buy-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .whatif-buy-top .nec-cat-input { flex: 1; min-width: 0; }
+  .whatif-buy-mid { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .whatif-buy-amt { display: flex; align-items: center; gap: 4px; }
+  .whatif-buy-amt .nec-amt-input { width: 120px; }
+  .whatif-buy-amtlabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+  .whatif-buy-chips { display: flex; gap: 6px; margin-left: auto; }
+  .whatif-buy-inst { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
+  .whatif-buy-field { display: flex; flex-direction: column; gap: 4px; }
+  .whatif-buy-field > span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .whatif-buy-field .nec-day-input { width: 70px; }
+  .whatif-buy-month { height: 36px; font-size: 13px; width: 132px; }
+  .whatif-buy-summary { margin-top: 8px; font-size: 12px; color: var(--text3); line-height: 1.5; padding: 6px 10px; background: var(--surface2); border-radius: var(--radius-sm); }
+
   /* PAY DAY input */
   .nec-day-input {
     background: var(--surface2); border: 1px solid transparent;
@@ -1614,7 +1630,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-21d</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-21e</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3133,7 +3149,7 @@
       <!-- PLANNED PURCHASES (What-If only — never touches your net summary) -->
       <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
         <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:4px;">🛒 Planned purchases <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(What-If only)</span></div>
-        <div style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5;">Things you're thinking of buying in this range. They're subtracted from the total below, but stay out of your Financial Health and net summary.</div>
+        <div style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5;">Things you're thinking of buying in this range. Flag one as an <strong>installment</strong> to spread it over months — only the payments landing inside your What-If dates are subtracted. Everything here stays out of your Financial Health and net summary.</div>
         <div id="whatifBuyContainer"></div>
         <button class="add-btn" onclick="addWhatifBuy()">+ Add purchase</button>
         <div class="nb-row" style="margin-top:10px;"><span class="nb-label">Planned purchases total</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifBuyTotal">₱0.00</span></div>
@@ -3817,6 +3833,7 @@ function calcWhatif() {
   // Financial Health tiles or the net summary.
   const updateWhatifSavUI = (netPHP, netKnown) => {
     const savTotal = whatifCurrentSavings();
+    refreshWhatifBuyRows();               // keep in-range counts current with the dates
     const buyTotal = whatifBuySum();
     set('whatifSavTotal', fPHP(savTotal));
     set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
@@ -3914,8 +3931,110 @@ function whatifCurrentSavings() {
   return 0;
 }
 
+// Default installment start = the current month (What-If windows usually
+// start now). Format matches <input type="month"> → "YYYY-MM".
+function whatifBuyDefaultYM() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+// The What-If From/To range as absolute month indices (year*12+month), used
+// to count how many of an installment's monthly payments fall inside the
+// window. Returns null when the dates aren't set / are invalid.
+function whatifRangeMonths() {
+  const fEl = document.getElementById('whatifFrom');
+  const tEl = document.getElementById('whatifTo');
+  if (!fEl || !tEl || !fEl.value || !tEl.value) return null;
+  const f = new Date(fEl.value + 'T00:00:00');
+  const t = new Date(tEl.value + 'T00:00:00');
+  if (isNaN(f) || isNaN(t) || t < f) return null;
+  return { from: f.getFullYear() * 12 + f.getMonth(), to: t.getFullYear() * 12 + t.getMonth() };
+}
+
+function whatifAbsMonthLabel(abs) {
+  if (abs == null) return '';
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[((abs % 12) + 12) % 12] + ' ' + Math.floor(abs / 12);
+}
+
+// Numbers for one planned-purchase item.
+// One-off:  counted = full amount.
+// Installment: mode 'per' → typed amount is charged every month;
+//              mode 'total' → typed amount is the whole thing, split evenly.
+// counted = per-month × (payments landing inside the What-If range). When the
+// range or start month isn't set yet, all months count (falls back to full).
+function whatifBuyCalc(it) {
+  const amt = parseFloat(it.amt) || 0;
+  if (!it.inst) return { inst: false, perMonth: amt, total: amt, span: 1, startAbs: null, endAbs: null, inRangeMonths: 1, counted: amt };
+  const span = Math.max(1, parseInt(it.months) || 1);
+  const perMonth = it.mode === 'total' ? amt / span : amt;
+  const total    = it.mode === 'total' ? amt : amt * span;
+  let startAbs = null;
+  if (it.startYM && /^\d{4}-\d{2}$/.test(it.startYM)) {
+    const p = it.startYM.split('-');
+    startAbs = (parseInt(p[0], 10)) * 12 + (parseInt(p[1], 10) - 1);
+  }
+  const endAbs = startAbs != null ? startAbs + span - 1 : null;
+  const rng = whatifRangeMonths();
+  let inRangeMonths = span; // no range / no start → count them all
+  if (rng && startAbs != null) {
+    inRangeMonths = 0;
+    for (let i = 0; i < span; i++) {
+      const m = startAbs + i;
+      if (m >= rng.from && m <= rng.to) inRangeMonths++;
+    }
+  }
+  return { inst: true, perMonth, total, span, startAbs, endAbs, inRangeMonths, counted: perMonth * inRangeMonths };
+}
+
 function whatifBuySum() {
-  return whatifBuy.reduce((s, it) => s + (parseFloat(it.amt) || 0), 0);
+  return whatifBuy.reduce((s, it) => s + whatifBuyCalc(it).counted, 0);
+}
+
+// The little grey recap under an installment item.
+function whatifBuySummaryHTML(it) {
+  const calc = whatifBuyCalc(it);
+  if (!calc.inst) return '';
+  const range = calc.startAbs != null
+    ? whatifAbsMonthLabel(calc.startAbs) + ' – ' + whatifAbsMonthLabel(calc.endAbs)
+    : 'pick a start month';
+  const rng = whatifRangeMonths();
+  let note = '';
+  if (calc.startAbs == null) {
+    note = '';
+  } else if (!rng) {
+    note = 'set the What-If dates above to count only in-range payments';
+  } else {
+    note = calc.inRangeMonths + ' of ' + calc.span + ' month' + (calc.span === 1 ? '' : 's')
+         + ' in this range → ' + fPHP(calc.counted) + ' counted';
+  }
+  return fPHP(calc.perMonth) + '/mo · ' + fPHP(calc.total) + ' total · ' + range
+       + (note ? '<br>' + note : '');
+}
+
+// Refresh just one row's summary (used on typing, so inputs keep focus).
+function updateWhatifBuyRow(i) {
+  const el = document.getElementById('whatifBuySum-' + i);
+  if (el && whatifBuy[i]) el.innerHTML = whatifBuySummaryHTML(whatifBuy[i]);
+}
+// Refresh all summaries — called when the What-If date range changes.
+function refreshWhatifBuyRows() {
+  whatifBuy.forEach((_, i) => updateWhatifBuyRow(i));
+}
+
+// Toggle one item between one-off and installment.
+function setWhatifBuyInst(i, on) {
+  const it = whatifBuy[i];
+  if (!it) return;
+  it.inst = on;
+  if (on) {
+    if (it.mode == null) it.mode = 'per';
+    if (it.months == null || it.months === '') it.months = '6';
+    if (!it.startYM) it.startYM = whatifBuyDefaultYM();
+  }
+  renderWhatifBuy();
+  calcWhatif();
+  saveWhatif();
 }
 
 function renderWhatifBuy() {
@@ -3923,21 +4042,50 @@ function renderWhatifBuy() {
   if (!c) return;
   c.innerHTML = '';
   whatifBuy.forEach((it, i) => {
+    const isInst = !!it.inst;
+    const amtLabel = isInst ? (it.mode === 'total' ? 'Total (split)' : 'Per month') : 'Amount';
     const div = document.createElement('div');
-    div.className = 'whatif-sav-row';
+    div.className = 'whatif-buy-row';
     div.innerHTML =
-      '<input class="nec-cat-input" value="' + escH(it.label || '') + '" placeholder="e.g. new phone, trip, laptop" ' +
-        'oninput="whatifBuy[' + i + '].label=this.value; saveWhatif()">' +
-      '<div class="whatif-sav-amt"><span style="font-size:12px;color:var(--text3);">₱</span>' +
-        '<input class="nec-amt-input" type="number" value="' + (it.amt != null ? it.amt : '') + '" placeholder="0.00" min="0" step="0.01" ' +
-          'oninput="whatifBuy[' + i + '].amt=this.value; calcWhatif(); saveWhatif()"></div>' +
-      '<button class="del-btn" onclick="whatifBuy.splice(' + i + ',1); renderWhatifBuy(); calcWhatif(); saveWhatif()">✕</button>';
+      '<div class="whatif-buy-top">' +
+        '<input class="nec-cat-input" value="' + escH(it.label || '') + '" placeholder="e.g. new phone, trip, laptop" ' +
+          'oninput="whatifBuy[' + i + '].label=this.value; saveWhatif()">' +
+        '<button class="del-btn" onclick="whatifBuy.splice(' + i + ',1); renderWhatifBuy(); calcWhatif(); saveWhatif()">✕</button>' +
+      '</div>' +
+      '<div class="whatif-buy-mid">' +
+        '<div class="whatif-buy-amt">' +
+          '<span class="whatif-buy-amtlabel">' + amtLabel + '</span>' +
+          '<span style="font-size:12px;color:var(--text3);">₱</span>' +
+          '<input class="nec-amt-input" type="number" value="' + (it.amt != null ? it.amt : '') + '" placeholder="0.00" min="0" step="0.01" ' +
+            'oninput="whatifBuy[' + i + '].amt=this.value; updateWhatifBuyRow(' + i + '); calcWhatif(); saveWhatif()"></div>' +
+        '<div class="whatif-buy-chips">' +
+          '<button type="button" class="split-chip' + (!isInst ? ' active' : '') + '" onclick="setWhatifBuyInst(' + i + ', false)">One-off</button>' +
+          '<button type="button" class="split-chip' + (isInst ? ' active' : '') + '" onclick="setWhatifBuyInst(' + i + ', true)">📅 Installment</button>' +
+        '</div>' +
+      '</div>' +
+      (isInst ?
+      '<div class="whatif-buy-inst">' +
+        '<div class="whatif-buy-field"><span>Amount is</span>' +
+          '<select class="nec-inst-select" ' +
+            'onchange="whatifBuy[' + i + '].mode=this.value; renderWhatifBuy(); calcWhatif(); saveWhatif()">' +
+            '<option value="per"' + (it.mode !== 'total' ? ' selected' : '') + '>Per month</option>' +
+            '<option value="total"' + (it.mode === 'total' ? ' selected' : '') + '>Total — split</option>' +
+          '</select></div>' +
+        '<div class="whatif-buy-field"><span>Months</span>' +
+          '<input class="nec-day-input" type="number" min="1" step="1" placeholder="6" value="' + escH(it.months != null ? it.months : '') + '" ' +
+            'oninput="whatifBuy[' + i + '].months=this.value; updateWhatifBuyRow(' + i + '); calcWhatif(); saveWhatif()"></div>' +
+        '<div class="whatif-buy-field"><span>Starting</span>' +
+          '<input class="nec-cat-input whatif-buy-month" type="month" value="' + escH(it.startYM || '') + '" ' +
+            'oninput="whatifBuy[' + i + '].startYM=this.value; updateWhatifBuyRow(' + i + '); calcWhatif(); saveWhatif()"></div>' +
+      '</div>' +
+      '<div class="whatif-buy-summary" id="whatifBuySum-' + i + '">' + whatifBuySummaryHTML(it) + '</div>'
+      : '');
     c.appendChild(div);
   });
 }
 
 function addWhatifBuy() {
-  whatifBuy.push({ label: '', amt: '' });
+  whatifBuy.push({ label: '', amt: '', inst: false });
   renderWhatifBuy();
   calcWhatif();
   saveWhatif();
