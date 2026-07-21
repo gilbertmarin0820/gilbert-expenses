@@ -450,6 +450,12 @@
   }
   .nec-amt-input:focus { outline: none; border-color: var(--red); background: var(--surface3); }
 
+  /* "What If" current-savings rows (Plan tab) */
+  .whatif-sav-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .whatif-sav-row .nec-cat-input { flex: 1; min-width: 0; }
+  .whatif-sav-amt { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .whatif-sav-amt .nec-amt-input { width: 110px; }
+
   /* PAY DAY input */
   .nec-day-input {
     background: var(--surface2); border: 1px solid transparent;
@@ -1608,7 +1614,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-20k</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-21d</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2023,104 +2029,6 @@
     </div>
   </div>
 
-  <!-- WHAT IF DATE RANGE PROJECTION -->
-  <div>
-    <div class="section-title">💡 "What If" Date Range</div>
-    <div class="card">
-      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        See how a different rate would change your income over a specific date range — at the live exchange rate, without touching your actual settings. Counts Mon–Fri as working days. Leave rate or hours blank to use your current settings.
-      </div>
-      <div class="whatif-inputs" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
-        <div class="input-block" style="flex:1; min-width:140px;">
-          <label class="input-label">Hypothetical rate (USD/hr)</label>
-          <div class="input-row" style="border-color:var(--purple);">
-            <div class="input-prefix" style="color:var(--purple-text);">$ / hr</div>
-            <input class="big-input" type="number" id="whatifRate" placeholder="4.50" min="0" step="0.25"
-              inputmode="decimal" oninput="calcWhatif()" style="color:var(--purple-text);">
-          </div>
-        </div>
-        <div class="input-block" style="min-width:120px;">
-          <label class="input-label">Daily hours</label>
-          <div class="input-row" style="border-color:var(--purple);">
-            <div class="input-prefix" style="color:var(--purple-text);">hrs</div>
-            <input class="big-input" type="number" id="whatifHours" placeholder="8" min="0" max="24" step="0.5"
-              inputmode="decimal" oninput="calcWhatif()" style="color:var(--purple-text);">
-          </div>
-        </div>
-        <div class="input-block" style="flex:1; min-width:140px;">
-          <label class="input-label">From</label>
-          <div class="input-row" style="border-color:var(--purple);">
-            <input class="big-input" type="date" id="whatifFrom" oninput="calcWhatif()" style="color:var(--purple-text);">
-          </div>
-        </div>
-        <div class="input-block" style="flex:1; min-width:140px;">
-          <label class="input-label">To</label>
-          <div class="input-row" style="border-color:var(--purple);">
-            <input class="big-input" type="date" id="whatifTo" oninput="calcWhatif()" style="color:var(--purple-text);">
-          </div>
-        </div>
-        <div class="input-block" style="min-width:100px;">
-          <label class="input-label">Tax rate (%)</label>
-          <div class="input-row" style="border-color:var(--purple);">
-            <div class="input-prefix" style="color:var(--purple-text);">%</div>
-            <input class="big-input" type="number" id="whatifTax" placeholder="15" min="0" max="50" step="1"
-              inputmode="decimal" oninput="calcWhatif()" style="color:var(--purple-text);">
-          </div>
-        </div>
-      </div>
-      <!-- Results grid -->
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px;" id="whatifResults">
-        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Working days</div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifDays">—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifDaysSub">—</div>
-        </div>
-        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per day <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifPerDay">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifPerDayUSD">$—</div>
-        </div>
-        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Total tax</div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--red-text);" id="whatifTaxTotal">−₱—</div>
-          <div style="font-size:11px; color:var(--red-text); margin-top:2px;" id="whatifTaxTotalUSD">−$—</div>
-        </div>
-        <div style="padding:12px 14px; background:var(--purple-dim); border-radius:var(--radius-sm); border:1px solid var(--purple);">
-          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Range total <span style="color:var(--green-text);">(net)</span></div>
-          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifNet">₱—</div>
-          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifNetUSD">$—</div>
-        </div>
-      </div>
-
-      <!-- TAX BREAKDOWN — gross → tax deducted → net (for the selected range) -->
-      <div id="whatifTaxBreakdown" style="display:block; padding:12px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
-        <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">Range tax breakdown</div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div style="text-align:center;">
-            <div style="font-size:10px; color:var(--text3); margin-bottom:3px;">Gross</div>
-            <div style="font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--text);" id="whatifGross">$—</div>
-            <div style="font-size:11px; color:var(--text3);" id="whatifGrossPHP">₱—</div>
-          </div>
-          <div style="color:var(--red-text); font-size:18px; font-weight:300;">−</div>
-          <div style="text-align:center;">
-            <div style="font-size:10px; color:var(--text3); margin-bottom:3px;" id="whatifTaxLabel">Tax (15%)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--red-text);" id="whatifTaxAmt">$—</div>
-            <div style="font-size:11px; color:var(--red-text);" id="whatifTaxAmtPHP">₱—</div>
-          </div>
-          <div style="color:var(--text3); font-size:18px; font-weight:300;">=</div>
-          <div style="text-align:center; flex:1;">
-            <div style="font-size:10px; color:var(--green-text); margin-bottom:3px;">Net (take-home)</div>
-            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--green-text);" id="whatifNetBD">$—</div>
-            <div style="font-size:11px; color:var(--green-text);" id="whatifNetBDPHP">₱—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- calculation basis -->
-      <div id="whatifDelta" style="margin-top:4px; font-size:12px; color:var(--text3); text-align:center;"></div>
-    </div>
-  </div>
-
   <!-- SALARY HISTORY LOG -->
   <div>
     <div class="section-title">Salary History</div>
@@ -2321,10 +2229,28 @@
             </select>
           </div>
 
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <div class="input-block" style="flex:1; min-width:130px;">
+              <label class="input-label">Night differential</label>
+              <div class="input-row">
+                <input class="big-input" type="number" id="otNDPct" min="0" step="1" inputmode="decimal" placeholder="e.g. 10" oninput="otCalc()">
+                <div class="input-prefix" style="border-right:none; border-left:1px solid var(--border);">%</div>
+              </div>
+            </div>
+            <div class="input-block" style="flex:1; min-width:130px;">
+              <label class="input-label">Night hours (10 PM–6 AM)</label>
+              <div class="input-row">
+                <div class="input-prefix">hrs</div>
+                <input class="big-input" type="number" id="otNightHrs" min="0" max="24" step="0.5" inputmode="decimal" placeholder="e.g. 6" oninput="otCalc()">
+              </div>
+            </div>
+          </div>
+
           <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
             <div class="nb-row"><span class="nb-label">Hourly rate (daily ÷ 8)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otHourly">—</span></div>
             <div class="nb-row"><span class="nb-label" id="otBaseLabel">First 8 hrs</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="otBasePay">—</span></div>
             <div class="nb-row"><span class="nb-label" id="otOTLabel">Overtime</span><span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="otOTPay">—</span></div>
+            <div class="nb-row"><span class="nb-label" id="otNDLabel">Night differential (10 PM–6 AM)</span><span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="otNDPay">—</span></div>
             <div class="divider"></div>
             <div class="nb-row" style="font-size:15px;">
               <span class="nb-label" style="color:var(--text);">= Total pay for this day</span>
@@ -2333,7 +2259,7 @@
             <div id="otVsNormal" style="font-size:11px; color:var(--text3); margin-top:6px;"></div>
           </div>
           <div style="font-size:11px; color:var(--text3); margin-top:10px; line-height:1.6;">
-            📌 Regular-day OT = hourly × 125%. Rest/special holiday = 130% first 8 hrs, 169% OT. Regular holiday = 200% (260% OT). Night diff (+10%) not included.
+            📌 Regular-day OT = hourly × 125%. Rest/special holiday = 130% first 8 hrs, 169% OT. Regular holiday = 200% (260% OT). Night differential (DOLE minimum 10%) applies only to hours worked 10 PM–6 AM and stacks on the day-type/OT rate — enter your % and night hours above.
           </div>
         </div>
 
@@ -3104,6 +3030,129 @@
     </div>
   </div>
 
+  <!-- WHAT IF DATE RANGE PROJECTION -->
+  <div>
+    <div class="section-title">💡 "What If" Date Range</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        See how a different rate would change your income over a specific date range — at the live exchange rate, without touching your actual settings. Counts Mon–Fri as working days. Leave rate or hours blank to use your current settings.
+      </div>
+      <div class="whatif-inputs" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">Hypothetical rate (USD/hr)</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <div class="input-prefix" style="color:var(--purple-text);">$ / hr</div>
+            <input class="big-input" type="number" id="whatifRate" placeholder="4.50" min="0" step="0.25"
+              inputmode="decimal" oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+        <div class="input-block" style="min-width:120px;">
+          <label class="input-label">Daily hours</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <div class="input-prefix" style="color:var(--purple-text);">hrs</div>
+            <input class="big-input" type="number" id="whatifHours" placeholder="8" min="0" max="24" step="0.5"
+              inputmode="decimal" oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">From</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <input class="big-input" type="date" id="whatifFrom" oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+        <div class="input-block" style="flex:1; min-width:140px;">
+          <label class="input-label">To</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <input class="big-input" type="date" id="whatifTo" oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+        <div class="input-block" style="min-width:100px;">
+          <label class="input-label">Tax rate (%)</label>
+          <div class="input-row" style="border-color:var(--purple);">
+            <div class="input-prefix" style="color:var(--purple-text);">%</div>
+            <input class="big-input" type="number" id="whatifTax" placeholder="15" min="0" max="50" step="1"
+              inputmode="decimal" oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+          </div>
+        </div>
+      </div>
+      <!-- Results grid -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px;" id="whatifResults">
+        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Working days</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifDays">—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifDaysSub">—</div>
+        </div>
+        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Per day <span style="color:var(--green-text);">(net)</span></div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifPerDay">₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifPerDayUSD">$—</div>
+        </div>
+        <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Total tax</div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--red-text);" id="whatifTaxTotal">−₱—</div>
+          <div style="font-size:11px; color:var(--red-text); margin-top:2px;" id="whatifTaxTotalUSD">−$—</div>
+        </div>
+        <div style="padding:12px 14px; background:var(--purple-dim); border-radius:var(--radius-sm); border:1px solid var(--purple);">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Range total <span style="color:var(--green-text);">(net)</span></div>
+          <div style="font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--purple-text);" id="whatifNet">₱—</div>
+          <div style="font-size:11px; color:var(--text3); margin-top:2px;" id="whatifNetUSD">$—</div>
+        </div>
+      </div>
+
+      <!-- TAX BREAKDOWN — gross → tax deducted → net (for the selected range) -->
+      <div id="whatifTaxBreakdown" style="display:block; padding:12px 16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
+        <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">Range tax breakdown</div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="text-align:center;">
+            <div style="font-size:10px; color:var(--text3); margin-bottom:3px;">Gross</div>
+            <div style="font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--text);" id="whatifGross">$—</div>
+            <div style="font-size:11px; color:var(--text3);" id="whatifGrossPHP">₱—</div>
+          </div>
+          <div style="color:var(--red-text); font-size:18px; font-weight:300;">−</div>
+          <div style="text-align:center;">
+            <div style="font-size:10px; color:var(--text3); margin-bottom:3px;" id="whatifTaxLabel">Tax (15%)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--red-text);" id="whatifTaxAmt">$—</div>
+            <div style="font-size:11px; color:var(--red-text);" id="whatifTaxAmtPHP">₱—</div>
+          </div>
+          <div style="color:var(--text3); font-size:18px; font-weight:300;">=</div>
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:10px; color:var(--green-text); margin-bottom:3px;">Net (take-home)</div>
+            <div style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500; color:var(--green-text);" id="whatifNetBD">$—</div>
+            <div style="font-size:11px; color:var(--green-text);" id="whatifNetBDPHP">₱—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CURRENT SAVINGS (pulled from the Expenses tab — What-If only) -->
+      <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:6px;">💰 Current savings <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(from Expenses)</span></div>
+        <div class="nb-row"><span class="nb-label">Your savings balance</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="whatifSavTotal">₱0.00</span></div>
+        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">Pulled straight from your Savings on the Expenses tab — change it there and this follows. Added to the total below; still separate from your net summary.</div>
+      </div>
+
+      <!-- PLANNED PURCHASES (What-If only — never touches your net summary) -->
+      <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:4px;">🛒 Planned purchases <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(What-If only)</span></div>
+        <div style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5;">Things you're thinking of buying in this range. They're subtracted from the total below, but stay out of your Financial Health and net summary.</div>
+        <div id="whatifBuyContainer"></div>
+        <button class="add-btn" onclick="addWhatifBuy()">+ Add purchase</button>
+        <div class="nb-row" style="margin-top:10px;"><span class="nb-label">Planned purchases total</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifBuyTotal">₱0.00</span></div>
+      </div>
+
+      <!-- RANGE NET + SAVINGS − PURCHASES -->
+      <div id="whatifGrand" style="display:none; padding:12px 16px; background:var(--purple-dim); border-radius:var(--radius-sm); border:1px solid var(--purple); margin-bottom:12px;">
+        <div class="nb-row"><span class="nb-label">Range net (projected)</span><span style="font-family:'DM Mono',monospace; color:var(--purple-text);" id="whatifGrandNet">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">Current savings</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandSav">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">Planned purchases</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandBuy">₱0.00</span></div>
+        <div class="divider"></div>
+        <div class="nb-row" style="font-size:15px;"><span class="nb-label" style="color:var(--text);">= Projected total</span><span class="c-green" id="whatifGrandTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span></div>
+      </div>
+
+      <!-- calculation basis -->
+      <div id="whatifDelta" style="margin-top:4px; font-size:12px; color:var(--text3); text-align:center;"></div>
+    </div>
+  </div>
+
   <!-- SAVINGS INTEREST CALCULATOR -->
   <div>
     <div class="section-title">💹 Savings Interest Calculator</div>
@@ -3763,6 +3812,29 @@ function calcWhatif() {
   const taxPct = (tax * 100).toFixed(0);
   set('whatifTaxLabel', 'Tax (' + taxPct + '%)');
 
+  // Current savings (What-If only) — added on top of the range net for the
+  // "projected total" line. Purely local to this simulator; never feeds the
+  // Financial Health tiles or the net summary.
+  const updateWhatifSavUI = (netPHP, netKnown) => {
+    const savTotal = whatifCurrentSavings();
+    const buyTotal = whatifBuySum();
+    set('whatifSavTotal', fPHP(savTotal));
+    set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
+    const grand = document.getElementById('whatifGrand');
+    if (!grand) return;
+    const showGrand = netKnown || savTotal > 0 || buyTotal > 0;
+    grand.style.display = showGrand ? 'block' : 'none';
+    if (showGrand) {
+      const total = (netKnown ? netPHP : 0) + savTotal - buyTotal;
+      set('whatifGrandNet', netKnown ? fPHP(netPHP) : '₱0.00');
+      set('whatifGrandSav', '+ ' + fPHP(savTotal));
+      set('whatifGrandBuy', '− ' + fPHP(buyTotal));
+      set('whatifGrandTotal', total < 0 ? '−' + fPHP(Math.abs(total)) : fPHP(total));
+      const totalEl = document.getElementById('whatifGrandTotal');
+      if (totalEl) totalEl.style.color = total < 0 ? 'var(--red-text)' : 'var(--green-text)';
+    }
+  };
+
   if (!valid) {
     set('whatifDays', '—'); set('whatifDaysSub', from && to && from > to ? 'invalid range' : '—');
     set('whatifPerDay', '₱—');  set('whatifPerDayUSD', '$—');
@@ -3774,6 +3846,7 @@ function calcWhatif() {
       set('whatifNetBD', '$—');   set('whatifNetBDPHP', '₱—');
     }
     if (deltaEl) deltaEl.textContent = '';
+    updateWhatifSavUI(0, false);
     return;
   }
 
@@ -3822,6 +3895,112 @@ function calcWhatif() {
     }
     deltaEl.innerHTML = line;
   }
+
+  updateWhatifSavUI(fx > 0 ? netUSD * fx : 0, fx > 0);
+}
+
+// ── "What If" extras (What-If only) + persistence ──────────────
+let whatifBuy = [];
+
+// Current savings comes straight from the Expenses tab. savingsInput is the
+// canonical balance there (auto-synced to the sum of included savings items);
+// fall back to summing the items if the field is somehow empty.
+function whatifCurrentSavings() {
+  const el = document.getElementById('savingsInput');
+  if (el && el.value !== '') return parseFloat(el.value) || 0;
+  if (Array.isArray(savingsItems)) {
+    return savingsItems.reduce((s, it) => s + (isInc(it) ? (parseFloat(it.amt) || 0) : 0), 0);
+  }
+  return 0;
+}
+
+function whatifBuySum() {
+  return whatifBuy.reduce((s, it) => s + (parseFloat(it.amt) || 0), 0);
+}
+
+function renderWhatifBuy() {
+  const c = document.getElementById('whatifBuyContainer');
+  if (!c) return;
+  c.innerHTML = '';
+  whatifBuy.forEach((it, i) => {
+    const div = document.createElement('div');
+    div.className = 'whatif-sav-row';
+    div.innerHTML =
+      '<input class="nec-cat-input" value="' + escH(it.label || '') + '" placeholder="e.g. new phone, trip, laptop" ' +
+        'oninput="whatifBuy[' + i + '].label=this.value; saveWhatif()">' +
+      '<div class="whatif-sav-amt"><span style="font-size:12px;color:var(--text3);">₱</span>' +
+        '<input class="nec-amt-input" type="number" value="' + (it.amt != null ? it.amt : '') + '" placeholder="0.00" min="0" step="0.01" ' +
+          'oninput="whatifBuy[' + i + '].amt=this.value; calcWhatif(); saveWhatif()"></div>' +
+      '<button class="del-btn" onclick="whatifBuy.splice(' + i + ',1); renderWhatifBuy(); calcWhatif(); saveWhatif()">✕</button>';
+    c.appendChild(div);
+  });
+}
+
+function addWhatifBuy() {
+  whatifBuy.push({ label: '', amt: '' });
+  renderWhatifBuy();
+  calcWhatif();
+  saveWhatif();
+  const c = document.getElementById('whatifBuyContainer');
+  const inp = c && c.lastElementChild && c.lastElementChild.querySelector('input');
+  if (inp) inp.focus();
+}
+
+// Snap a From date that has slipped into the past forward to today, and keep
+// To sane. Runs on load and whenever the Plan tab is opened.
+function whatifNormalizeDates() {
+  const fEl = document.getElementById('whatifFrom');
+  const tEl = document.getElementById('whatifTo');
+  if (!fEl || !tEl) return;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayStr = whatifDateStr(today);
+  const eom = d => whatifDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+
+  // Nothing set yet → default to today → end of this month
+  if (!fEl.value && !tEl.value) { fEl.value = todayStr; tEl.value = eom(today); return; }
+
+  // From in the past → jump to today
+  if (fEl.value) {
+    const f = new Date(fEl.value + 'T00:00:00');
+    if (!isNaN(f) && f < today) fEl.value = todayStr;
+  }
+  // Make sure To exists and isn't before From
+  if (fEl.value) {
+    const f = new Date(fEl.value + 'T00:00:00');
+    if (!tEl.value) {
+      tEl.value = eom(f);
+    } else {
+      const t = new Date(tEl.value + 'T00:00:00');
+      if (!isNaN(t) && t < f) tEl.value = eom(f);
+    }
+  }
+}
+
+function saveWhatif() {
+  try {
+    const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    localStorage.setItem('va_whatif', JSON.stringify({
+      rate: v('whatifRate'), hours: v('whatifHours'),
+      from: v('whatifFrom'), to: v('whatifTo'), tax: v('whatifTax'),
+      buy: whatifBuy,
+    }));
+  } catch (e) {}
+}
+
+function loadWhatif() {
+  try {
+    const raw = localStorage.getItem('va_whatif');
+    if (raw) {
+      const d = JSON.parse(raw);
+      const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      set('whatifRate', d.rate); set('whatifHours', d.hours);
+      set('whatifFrom', d.from); set('whatifTo', d.to); set('whatifTax', d.tax);
+      whatifBuy = Array.isArray(d.buy) ? d.buy : [];
+    }
+  } catch (e) { whatifBuy = []; }
+  whatifNormalizeDates();
+  renderWhatifBuy();
+  calcWhatif();
 }
 
 // ── Online / offline detection ─────────────────────────────────
@@ -9007,6 +9186,9 @@ function switchPage(page) {
     renderDebts();
     renderPayoffDebts();
     renderBillChecklist();
+    whatifNormalizeDates();      // snap a past "From" forward to today
+    renderWhatifBuy();
+    calcWhatif();
     if (!calYear) calInit();     // calendar builds on first Plan visit only
     else renderCalendar();
   }
@@ -9779,6 +9961,7 @@ const BACKUP_KEYS = [
   'va_squads',
   'va_ot_calc',
   'va_interest_calc',
+  'va_whatif',
   'va_theme',
   'va_wallet_qrs',
 ];
@@ -10454,12 +10637,23 @@ function otCalc() {
   const type  = document.getElementById('otDayType').value;
   const t     = OT_TYPES[type] || OT_TYPES.regular;
 
+  const ndPct     = Math.max(0, parseFloat(document.getElementById('otNDPct').value) || 0);
+  const nightHrs  = Math.max(0, Math.min(hours, parseFloat(document.getElementById('otNightHrs').value) || 0));
+
   const hourly    = daily / 8;
   const baseHrs   = Math.min(hours, 8);
   const otHrs     = Math.max(0, hours - 8);
   const basePay   = hourly * t.base * baseHrs;
   const otPay     = hourly * t.ot   * otHrs;
-  const total     = basePay + otPay;
+
+  // Night differential applies only to hours worked 10 PM–6 AM, on top of the
+  // rate those hours already earn. Night hours are counted from the end of the
+  // shift, so any that land in the OT window get ND at the OT multiplier.
+  const ndOTHrs   = Math.min(nightHrs, otHrs);
+  const ndBaseHrs = Math.min(nightHrs - ndOTHrs, baseHrs);
+  const ndPay     = (ndPct / 100) * hourly * (t.ot * ndOTHrs + t.base * ndBaseHrs);
+
+  const total     = basePay + otPay + ndPay;
   const normalPay = hourly * hours;   // what the same hours pay at plain 100%
 
   document.getElementById('otHourly').textContent  = daily > 0 ? fPHP(hourly) + ' /hr' : '—';
@@ -10470,6 +10664,11 @@ function otCalc() {
     otHrs > 0 ? 'OT ' + otHrs + ' hr' + (otHrs === 1 ? '' : 's') + ' × ' + Math.round(t.ot * 100) + '%'
               : 'Overtime (hours beyond 8) × ' + Math.round(t.ot * 100) + '%';
   document.getElementById('otOTPay').textContent   = otHrs > 0 && daily > 0 ? fPHP(otPay) : '—';
+  document.getElementById('otNDLabel').textContent =
+    (nightHrs > 0 && ndPct > 0)
+      ? 'Night diff (' + nightHrs + ' hr' + (nightHrs === 1 ? '' : 's') + ' × ' + ndPct + '%)'
+      : 'Night differential (10 PM–6 AM)';
+  document.getElementById('otNDPay').textContent   = nightHrs > 0 && ndPct > 0 && daily > 0 ? fPHP(ndPay) : '—';
   document.getElementById('otTotal').textContent   = fPHP(total);
 
   const vsEl = document.getElementById('otVsNormal');
@@ -10481,7 +10680,7 @@ function otCalc() {
 
   // Persist inputs so they survive reloads
   try {
-    localStorage.setItem('va_ot_calc', JSON.stringify({ daily: document.getElementById('otDailyRate').value, hours: document.getElementById('otHours').value, type }));
+    localStorage.setItem('va_ot_calc', JSON.stringify({ daily: document.getElementById('otDailyRate').value, hours: document.getElementById('otHours').value, type, ndPct: document.getElementById('otNDPct').value, nightHrs: document.getElementById('otNightHrs').value }));
   } catch(e) {}
 }
 
@@ -10493,6 +10692,8 @@ function loadOTCalc() {
     if (d.daily != null) document.getElementById('otDailyRate').value = d.daily;
     if (d.hours != null) document.getElementById('otHours').value     = d.hours;
     if (d.type && OT_TYPES[d.type]) document.getElementById('otDayType').value = d.type;
+    if (d.ndPct != null)    document.getElementById('otNDPct').value    = d.ndPct;
+    if (d.nightHrs != null) document.getElementById('otNightHrs').value = d.nightHrs;
   } catch(e) {}
   otCalc();
 }
@@ -10950,6 +11151,7 @@ loadSquads();
 renderSquadChips();
 loadOTCalc();
 loadIntCalc();
+loadWhatif();
 updateThemeButtons();
 
 // ─── PWA: SERVICE WORKER REGISTRATION ──────────────────────────
