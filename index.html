@@ -1630,7 +1630,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-21e</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2957,6 +2957,9 @@
   <!-- ITEMS (single list, tagged via dropdown) -->
   <div>
     <div class="section-title">🧾 Items</div>
+    <div style="font-size:12px; color:var(--text3); margin:-6px 0 12px; line-height:1.5;">
+      Each item has its own currency — handy when a trip mixes ₱, ¥, $, etc. Totals are converted to pesos (live rate) so you collect one clean amount back home.
+    </div>
     <div id="hsItemsList" class="two-col"></div>
     <button class="add-btn" onclick="addHSItem()">+ Add item</button>
   </div>
@@ -2971,6 +2974,8 @@
         <span style="color:var(--text2); font-weight:500;">Grand total</span>
         <span id="hsGrandTotal" style="font-family:'DM Mono',monospace; font-weight:500; font-size:18px; color:var(--green-text);">₱0.00</span>
       </div>
+      <!-- ₱ equivalent of the grand total (foreign-currency sessions only) -->
+      <div id="hsPhpEquiv" style="display:none; justify-content:space-between; align-items:center; font-size:12px; margin-top:4px;"></div>
       <!-- Settle-up progress: "2 of 4 paid · ₱X still to collect" -->
       <div id="hsPaidStatus" style="display:none; font-size:12px; margin-top:8px;"></div>
       <!-- Spend breakdown by tag (Food / Drink / Fare / …) -->
@@ -3051,7 +3056,7 @@
     <div class="section-title">💡 "What If" Date Range</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
-        See how a different rate would change your income over a specific date range — at the live exchange rate, without touching your actual settings. Counts Mon–Fri as working days. Leave rate or hours blank to use your current settings.
+        See how a different rate would change your income over a specific date range — at the live exchange rate, without touching your actual settings. Counts Mon–Fri as working days. Leave rate or hours blank to use your current settings. Your savings and a one-off bonus add on; your Necessities, PayLater, and planned purchases for the range are deducted — giving a projected total you'd actually be left with.
       </div>
       <div class="whatif-inputs" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
         <div class="input-block" style="flex:1; min-width:140px;">
@@ -3146,6 +3151,25 @@
         <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">Pulled straight from your Savings on the Expenses tab — change it there and this follows. Added to the total below; still separate from your net summary.</div>
       </div>
 
+      <!-- COMMITTED EXPENSES (from Expenses tab — prorated to the What-If range) -->
+      <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:6px;">💳 Committed expenses <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(from Expenses, in this range)</span></div>
+        <div class="nb-row"><span class="nb-label">Necessities &amp; expenses</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifNecTotal">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">PayLater debts</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifPlTotal">₱0.00</span></div>
+        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">Pulled from your <strong>Necessities &amp; Expenses</strong> and <strong>PayLater</strong> on the Expenses tab, counted only for the dates above — same range logic as that tab (pay-day counters and installment / billing dates respected). Deducted from the total below; your real net summary is untouched.</div>
+      </div>
+
+      <!-- BONUS (What-If only) -->
+      <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
+        <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">➕ Bonus <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(What-If only)</span></div>
+        <div class="input-row" style="border-color:var(--purple); max-width:220px;">
+          <div class="input-prefix" style="color:var(--purple-text);">₱</div>
+          <input class="big-input" type="number" id="whatifBonus" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+            oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
+        </div>
+        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">A one-off bump — 13th month, incentive, a gift — added straight to the projected total.</div>
+      </div>
+
       <!-- PLANNED PURCHASES (What-If only — never touches your net summary) -->
       <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
         <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:4px;">🛒 Planned purchases <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(What-If only)</span></div>
@@ -3159,6 +3183,9 @@
       <div id="whatifGrand" style="display:none; padding:12px 16px; background:var(--purple-dim); border-radius:var(--radius-sm); border:1px solid var(--purple); margin-bottom:12px;">
         <div class="nb-row"><span class="nb-label">Range net (projected)</span><span style="font-family:'DM Mono',monospace; color:var(--purple-text);" id="whatifGrandNet">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Current savings</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandSav">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandBonusRow" style="display:none;"><span class="nb-label">Bonus</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandBonus">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandNecRow" style="display:none;"><span class="nb-label">Necessities &amp; expenses</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandNec">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandPlRow" style="display:none;"><span class="nb-label">PayLater debts</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandPl">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Planned purchases</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandBuy">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;"><span class="nb-label" style="color:var(--text);">= Projected total</span><span class="c-green" id="whatifGrandTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span></div>
@@ -3691,6 +3718,7 @@ async function fetchRate(manual = false) {
       if (manual) showToast('✓ Rate: ₱' + rate.toFixed(4) + ' per $1', false);
       recalcAll();
       convertCurrency();
+      hsCurrencyRefresh();
       success = true;
       break;
     } catch(e) {
@@ -3735,7 +3763,7 @@ async function fetchMissingRates() {
       const key = KEY_MAP[code];
       if (key && d.usd[key]) { fxRates[code] = parseFloat(d.usd[key]); filled++; }
     }
-    if (filled > 0) convertCurrency();
+    if (filled > 0) { convertCurrency(); hsCurrencyRefresh(); }
     return;
   } catch(e) {
     console.warn('fetchMissingRates (fawazahmed0) failed:', e.message);
@@ -3751,7 +3779,7 @@ async function fetchMissingRates() {
     for (const code of missing) {
       if (d.rates[code]) { fxRates[code] = parseFloat(d.rates[code]); filled++; }
     }
-    if (filled > 0) convertCurrency();
+    if (filled > 0) { convertCurrency(); hsCurrencyRefresh(); }
   } catch(e) {
     console.warn('fetchMissingRates (open.er-api) failed:', e.message);
   }
@@ -3835,17 +3863,29 @@ function calcWhatif() {
     const savTotal = whatifCurrentSavings();
     refreshWhatifBuyRows();               // keep in-range counts current with the dates
     const buyTotal = whatifBuySum();
+    const bonus    = whatifBonusAmt();
+    const { nec, pl } = whatifCommitments();
     set('whatifSavTotal', fPHP(savTotal));
     set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
+    set('whatifNecTotal', nec > 0 ? '−' + fPHP(nec) : fPHP(0));
+    set('whatifPlTotal',  pl  > 0 ? '−' + fPHP(pl)  : fPHP(0));
     const grand = document.getElementById('whatifGrand');
     if (!grand) return;
-    const showGrand = netKnown || savTotal > 0 || buyTotal > 0;
+    const showGrand = netKnown || savTotal > 0 || buyTotal > 0 || bonus > 0 || nec > 0 || pl > 0;
     grand.style.display = showGrand ? 'block' : 'none';
     if (showGrand) {
-      const total = (netKnown ? netPHP : 0) + savTotal - buyTotal;
+      const total = (netKnown ? netPHP : 0) + savTotal + bonus - buyTotal - nec - pl;
       set('whatifGrandNet', netKnown ? fPHP(netPHP) : '₱0.00');
       set('whatifGrandSav', '+ ' + fPHP(savTotal));
+      set('whatifGrandBonus', '+ ' + fPHP(bonus));
+      set('whatifGrandNec', '− ' + fPHP(nec));
+      set('whatifGrandPl',  '− ' + fPHP(pl));
       set('whatifGrandBuy', '− ' + fPHP(buyTotal));
+      // Hide the optional rows when they're zero, to keep the stack tidy.
+      const showRow = (id, on) => { const r = document.getElementById(id); if (r) r.style.display = on ? 'flex' : 'none'; };
+      showRow('whatifGrandBonusRow', bonus > 0.005);
+      showRow('whatifGrandNecRow',   nec   > 0.005);
+      showRow('whatifGrandPlRow',    pl    > 0.005);
       set('whatifGrandTotal', total < 0 ? '−' + fPHP(Math.abs(total)) : fPHP(total));
       const totalEl = document.getElementById('whatifGrandTotal');
       if (totalEl) totalEl.style.color = total < 0 ? 'var(--red-text)' : 'var(--green-text)';
@@ -3929,6 +3969,44 @@ function whatifCurrentSavings() {
     return savingsItems.reduce((s, it) => s + (isInc(it) ? (parseFloat(it.amt) || 0) : 0), 0);
   }
   return 0;
+}
+
+// Committed expenses from the Expenses tab (Necessities & Expenses + PayLater
+// debts), scoped to the What-If From/To dates using the SAME range logic the
+// Expenses tab itself uses — so the figures line up with that tab for the same
+// window. Both are deducted from the projected total. Purely local to the
+// simulator; never touches Financial Health or the net summary.
+function whatifCommitments() {
+  const fEl = document.getElementById('whatifFrom');
+  const tEl = document.getElementById('whatifTo');
+  const fromStr = fEl ? fEl.value : '';
+  const toStr   = tEl ? tEl.value : '';
+
+  // Necessities & Expenses — respects pay-day counters and installment ranges.
+  let nec = 0;
+  if (Array.isArray(necData)) {
+    necData.forEach(row => {
+      if (!isInc(row)) return;
+      nec += necRowBase(row) * necRowMult(row, fromStr, toStr);
+    });
+  }
+
+  // PayLater debts — only entries whose billing date lands inside the range
+  // (Shopee 5th, TikTok 1st, Maya 15th — mirrors recalcAll()).
+  let pl = 0;
+  if (typeof plData === 'object' && plData) {
+    (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 5,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 1,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 15, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+  }
+
+  return { nec, pl };
+}
+
+// The What-If bonus (₱) — a one-off addition local to the simulator.
+function whatifBonusAmt() {
+  const el = document.getElementById('whatifBonus');
+  return el ? (parseFloat(el.value) || 0) : 0;
 }
 
 // Default installment start = the current month (What-If windows usually
@@ -4130,6 +4208,7 @@ function saveWhatif() {
     localStorage.setItem('va_whatif', JSON.stringify({
       rate: v('whatifRate'), hours: v('whatifHours'),
       from: v('whatifFrom'), to: v('whatifTo'), tax: v('whatifTax'),
+      bonus: v('whatifBonus'),
       buy: whatifBuy,
     }));
   } catch (e) {}
@@ -4143,6 +4222,7 @@ function loadWhatif() {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
       set('whatifRate', d.rate); set('whatifHours', d.hours);
       set('whatifFrom', d.from); set('whatifTo', d.to); set('whatifTax', d.tax);
+      set('whatifBonus', d.bonus);
       whatifBuy = Array.isArray(d.buy) ? d.buy : [];
     }
   } catch (e) { whatifBuy = []; }
@@ -6319,9 +6399,12 @@ function splitPersonRowHtml(type, p, total, items, open) {
   const sub = (open && has)
     ? `<div style="margin:2px 0 8px 14px; padding:6px 10px; border-left:2px solid var(--border);">` +
       items.map(it => {
+        const c = (it.cur && CURRENCY_META[it.cur]) ? it.cur : 'PHP';
+        const eqNote = (c !== 'PHP' && it.amtPhp != null)
+          ? ` <span style="color:var(--text3); font-size:10px;">≈ ${fPHP(it.amtPhp)}</span>` : '';
         const priceHtml = (it.n > 1)
-          ? `<span style="color:var(--text3);">${fPHP(it.total)} ÷ ${it.n} =</span> <span style="color:var(--text2);">${fPHP(it.amt)}</span>`
-          : `<span style="color:var(--text2);">${fPHP(it.amt)}</span>`;
+          ? `<span style="color:var(--text3);">${curFmt(c, it.total)} ÷ ${it.n} =</span> <span style="color:var(--text2);">${curFmt(c, it.amt)}</span>${eqNote}`
+          : `<span style="color:var(--text2);">${curFmt(c, it.amt)}</span>${eqNote}`;
         return `
         <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:2px 0;">
           <span style="color:var(--text3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escH(it.label)}${it.date ? `<span style="font-size:10px; color:var(--text3); opacity:0.75; font-family:'DM Mono',monospace;"> · ${fmtStoreDate(it.date)}</span>` : ''}</span>
@@ -6358,9 +6441,16 @@ function buildSplitMessage(type) {
   if (rows.length === 0) return null;
 
   const maxLen = Math.max(...rows.map(r => r.name.length));
-  return rows.map(r =>
-    r.name.padEnd(maxLen) + ' - ' + formatSplitAmt(r.amt) + (r.paid ? ' ✓ paid' : '')
+  // Person totals are in ₱ for both split types (Hangout items are normalised).
+  const totText = t => (type === 'hs' ? '₱' : '') + formatSplitAmt(t);
+  let out = rows.map(r =>
+    r.name.padEnd(maxLen) + ' - ' + totText(r.amt) + (r.paid ? ' ✓ paid' : '')
   ).join('\n');
+
+  // If any Hangout item was in a foreign currency, note that totals are ₱ at live rates.
+  const anyForeign = type === 'hs' && hsItems.some(it => isInc(it) && it.cur && it.cur !== 'PHP');
+  if (anyForeign) out += `\n\n(Totals in ₱ — foreign items converted at live rates)`;
+  return out;
 }
 
 function copySplitMessage(type) {
@@ -6391,23 +6481,31 @@ function buildSplitTable(type) {
   lines.push((hasDates ? ['Person', 'Item', 'Date', 'Share'] : ['Person', 'Item', 'Share']).join('\t'));
 
   let grand = 0;
+  // Item shares/totals show in each item's own currency; person + grand totals in ₱.
+  const itemTxt = (it, v) => {
+    const c = (it.cur && CURRENCY_META[it.cur]) ? it.cur : 'PHP';
+    return (c !== 'PHP' ? convSymbol(c) : '') + formatSplitAmt(v);
+  };
+  const totText = t => (type === 'hs' ? '₱' : '') + formatSplitAmt(t);
   owing.forEach(p => {
     const its = items[p.id] || [];
     its.forEach((it, idx) => {
-      const label = it.label + (it.n > 1 ? ' (' + formatSplitAmt(it.total) + ' ÷ ' + it.n + ')' : '');
+      const label = it.label + (it.n > 1 ? ' (' + itemTxt(it, it.total) + ' ÷ ' + it.n + ')' : '');
       const row = hasDates
-        ? [idx === 0 ? p.name : '', label, fmtStoreDate(it.date), formatSplitAmt(it.amt)]
-        : [idx === 0 ? p.name : '', label, formatSplitAmt(it.amt)];
+        ? [idx === 0 ? p.name : '', label, fmtStoreDate(it.date), itemTxt(it, it.amt)]
+        : [idx === 0 ? p.name : '', label, itemTxt(it, it.amt)];
       lines.push(row.join('\t'));
     });
     const tot = totals[p.id] || 0;
     grand += tot;
     const totRow = hasDates
-      ? [its.length ? '' : p.name, '— total —', '', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')]
-      : [its.length ? '' : p.name, '— total —', formatSplitAmt(tot) + (p.paid ? ' ✓ paid' : '')];
+      ? [its.length ? '' : p.name, '— total —', '', totText(tot) + (p.paid ? ' ✓ paid' : '')]
+      : [its.length ? '' : p.name, '— total —', totText(tot) + (p.paid ? ' ✓ paid' : '')];
     lines.push(totRow.join('\t'));
   });
-  lines.push((hasDates ? ['GRAND TOTAL', '', '', formatSplitAmt(grand)] : ['GRAND TOTAL', '', formatSplitAmt(grand)]).join('\t'));
+  lines.push((hasDates ? ['GRAND TOTAL', '', '', totText(grand)] : ['GRAND TOTAL', '', totText(grand)]).join('\t'));
+  const anyForeign = type === 'hs' && hsItems.some(it => isInc(it) && it.cur && it.cur !== 'PHP');
+  if (anyForeign) lines.push('', 'Totals in ₱ — foreign items converted at live rates.');
   return lines.join('\n');
 }
 
@@ -6845,6 +6943,7 @@ let _hsLastItems  = {};                // last computed { personId: [{label, amt
 let hsPersonSeq = 1;
 let hsItems     = [];                  // [{ name, amt, tag, people:[personId,...] }]
 let hsNote      = '';                  // free-text session note — saved with the archive entry
+let hsLastCur   = 'PHP';               // currency the next new item defaults to (last one you picked)
 
 // Tag options for the per-item dropdown
 const HS_TAGS = [
@@ -6857,6 +6956,63 @@ const HS_TAGS = [
 ];
 const HS_TAG_LABEL = Object.fromEntries(HS_TAGS.map(t => [t.val, t.label]));
 
+// ─── HANGOUT CURRENCY (per item) ──────────────────────────────
+// Each Hangout item carries its own currency (item.cur) from the set the
+// converter supports (CURRENCY_META). Amounts are entered & shown in that
+// item's currency; totals are normalised to ₱ using the converter's live
+// fxRates, since that's what you collect back home. New items default to
+// the currency of the previous item (hsLastCur).
+
+// Format an amount in a given currency code.
+function curFmt(cur, n) { return (!cur || cur === 'PHP') ? fPHP(n) : convFormat(n, cur); }
+// Symbol for a currency code (₱, ¥, $, …).
+function curSym(cur) { return convSymbol(cur || 'PHP'); }
+
+// PHP per 1 unit of `cur`, from the converter's fxRates (units per USD).
+// Returns 0 when rates for either side aren't loaded yet.
+function curRateToPhp(cur) {
+  if (!cur || cur === 'PHP') return 1;
+  const from = fxRates[cur], php = fxRates.PHP;
+  if (!from || from <= 0 || !php || php <= 0) return 0;
+  return php / from;
+}
+// Convert an amount in `cur` to PHP. Returns null when the live rate is missing.
+function curToPhp(n, cur) {
+  if (!cur || cur === 'PHP') return n;
+  const r = curRateToPhp(cur);
+  return r > 0 ? n * r : null;
+}
+// "≈ ₱X" note for a foreign amount ('' if PHP or no rate yet).
+function curPhpNote(n, cur) {
+  if (!cur || cur === 'PHP') return '';
+  const r = curRateToPhp(cur);
+  return r > 0 ? '≈ ' + fPHP(n * r) : '';
+}
+
+// <option> list for a per-item currency <select>.
+function hsCurOptions(sel) {
+  return Object.keys(CURRENCY_META).map(code =>
+    `<option value="${code}"${code === sel ? ' selected' : ''}>${code} ${convSymbol(code)}</option>`
+  ).join('');
+}
+
+function onHSItemCur(i, v) {
+  const item = hsItems[i];
+  if (!item) return;
+  item.cur = CURRENCY_META[v] ? v : 'PHP';
+  hsLastCur = item.cur;                // new items inherit this currency
+  renderHSItems();                     // refresh this item's prefix/label/each
+  updateHSSummary();                   // totals re-normalise to ₱
+  saveHS();
+}
+
+// Refresh currency-dependent Hangout views when live rates arrive.
+function hsCurrencyRefresh() {
+  if (!_pageInited || !_pageInited.hangout) return;
+  hsItems.forEach((it, i) => updateHSItemEach(i));   // refresh "each" ≈₱ notes
+  updateHSSummary();                                 // re-normalise ₱ totals
+}
+
 // Convert old saved format ({drinks:[], food:[]}) to the new flat
 // item list so nobody loses previously saved sessions.
 function hsNormalizeData(data) {
@@ -6865,12 +7021,16 @@ function hsNormalizeData(data) {
   if (Array.isArray(data.people)) out.people = data.people;
   if (typeof data.personSeq === 'number') out.personSeq = data.personSeq;
   if (typeof data.note === 'string') out.note = data.note;
+  // Migration: pre-per-item saves stored one session `currency` — use it as the
+  // fallback for any item that has no `cur` of its own.
+  const migrateCur = (typeof data.currency === 'string' && CURRENCY_META[data.currency]) ? data.currency : 'PHP';
+  const fixCur = c => (typeof c === 'string' && CURRENCY_META[c]) ? c : migrateCur;
   if (Array.isArray(data.items)) {
-    out.items = data.items.map(it => ({ ...it, tag: HS_TAG_LABEL[it.tag] ? it.tag : 'others' }));
+    out.items = data.items.map(it => ({ ...it, tag: HS_TAG_LABEL[it.tag] ? it.tag : 'others', cur: fixCur(it.cur) }));
   } else {
     // legacy format: separate drinks & food arrays
-    if (Array.isArray(data.drinks)) data.drinks.forEach(it => out.items.push({ ...it, tag: 'drink' }));
-    if (Array.isArray(data.food))   data.food.forEach(it   => out.items.push({ ...it, tag: 'food' }));
+    if (Array.isArray(data.drinks)) data.drinks.forEach(it => out.items.push({ ...it, tag: 'drink', cur: fixCur(it.cur) }));
+    if (Array.isArray(data.food))   data.food.forEach(it   => out.items.push({ ...it, tag: 'food',  cur: fixCur(it.cur) }));
   }
   return out;
 }
@@ -6913,7 +7073,7 @@ function renderHSPeople() {
 
 // ─── ITEMS (single list, tagged) ──────────────────────────────
 function addHSItem() {
-  hsItems.push({ name: '', amt: '', tag: 'food', people: [] });
+  hsItems.push({ name: '', amt: '', tag: 'food', cur: hsLastCur, people: [] });
   renderHSItems();
   saveHS();
   setTimeout(() => {
@@ -6985,11 +7145,20 @@ function updateHSItemEach(i) {
   const item = hsItems[i];
   if (!item) return;
   const amt  = parseFloat(item.amt) || 0;
+  const cur  = (item.cur && CURRENCY_META[item.cur]) ? item.cur : 'PHP';
   const n    = item.people.length;
   const each = n > 0 ? amt / n : 0;
   const eachEl  = document.getElementById('hsEach-' + i);
   const countEl = document.getElementById('hsCount-' + i);
-  if (eachEl)  eachEl.textContent  = n > 0 ? fPHP(each) + ' each' : '—';
+  if (eachEl) {
+    if (n > 0) {
+      const note = cur !== 'PHP' ? curPhpNote(each, cur) : '';
+      eachEl.innerHTML = curFmt(cur, each) + ' each' +
+        (note ? ` <span style="color:var(--text3); font-weight:400; font-size:11px;">${note}</span>` : '');
+    } else {
+      eachEl.textContent = '—';
+    }
+  }
   if (countEl) countEl.textContent = n === 0
     ? 'No one selected yet'
     : (n + (n === 1 ? ' person' : ' people') + ' sharing');
@@ -7020,6 +7189,8 @@ function renderHSItems() {
     const n    = item.people.length;
     const each = n > 0 ? amt / n : 0;
     const tag  = HS_TAG_LABEL[item.tag] ? item.tag : 'others';
+    const cur  = (item.cur && CURRENCY_META[item.cur]) ? item.cur : 'PHP';
+    const eachNote = n > 0 && cur !== 'PHP' ? curPhpNote(each, cur) : '';
 
     const allIn = hsPeople.length > 0 && hsPeople.every(p => item.people.includes(p.id));
     const chipsHtml = hsPeople.length === 0
@@ -7046,15 +7217,20 @@ function renderHSItems() {
           <input class="nec-cat-input" style="height:42px; font-size:14px;" value="${escH(item.name)}" placeholder="e.g. Sisig, Beer, Grab fare"
             oninput="hsItems[${i}].name=this.value; saveHS()">
         </div>
-        <div class="input-block" style="width:150px; flex-shrink:0;">
+        <div class="input-block" style="width:140px; flex-shrink:0;">
           <label class="input-label">Tag</label>
           <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer;"
             onchange="setHSTag(${i}, this.value)">${tagOptions}</select>
         </div>
-        <div class="input-block" style="width:190px; flex-shrink:0;">
-          <label class="input-label">Amount (₱)</label>
+        <div class="input-block" style="width:104px; flex-shrink:0;">
+          <label class="input-label">Currency</label>
+          <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer;"
+            onchange="onHSItemCur(${i}, this.value)" title="Currency for this item">${hsCurOptions(cur)}</select>
+        </div>
+        <div class="input-block" style="width:168px; flex-shrink:0;">
+          <label class="input-label">Amount</label>
           <div class="input-row amt-row">
-            <div class="input-prefix">₱</div>
+            <div class="input-prefix">${curSym(cur)}</div>
             <input class="big-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
               oninput="hsItems[${i}].amt=this.value; updateHSItemEach(${i}); updateHSSummary(); saveHS()">
           </div>
@@ -7068,7 +7244,7 @@ function renderHSItems() {
 
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); gap:10px; flex-wrap:wrap;">
         <span id="hsCount-${i}" style="font-size:12px; color:var(--text3);">${n===0 ? 'No one selected yet' : (n+(n===1?' person':' people')+' sharing')}</span>
-        <span id="hsEach-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? fPHP(each)+' each' : '—'}</span>
+        <span id="hsEach-${i}" style="font-family:'DM Mono',monospace; font-weight:500; color:var(--teal-text);">${n>0 ? curFmt(cur, each)+' each'+(eachNote ? ` <span style="color:var(--text3); font-weight:400; font-size:11px;">${eachNote}</span>` : '') : '—'}</span>
       </div>
     `;
     container.appendChild(div);
@@ -7076,32 +7252,43 @@ function renderHSItems() {
 }
 
 // ─── SUMMARY (all items) ──────────────────────────────────────
+// Items can each be in a different currency; every amount is converted to ₱
+// (live rates) so the totals aggregate into one collectable figure.
 function updateHSSummary() {
-  const totals = {};
-  const personItems = {};                // { personId: [{label, amt}] } for the expandable breakdown
+  const totals = {};                     // ₱ owed per person
+  const personItems = {};                // per-person expandable breakdown
   hsPeople.forEach(p => { totals[p.id] = 0; personItems[p.id] = []; });
-  let grand = 0;
-  let unassigned = 0;
-  const tagTotals = {};                  // { tag: sum } for the spend-by-tag breakdown
+  let grand = 0;                         // ₱
+  let unassigned = 0;                    // ₱
+  let pendingRate = 0;                   // foreign items whose live rate isn't loaded yet
+  const tagTotals = {};                  // ₱ per tag
 
   hsItems.forEach(item => {
     if (!isInc(item)) return;              // unmarked — excluded from the split
-    const amt = parseFloat(item.amt) || 0;
-    grand += amt;
+    const rawAmt = parseFloat(item.amt) || 0;
+    const cur    = (item.cur && CURRENCY_META[item.cur]) ? item.cur : 'PHP';
+    const phpAmt = curToPhp(rawAmt, cur);  // null when the rate is missing
+    if (phpAmt === null && rawAmt > 0) pendingRate++;
+    const amtPhp = phpAmt === null ? 0 : phpAmt;
+    grand += amtPhp;
     const tg = HS_TAG_LABEL[item.tag] ? item.tag : 'others';
-    if (amt > 0) tagTotals[tg] = (tagTotals[tg] || 0) + amt;
+    if (amtPhp > 0) tagTotals[tg] = (tagTotals[tg] || 0) + amtPhp;
     const n = item.people.length;
     if (n > 0) {
-      const each = amt / n;
+      const eachPhp = amtPhp / n;
+      const eachCur = rawAmt / n;
       const tagEmoji = (HS_TAG_LABEL[tg] || '').split(' ')[0];
       item.people.forEach(pid => {
         if (totals[pid] !== undefined) {
-          totals[pid] += each;
-          if (each > 0.005) personItems[pid].push({ label: tagEmoji + ' ' + (item.name || 'Unnamed item'), amt: each, total: amt, n: n });
+          totals[pid] += eachPhp;
+          if (rawAmt > 0.005) personItems[pid].push({
+            label: tagEmoji + ' ' + (item.name || 'Unnamed item'),
+            amt: eachCur, total: rawAmt, n: n, cur: cur, amtPhp: eachPhp
+          });
         }
       });
     } else {
-      unassigned += amt;
+      unassigned += amtPhp;
     }
   });
 
@@ -7120,9 +7307,22 @@ function updateHSSummary() {
 
   document.getElementById('hsGrandTotal').textContent = fPHP(grand);
 
+  // Show a "items awaiting live rate" note when a foreign item can't be
+  // converted yet (rates still loading / offline).
+  const phpEqEl = document.getElementById('hsPhpEquiv');
+  if (phpEqEl) {
+    if (pendingRate > 0) {
+      phpEqEl.style.display = 'flex';
+      phpEqEl.innerHTML = `<span style="color:var(--amber-text);">⏳ ${pendingRate} item${pendingRate>1?'s':''} awaiting live rate — not yet counted</span>`;
+    } else {
+      phpEqEl.style.display = 'none';
+      phpEqEl.innerHTML = '';
+    }
+  }
+
   renderPaidStatus('hs', hsPeople, totals);
 
-  // Spend breakdown by tag — "🍔 Food ₱1,200 · 🍹 Drink ₱800 · …"
+  // Spend breakdown by tag — all in ₱ — "🍔 Food ₱1,200 · 🍹 Drink ₱800 · …"
   const tagEl = document.getElementById('hsTagBreakdown');
   if (tagEl) {
     const parts = HS_TAGS
@@ -7200,6 +7400,7 @@ function hsUndo() {
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
     hsNote      = data.note;
+    hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
     syncSessionNoteInput('hs');
     renderHSPeople();
     renderHSItems();
@@ -7244,6 +7445,7 @@ function loadHS() {
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
     hsNote      = data.note;
+    hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
   } catch(e) { console.warn('HS load failed', e); }
   syncSessionNoteInput('hs');
 }
@@ -9530,7 +9732,10 @@ function archiveSplit(type) {
       let grand = 0;
       hsItems.forEach(item => {
         if (!isInc(item)) return;
-        const amt = parseFloat(item.amt) || 0; grand += amt;
+        const raw = parseFloat(item.amt) || 0;
+        const php = curToPhp(raw, item.cur || 'PHP');   // → ₱ (null if rate missing)
+        const amt = php === null ? 0 : php;
+        grand += amt;
         const n = item.people.length;
         if (n > 0) item.people.forEach(pid => { if (totals[pid] !== undefined) totals[pid] += amt / n; });
       });
@@ -9563,8 +9768,12 @@ function renderSplitArchive(listId, filterType) {
       const badgeStyle = e.type === 'cc'
         ? 'background:var(--teal-dim);color:var(--teal-text);border:1px solid var(--teal);'
         : 'background:var(--purple-dim);color:var(--purple-text);border:1px solid var(--purple);';
+      // Foreign-currency Hangout sessions are stored with a `cur` code; format in it.
+      const archFmt = (e.type === 'hs' && e.cur && e.cur !== 'PHP' && CURRENCY_META[e.cur])
+        ? (v => convFormat(v, e.cur))
+        : fPHP;
       const peopleHtml = e.people.map(p =>
-        `<span class="arch-person">${escH(p.name)} <span class="arch-person-amt">${fPHP(p.owes)}</span>${p.paid ? ' <span style="color:var(--green-text); font-size:11px;" title="Paid">✓</span>' : ''}</span>`
+        `<span class="arch-person">${escH(p.name)} <span class="arch-person-amt">${archFmt(p.owes)}</span>${p.paid ? ' <span style="color:var(--green-text); font-size:11px;" title="Paid">✓</span>' : ''}</span>`
       ).join('');
       const storesHtml = (e.stores || []).length > 0
         ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">' +
@@ -9578,7 +9787,7 @@ function renderSplitArchive(listId, filterType) {
         <div class="arch-header">
           <span class="arch-badge" style="${badgeStyle}">${e.type === 'cc' ? 'CC Split' : 'Hangout'}</span>
           <span class="arch-date">${dateStr}</span>
-          <span class="arch-total">${fPHP(e.total)}</span>
+          <span class="arch-total">${archFmt(e.total)}</span>
         </div>${noteHtml}
         <div class="arch-people">${peopleHtml}</div>${storesHtml}
       </div>`;
@@ -10112,6 +10321,8 @@ const BACKUP_KEYS = [
   'va_whatif',
   'va_theme',
   'va_wallet_qrs',
+  'va_sr_history',   // savings-rate streak snapshots (🔥 badge) — must sync + be per-profile
+  'va_conv_pins',    // pinned currencies in the converter — nice to carry across devices
 ];
 
 // ═══════════════════════════════════════════════════════════════
