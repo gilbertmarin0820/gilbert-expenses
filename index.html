@@ -880,6 +880,13 @@
   .sav-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
   .sav-item-row .sav-amt-group { display: flex; align-items: center; gap: 4px; flex: 1 1 auto; }
   .sav-item-row .nec-amt-input { flex: 1 1 90px; min-width: 90px; max-width: 160px; margin-left: auto; }
+  .sav-int-row { flex-basis: 100%; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    padding: 6px 0 2px; margin-top: 2px; border-top: 1px dashed var(--border); }
+  .sav-int-row .sav-int-lbl { font-size: 11px; color: var(--text3); }
+  .sav-int-input { width: 52px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; }
+  .sav-int-input:focus { outline: none; border-color: var(--green); background: var(--surface3); }
+  .sav-int-earned { margin-left: auto; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--green-text); text-align: right; }
   .sav-panel-title {
     font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
@@ -1630,7 +1637,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22c</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22f</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2341,6 +2348,13 @@
           <span style="font-family:'DM Mono',monospace; color:var(--text2);" id="savingsBalanceRef">₱0.00</span>
         </div>
         <div id="savingsMatchIndicator" style="margin-top:8px;"></div>
+        <div id="savingsInterestRow" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+            <span style="color:var(--text3);">💹 Est. interest <span style="font-size:11px;">(net of tax)</span></span>
+            <span style="font-family:'DM Mono',monospace; font-weight:500; color:var(--green-text);" id="savingsInterestTotal">₱0.00</span>
+          </div>
+          <div style="font-size:11px; color:var(--text3); text-align:right; margin-top:2px;" id="savingsInterestSub"></div>
+        </div>
       </div>
 
       <!-- Auto-sync note -->
@@ -3162,12 +3176,22 @@
       <!-- BONUS (What-If only) -->
       <div style="padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:12px;">
         <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:8px;">➕ Bonus <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(What-If only)</span></div>
-        <div class="input-row" style="border-color:var(--purple); max-width:220px;">
-          <div class="input-prefix" style="color:var(--purple-text);">₱</div>
+        <div class="input-row" style="border-color:var(--purple); max-width:220px; margin-bottom:10px;">
+          <div class="input-prefix" style="color:var(--purple-text);">$ USD</div>
           <input class="big-input" type="number" id="whatifBonus" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
             oninput="calcWhatif(); saveWhatif()" style="color:var(--purple-text);">
         </div>
-        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">A one-off bump — 13th month, incentive, a gift — added straight to the projected total.</div>
+        <div class="bonus-preview">
+          <div>
+            <div style="font-size:11px; color:var(--text3); margin-bottom:3px;">Bonus in PHP</div>
+            <div style="font-family:'DM Mono',monospace; font-size:22px; font-weight:500; color:var(--purple-text);" id="whatifBonusPHP">₱—</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:3px;">At current rate</div>
+            <div style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3);" id="whatifBonusRateNote">—</div>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">A one-off bump — 13th month, incentive, a gift. Entered in USD, converted to ₱ at the current rate and added straight to the projected total.</div>
       </div>
 
       <!-- PLANNED PURCHASES (What-If only — never touches your net summary) -->
@@ -3865,6 +3889,9 @@ function calcWhatif() {
     const buyTotal = whatifBuySum();
     const bonus    = whatifBonusAmt();
     const { nec, pl } = whatifCommitments();
+    // Live USD→₱ preview for the bonus input (mirrors the Expenses-tab bonus).
+    set('whatifBonusPHP', fxRate > 0 ? fPHP(bonus) : '₱—');
+    set('whatifBonusRateNote', fxRate > 0 ? '$1 = ' + fPHP(fxRate) : 'rate not loaded');
     set('whatifSavTotal', fPHP(savTotal));
     set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
     set('whatifNecTotal', nec > 0 ? '−' + fPHP(nec) : fPHP(0));
@@ -4003,10 +4030,15 @@ function whatifCommitments() {
   return { nec, pl };
 }
 
-// The What-If bonus (₱) — a one-off addition local to the simulator.
-function whatifBonusAmt() {
+// The What-If bonus. Entered in USD (like the Expenses-tab bonus); the
+// projected-total math is all in ₱, so this returns the PHP-converted amount
+// at the current live rate (0 if the rate hasn't loaded yet).
+function whatifBonusUsd() {
   const el = document.getElementById('whatifBonus');
   return el ? (parseFloat(el.value) || 0) : 0;
+}
+function whatifBonusAmt() {
+  return fxRate > 0 ? whatifBonusUsd() * fxRate : 0;
 }
 
 // Default installment start = the current month (What-If windows usually
@@ -5002,7 +5034,7 @@ function resetAll() {
 
 // ─── SAVINGS ALLOCATION ───────────────────────────────────────
 function addSavingsItem() {
-  savingsItems.push({ bankId: 'gcash', label: 'GCash', amt: '' });
+  savingsItems.push({ bankId: 'gcash', label: 'GCash', amt: '', intRate: '', intPeriod: 'year', intTax: '20' });
   renderSavingsItems();
   saveData();
   setTimeout(() => {
@@ -5013,6 +5045,106 @@ function addSavingsItem() {
 
 function escH(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// ── Per-item savings interest ──────────────────────────────────
+// Each allocation can earn interest: a rate (%), the period that rate is
+// quoted in (per day / month / year), and a withholding-tax cut (PH banks
+// take 20% on savings interest). Blank/zero rate = the item earns nothing.
+// Figures are a simple projection (not compounded) normalised to a year,
+// from which the monthly and daily amounts are derived.
+const SAV_INT_PER_YEAR = { day: 365, month: 12, year: 1 };
+
+// Net interest per YEAR for one item (after withholding tax), in ₱.
+function savItemNetInterestPerYear(item) {
+  if (!item || !isInc(item)) return 0;
+  const rate = parseFloat(item.intRate);
+  if (!isFinite(rate) || rate <= 0) return 0;          // blank/zero → no interest
+  const amt = parseFloat(item.amt) || 0;
+  if (amt <= 0) return 0;
+  const period  = SAV_INT_PER_YEAR[item.intPeriod] ? item.intPeriod : 'year';
+  const perYear = SAV_INT_PER_YEAR[period];             // how many such periods in a year
+  const grossYr = amt * (rate / 100) * perYear;         // simple, normalised to a year
+  const taxRate = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100) / 100; // blank → 0%
+  return grossYr * (1 - taxRate);
+}
+
+// Refresh just one item's "earns ≈ …" readout without a full re-render.
+function updateSavItemInterest(i) {
+  const el = document.getElementById('savIntEarned-' + i);
+  if (!el) return;
+  const item = savingsItems[i];
+  const netYr = savItemNetInterestPerYear(item);
+  if (netYr <= 0) { el.textContent = ''; return; }
+  const taxRate = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100);
+  const taxNote = taxRate > 0 ? ' · net of ' + (Number.isInteger(taxRate) ? taxRate : taxRate.toFixed(2)) + '% tax' : '';
+  if (item.intPeriod === 'day') {
+    // Daily buckets actually grow the balance — show the daily rate + total added.
+    const grown = parseFloat(item.intGrown) || 0;
+    el.textContent = '🌱 grows ' + fPHP(netYr / 365) + '/day'
+      + (grown > 0.005 ? ' · +' + fPHP(grown) + ' added so far' : '') + taxNote;
+    el.style.color = 'var(--green-text)';
+  } else {
+    // Month/year buckets are a projection only — not auto-added.
+    el.textContent = '+ ' + fPHP(netYr / 12) + '/mo · ' + fPHP(netYr) + '/yr' + taxNote;
+    el.style.color = 'var(--text3)';
+  }
+}
+
+// ── Daily interest accrual (only for buckets set to "per day") ──
+// A daily bucket actually grows: each day it compounds the entered per-day
+// rate (net of tax) into its balance. Month/year buckets stay projections.
+// Runs on load and when the Expenses tab opens; the lastAccr date makes it
+// idempotent within a day, so it never double-counts.
+function todayLocalStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function daysBetweenLocal(fromStr, toStr) {
+  const a = new Date(fromStr + 'T00:00:00'), b = new Date(toStr + 'T00:00:00');
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.floor((b - a) / 86400000);
+}
+function accrueSavingsInterest() {
+  if (!Array.isArray(savingsItems) || !savingsItems.length) return 0;
+  const today = todayLocalStr();
+  let totalAdded = 0;
+  savingsItems.forEach(item => {
+    const rate = parseFloat(item.intRate);
+    const eligible = item.intPeriod === 'day' && isFinite(rate) && rate > 0 && isInc(item);
+    // Park anything not currently earning at today, so re-enabling later
+    // doesn't retroactively dump a lump of "back interest".
+    if (!eligible) { if (item.lastAccr) item.lastAccr = today; return; }
+    if (!item.lastAccr) { item.lastAccr = today; return; }   // start fresh from today
+    const days = daysBetweenLocal(item.lastAccr, today);
+    if (days < 1) return;
+    const amt = parseFloat(item.amt) || 0;
+    if (amt <= 0) { item.lastAccr = today; return; }
+    const taxRate  = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100) / 100;
+    const netDaily = (rate / 100) * (1 - taxRate);           // net growth per day
+    const earned   = amt * (Math.pow(1 + netDaily, days) - 1); // compounded over elapsed days
+    let carry = (parseFloat(item.intCarry) || 0) + earned;
+    const wholeCent = Math.floor(carry * 100) / 100;          // only realise whole centavos
+    if (wholeCent >= 0.01) {
+      item.amt     = (amt + wholeCent).toFixed(2);
+      item.intGrown = +(((parseFloat(item.intGrown) || 0) + wholeCent)).toFixed(2);
+      carry -= wholeCent;
+      totalAdded += wholeCent;
+    }
+    item.intCarry = +carry.toFixed(6);                        // keep sub-centavo remainder
+    item.lastAccr = today;
+  });
+  return +totalAdded.toFixed(2);
+}
+// Accrue, then refresh + persist + optionally announce if the balance grew.
+function runDailyAccrual(announce) {
+  const grown = accrueSavingsInterest();
+  if (grown > 0.005) {
+    renderSavingsItems();
+    saveData();
+    if (announce) showToast('💹 Savings grew ' + fPHP(grown) + ' from daily interest');
+  }
+  return grown;
 }
 
 function renderSavingsItems() {
@@ -5030,6 +5162,15 @@ function renderSavingsItems() {
 
     const div = document.createElement('div');
     div.className = 'sav-item-row' + (isInc(item) ? '' : ' inc-off');
+    const intPeriod = SAV_INT_PER_YEAR[item.intPeriod] ? item.intPeriod : 'year';
+    const intTax    = item.intTax != null ? item.intTax : '20';
+    // Persist the defaults onto the item so the computed interest matches
+    // what the fields display (old items had no interest fields at all).
+    if (item.intPeriod == null) item.intPeriod = intPeriod;
+    if (item.intTax == null)    item.intTax    = intTax;
+    if (item.intRate == null)   item.intRate   = '';
+    const perOpts   = [['day','day'],['month','month'],['year','year']].map(([v,l]) =>
+      `<option value="${v}"${v === intPeriod ? ' selected' : ''}>${l}</option>`).join('');
     div.innerHTML = `
       <div class="bank-select-wrap">
         <div class="bank-icon" style="background:${bank.color};">${escH(bank.abbr)}</div>
@@ -5044,11 +5185,27 @@ function renderSavingsItems() {
         ${incBtn(item, `toggleSavInc(${i})`)}
         <span style="font-size:12px;color:var(--text3);">₱</span>
         <input class="nec-amt-input" type="number" value="${item.amt}" placeholder="0.00" min="0" step="0.01"
-          oninput="savingsItems[${i}].amt=this.value; updateSavingsSummary(); saveData()">
+          oninput="savingsItems[${i}].amt=this.value; updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
       </div>
       <button class="del-btn" onclick="savingsItems.splice(${i},1); renderSavingsItems(); saveData()">✕</button>
+      <div class="sav-int-row">
+        <span class="sav-int-lbl">💹 Interest</span>
+        <input class="sav-int-input" type="number" value="${item.intRate != null ? escH(item.intRate) : ''}"
+          placeholder="—" min="0" step="0.01" inputmode="decimal" title="Interest rate — leave blank for none"
+          oninput="savingsItems[${i}].intRate=this.value; savingsItems[${i}].lastAccr=todayLocalStr(); updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
+        <span class="sav-int-lbl">% per</span>
+        <select class="nec-inst-select" title="What period the rate is for — pick 'day' to actually grow this balance daily"
+          onchange="savingsItems[${i}].intPeriod=this.value; savingsItems[${i}].lastAccr=todayLocalStr(); updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">${perOpts}</select>
+        <span class="sav-int-lbl">· tax</span>
+        <input class="sav-int-input" type="number" value="${escH(intTax)}" style="width:44px;"
+          min="0" max="100" step="0.01" inputmode="decimal" title="Withholding tax on interest (PH default 20%)"
+          oninput="savingsItems[${i}].intTax=this.value; updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
+        <span class="sav-int-lbl">%</span>
+        <span class="sav-int-earned" id="savIntEarned-${i}"></span>
+      </div>
     `;
     container.appendChild(div);
+    updateSavItemInterest(i);
   });
 
   updateSavingsSummary();
@@ -5124,6 +5281,22 @@ function updateSavingsSummary() {
       const overUnder = diff > 0 ? 'over by' : 'short by';
       const col = diff > 0 ? 'var(--red-text)' : 'var(--amber-text)';
       ind.innerHTML = `<div style="font-size:11px;color:${col};">⚠ ${overUnder} ${fPHP(Math.abs(diff))}</div>`;
+    }
+  }
+
+  // ── Estimated interest across all included allocations (net of tax) ──
+  let intYr = 0;
+  savingsItems.forEach(item => { intYr += savItemNetInterestPerYear(item); });
+  const intRow = document.getElementById('savingsInterestRow');
+  const intTot = document.getElementById('savingsInterestTotal');
+  const intSub = document.getElementById('savingsInterestSub');
+  if (intRow && intTot) {
+    if (intYr > 0.005) {
+      intRow.style.display = 'block';
+      intTot.textContent = fPHP(intYr / 12) + '/mo';
+      if (intSub) intSub.textContent = '≈ ' + fPHP(intYr) + '/yr · ' + fPHP(intYr / 365) + '/day, on average';
+    } else {
+      intRow.style.display = 'none';
     }
   }
 }
@@ -9551,6 +9724,7 @@ function switchPage(page) {
     renderSplitArchive('hsArchiveList', 'hs');
   }
   if (page === 'expenses') {
+    runDailyAccrual(true);   // catch up daily-interest growth on tab open
     setTimeout(drawChart, 60);
   }
   if (page === 'tracker') {
@@ -9572,12 +9746,19 @@ let trkrYears    = [];
 let trkrViewYear = new Date().getFullYear();
 
 loadData();
+// Default the Expenses date-range "From" to today when it's empty, so the
+// range always starts from the current date without manual entry.
+(function () {
+  const ds = document.getElementById('dateStart');
+  if (ds && !ds.value) { ds.value = todayLocalStr(); saveData(); }
+})();
 renderNec();
 renderPL('shopee');
 renderPL('tiktok');
 renderPL('maya');
 initPLPurchaseForms();
 renderSavingsItems();
+runDailyAccrual(true);   // grow any "per day" savings buckets by interest earned since last open
 loadCachedRate(); // show last known rate immediately while live fetch runs
 fetchRate(false); // then fetch a fresh live rate in the background
 
