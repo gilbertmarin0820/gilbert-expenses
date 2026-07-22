@@ -1630,7 +1630,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3997,7 +3997,7 @@ function whatifCommitments() {
   if (typeof plData === 'object' && plData) {
     (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 5,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
     (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 1,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
-    (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 15, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.maya, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
   }
 
   return { nec, pl };
@@ -4733,7 +4733,7 @@ function recalcAll() {
   });
   plData.maya.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — excluded from totals
-    if (isPLBillingInRange(row.month, 15, plStart, plEnd))
+    if (isPLBillingInRange(row.month, PL_BILLING_DAY.maya, plStart, plEnd))
       mayaSum += parseFloat(row.amt) || 0;
   });
   document.getElementById('shopeeTotal').textContent = fPHP(shopeeSum);
@@ -5442,7 +5442,7 @@ function addNec() {
 
 // ─── PAYLATER ─────────────────────────────────────────────────
 const plData = { shopee: [], tiktok: [], maya: [] };
-// Billing days: Shopee = 5th, TikTok = 1st, Maya Black CC = 15th
+// Billing days: Shopee = 5th, TikTok = 1st, Maya Black CC = 21st
 const PL_BILLING_DAY = { shopee: 5, tiktok: 1, maya: 21 };
 
 function addPLRow(type) {
@@ -9124,12 +9124,12 @@ function getCashFlowEvents(year, month) {
   if (shopeeAmt > 0)
     events.push({ day: 5, type: 'bill', label: 'SPayLater (Shopee)', amount: shopeeAmt });
 
-  // ── Bills: Maya Black Credit Card on 15th ────────────────
+  // ── Bills: Maya Black Credit Card on 21st ────────────────
   const mayaAmt = plData.maya
     .filter(r => r.month === month && isInc(r))
     .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
   if (mayaAmt > 0)
-    events.push({ day: 15, type: 'bill', label: 'Maya Black CC', amount: mayaAmt });
+    events.push({ day: PL_BILLING_DAY.maya, type: 'bill', label: 'Maya Black CC', amount: mayaAmt });
 
   // ── Bills: Necessities with a pay day set ────────────────
   necData.forEach(row => {
@@ -9290,7 +9290,7 @@ function renderCalendar() {
   const billDays = new Set();
   if (plData.tiktok.some(r => r.month === calMonth && isInc(r))) billDays.add(1);
   if (plData.shopee.some(r => r.month === calMonth && isInc(r))) billDays.add(5);
-  if (plData.maya.some(r => r.month === calMonth && isInc(r)))   billDays.add(15);
+  if (plData.maya.some(r => r.month === calMonth && isInc(r)))   billDays.add(PL_BILLING_DAY.maya);
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — hidden from calendar
     const d = parseInt(row.day) || 0;
