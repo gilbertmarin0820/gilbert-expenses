@@ -1637,7 +1637,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-22f</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -4022,8 +4022,8 @@ function whatifCommitments() {
   // (Shopee 5th, TikTok 1st, Maya 15th — mirrors recalcAll()).
   let pl = 0;
   if (typeof plData === 'object' && plData) {
-    (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 5,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
-    (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, 1,  fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.shopee, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.tiktok, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
     (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.maya, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
   }
 
@@ -4755,12 +4755,12 @@ function recalcAll() {
   let shopeeSum = 0, tiktokSum = 0, mayaSum = 0;
   plData.shopee.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — excluded from totals
-    if (isPLBillingInRange(row.month, 5, plStart, plEnd))
+    if (isPLBillingInRange(row.month, PL_BILLING_DAY.shopee, plStart, plEnd))
       shopeeSum += parseFloat(row.amt) || 0;
   });
   plData.tiktok.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — excluded from totals
-    if (isPLBillingInRange(row.month, 1, plStart, plEnd))
+    if (isPLBillingInRange(row.month, PL_BILLING_DAY.tiktok, plStart, plEnd))
       tiktokSum += parseFloat(row.amt) || 0;
   });
   plData.maya.forEach(row => {
@@ -5034,7 +5034,7 @@ function resetAll() {
 
 // ─── SAVINGS ALLOCATION ───────────────────────────────────────
 function addSavingsItem() {
-  savingsItems.push({ bankId: 'gcash', label: 'GCash', amt: '', intRate: '', intPeriod: 'year', intTax: '20' });
+  savingsItems.push({ bankId: 'gcash', label: 'GCash', amt: '', intRate: '', intPeriod: 'year', intTax: '20', intBasis: 'annual' });
   renderSavingsItems();
   saveData();
   setTimeout(() => {
@@ -5047,13 +5047,33 @@ function escH(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 
+// Safe to drop inside a SINGLE-QUOTED JS string that lives in an HTML
+// attribute — i.e. an inline onclick that passes a name as an argument.
+// escH alone is not enough there: it leaves apostrophes and backslashes untouched, so a name like
+// "Mom's allowance" or "O'Brien" closes the JS string early and the whole
+// handler dies with a SyntaxError (the control silently stops working).
+function escJS(s) {
+  return escH(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 // ── Per-item savings interest ──────────────────────────────────
-// Each allocation can earn interest: a rate (%), the period that rate is
-// quoted in (per day / month / year), and a withholding-tax cut (PH banks
-// take 20% on savings interest). Blank/zero rate = the item earns nothing.
-// Figures are a simple projection (not compounded) normalised to a year,
-// from which the monthly and daily amounts are derived.
-const SAV_INT_PER_YEAR = { day: 365, month: 12, year: 1 };
+// The rate is ALWAYS an annual rate (% per year) — that's how banks quote
+// savings accounts, and it matches the Plan-tab Savings Interest Calculator.
+// The dropdown picks how often that interest is CREDITED (daily / monthly /
+// yearly), not what period the rate is quoted in. Every frequency actually
+// grows the balance; it just lands in different sized chunks.
+//   one credit = balance × (rate ÷ 100) ÷ credits-per-year × (1 − tax)
+// e.g. ₱10,000 at 3%/yr, credited daily, 20% tax:
+//   10,000 × 0.03 ÷ 365 × 0.80 = ₱0.6575… per day  (≈ ₱240.00 a year)
+// Blank/zero rate = the item earns nothing.
+const SAV_INT_CREDITS_PER_YEAR = { day: 365, month: 12, year: 1 };
+const SAV_INT_FREQ_LABEL  = { day: 'daily',  month: 'monthly', year: 'yearly' };
+const SAV_INT_FREQ_SUFFIX = { day: '/day',   month: '/mo',     year: '/yr'    };
+
+// Which crediting frequency an item uses (defaults to yearly).
+function savItemCreditFreq(item) {
+  return (item && SAV_INT_CREDITS_PER_YEAR[item.intPeriod]) ? item.intPeriod : 'year';
+}
 
 // Net interest per YEAR for one item (after withholding tax), in ₱.
 function savItemNetInterestPerYear(item) {
@@ -5062,11 +5082,13 @@ function savItemNetInterestPerYear(item) {
   if (!isFinite(rate) || rate <= 0) return 0;          // blank/zero → no interest
   const amt = parseFloat(item.amt) || 0;
   if (amt <= 0) return 0;
-  const period  = SAV_INT_PER_YEAR[item.intPeriod] ? item.intPeriod : 'year';
-  const perYear = SAV_INT_PER_YEAR[period];             // how many such periods in a year
-  const grossYr = amt * (rate / 100) * perYear;         // simple, normalised to a year
   const taxRate = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100) / 100; // blank → 0%
-  return grossYr * (1 - taxRate);
+  return amt * (rate / 100) * (1 - taxRate);
+}
+
+// Net ₱ landing in the balance each time interest is credited.
+function savItemNetInterestPerCredit(item) {
+  return savItemNetInterestPerYear(item) / SAV_INT_CREDITS_PER_YEAR[savItemCreditFreq(item)];
 }
 
 // Refresh just one item's "earns ≈ …" readout without a full re-render.
@@ -5078,24 +5100,22 @@ function updateSavItemInterest(i) {
   if (netYr <= 0) { el.textContent = ''; return; }
   const taxRate = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100);
   const taxNote = taxRate > 0 ? ' · net of ' + (Number.isInteger(taxRate) ? taxRate : taxRate.toFixed(2)) + '% tax' : '';
-  if (item.intPeriod === 'day') {
-    // Daily buckets actually grow the balance — show the daily rate + total added.
-    const grown = parseFloat(item.intGrown) || 0;
-    el.textContent = '🌱 grows ' + fPHP(netYr / 365) + '/day'
-      + (grown > 0.005 ? ' · +' + fPHP(grown) + ' added so far' : '') + taxNote;
-    el.style.color = 'var(--green-text)';
-  } else {
-    // Month/year buckets are a projection only — not auto-added.
-    el.textContent = '+ ' + fPHP(netYr / 12) + '/mo · ' + fPHP(netYr) + '/yr' + taxNote;
-    el.style.color = 'var(--text3)';
-  }
+  const freq  = savItemCreditFreq(item);
+  const grown = parseFloat(item.intGrown) || 0;
+  el.textContent = '🌱 ' + fPHP(savItemNetInterestPerCredit(item)) + SAV_INT_FREQ_SUFFIX[freq]
+    + ' credited ' + SAV_INT_FREQ_LABEL[freq]
+    + ' · ≈ ' + fPHP(netYr) + '/yr'
+    + (grown > 0.005 ? ' · +' + fPHP(grown) + ' added so far' : '')
+    + taxNote;
+  el.style.color = 'var(--green-text)';
 }
 
-// ── Daily interest accrual (only for buckets set to "per day") ──
-// A daily bucket actually grows: each day it compounds the entered per-day
-// rate (net of tax) into its balance. Month/year buckets stay projections.
-// Runs on load and when the Expenses tab opens; the lastAccr date makes it
-// idempotent within a day, so it never double-counts.
+// ── Interest accrual ───────────────────────────────────────────
+// Every allocation with a rate grows its own balance on its crediting
+// schedule. lastAccr holds the date of the last credit, so this is
+// idempotent — running it twice in one day adds nothing, and it advances by
+// WHOLE periods only (a monthly bucket last credited on the 15th moves to
+// the 15th, not to today, so the part-month isn't lost).
 function todayLocalStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -5105,24 +5125,54 @@ function daysBetweenLocal(fromStr, toStr) {
   if (isNaN(a) || isNaN(b)) return 0;
   return Math.floor((b - a) / 86400000);
 }
+// Whole calendar months between two dates (Jan 15 → Mar 10 = 1, not 2).
+function monthsBetweenLocal(fromStr, toStr) {
+  const a = new Date(fromStr + 'T00:00:00'), b = new Date(toStr + 'T00:00:00');
+  if (isNaN(a) || isNaN(b)) return 0;
+  let m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) m--;
+  return Math.max(0, m);
+}
+function yearsBetweenLocal(fromStr, toStr) {
+  return Math.floor(monthsBetweenLocal(fromStr, toStr) / 12);
+}
+// Move a date forward by n whole periods, clamping short months (Jan 31 + 1mo → Feb 28).
+function addPeriodsLocal(fromStr, n, period) {
+  const d = new Date(fromStr + 'T00:00:00');
+  if (isNaN(d) || n < 1) return fromStr;
+  if (period === 'day') {
+    d.setDate(d.getDate() + n);
+  } else {
+    const dom = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + (period === 'year' ? n * 12 : n));
+    d.setDate(Math.min(dom, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 function accrueSavingsInterest() {
   if (!Array.isArray(savingsItems) || !savingsItems.length) return 0;
   const today = todayLocalStr();
   let totalAdded = 0;
   savingsItems.forEach(item => {
     const rate = parseFloat(item.intRate);
-    const eligible = item.intPeriod === 'day' && isFinite(rate) && rate > 0 && isInc(item);
+    const eligible = isFinite(rate) && rate > 0 && isInc(item);
     // Park anything not currently earning at today, so re-enabling later
     // doesn't retroactively dump a lump of "back interest".
     if (!eligible) { if (item.lastAccr) item.lastAccr = today; return; }
     if (!item.lastAccr) { item.lastAccr = today; return; }   // start fresh from today
-    const days = daysBetweenLocal(item.lastAccr, today);
-    if (days < 1) return;
+    const freq = savItemCreditFreq(item);
+    const n = freq === 'day'   ? daysBetweenLocal(item.lastAccr, today)
+            : freq === 'month' ? monthsBetweenLocal(item.lastAccr, today)
+            :                    yearsBetweenLocal(item.lastAccr, today);
+    if (n < 1) return;                                       // no full period yet
     const amt = parseFloat(item.amt) || 0;
     if (amt <= 0) { item.lastAccr = today; return; }
-    const taxRate  = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100) / 100;
-    const netDaily = (rate / 100) * (1 - taxRate);           // net growth per day
-    const earned   = amt * (Math.pow(1 + netDaily, days) - 1); // compounded over elapsed days
+    const taxRate = Math.min(Math.max(parseFloat(item.intTax) || 0, 0), 100) / 100;
+    // Annual rate split into one credit, net of tax…
+    const netPer  = (rate / 100) / SAV_INT_CREDITS_PER_YEAR[freq] * (1 - taxRate);
+    // …compounded over however many credits were missed since the last run.
+    const earned  = amt * (Math.pow(1 + netPer, n) - 1);
     let carry = (parseFloat(item.intCarry) || 0) + earned;
     const wholeCent = Math.floor(carry * 100) / 100;          // only realise whole centavos
     if (wholeCent >= 0.01) {
@@ -5132,16 +5182,61 @@ function accrueSavingsInterest() {
       totalAdded += wholeCent;
     }
     item.intCarry = +carry.toFixed(6);                        // keep sub-centavo remainder
-    item.lastAccr = today;
+    item.lastAccr = addPeriodsLocal(item.lastAccr, n, freq);  // advance by whole periods
   });
   return +totalAdded.toFixed(2);
 }
+
+// One-time migration to the annual-rate reading. Before this build the
+// dropdown meant "the rate is quoted per X", so a 3 on "day" meant 3% A DAY.
+// Now it means 3% a year credited daily. Items already on a per-day rate get
+// their lastAccr reset to today so nothing back-accrues under the new
+// reading, and we return how many changed meaning so the user can be told.
+function migrateSavingsInterestBasis() {
+  if (!Array.isArray(savingsItems)) return 0;
+  let changed = 0;
+  savingsItems.forEach(item => {
+    if (!item || item.intBasis === 'annual') return;
+    item.intBasis = 'annual';
+    const rate = parseFloat(item.intRate);
+    if (isFinite(rate) && rate > 0 && item.intPeriod === 'day') {
+      item.lastAccr = todayLocalStr();
+      changed++;
+    }
+  });
+  return changed;
+}
+
+// Undo the interest an allocation has accrued, putting the balance back to
+// what it was before it started growing. Handy after a mistyped rate.
+function resetSavGrown(i) {
+  const item = savingsItems[i];
+  if (!item) return;
+  const grown = parseFloat(item.intGrown) || 0;
+  if (grown <= 0.005) return;
+  const back = Math.max(0, (parseFloat(item.amt) || 0) - grown);
+  if (!confirm('Remove the ' + fPHP(grown) + ' of interest added to "'
+    + (item.label || 'this allocation') + '"?\n\nBalance goes back to ' + fPHP(back) + '.')) return;
+  item.amt      = back.toFixed(2);
+  item.intGrown = 0;
+  item.intCarry = 0;
+  item.lastAccr = todayLocalStr();
+  renderSavingsItems();
+  saveData();
+  showToast('↺ Removed ' + fPHP(grown) + ' of accrued interest');
+}
 // Accrue, then refresh + persist + optionally announce if the balance grew.
 function runDailyAccrual(announce) {
-  const grown = accrueSavingsInterest();
+  const before = JSON.stringify(savingsItems.map(it => [it.amt, it.lastAccr, it.intCarry]));
+  const grown  = accrueSavingsInterest();
+  // Persist whenever ANY bookkeeping changed — not just when a whole centavo
+  // landed. Sub-centavo days still advance lastAccr and bank intCarry, and
+  // parked (non-earning) items get their lastAccr moved forward; dropping
+  // those meant redoing the same work on every load.
+  const after = JSON.stringify(savingsItems.map(it => [it.amt, it.lastAccr, it.intCarry]));
+  if (after !== before) saveData();
   if (grown > 0.005) {
     renderSavingsItems();
-    saveData();
     if (announce) showToast('💹 Savings grew ' + fPHP(grown) + ' from daily interest');
   }
   return grown;
@@ -5162,14 +5257,16 @@ function renderSavingsItems() {
 
     const div = document.createElement('div');
     div.className = 'sav-item-row' + (isInc(item) ? '' : ' inc-off');
-    const intPeriod = SAV_INT_PER_YEAR[item.intPeriod] ? item.intPeriod : 'year';
+    const intPeriod = SAV_INT_CREDITS_PER_YEAR[item.intPeriod] ? item.intPeriod : 'year';
     const intTax    = item.intTax != null ? item.intTax : '20';
     // Persist the defaults onto the item so the computed interest matches
     // what the fields display (old items had no interest fields at all).
     if (item.intPeriod == null) item.intPeriod = intPeriod;
     if (item.intTax == null)    item.intTax    = intTax;
     if (item.intRate == null)   item.intRate   = '';
-    const perOpts   = [['day','day'],['month','month'],['year','year']].map(([v,l]) =>
+    if (item.intBasis == null)  item.intBasis  = 'annual';
+    const intGrown  = parseFloat(item.intGrown) || 0;
+    const perOpts   = [['day','daily'],['month','monthly'],['year','yearly']].map(([v,l]) =>
       `<option value="${v}"${v === intPeriod ? ' selected' : ''}>${l}</option>`).join('');
     div.innerHTML = `
       <div class="bank-select-wrap">
@@ -5191,16 +5288,21 @@ function renderSavingsItems() {
       <div class="sav-int-row">
         <span class="sav-int-lbl">💹 Interest</span>
         <input class="sav-int-input" type="number" value="${item.intRate != null ? escH(item.intRate) : ''}"
-          placeholder="—" min="0" step="0.01" inputmode="decimal" title="Interest rate — leave blank for none"
+          placeholder="—" min="0" step="0.01" inputmode="decimal" title="Annual interest rate (% per year), the way banks quote it — leave blank for none"
           oninput="savingsItems[${i}].intRate=this.value; savingsItems[${i}].lastAccr=todayLocalStr(); updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
-        <span class="sav-int-lbl">% per</span>
-        <select class="nec-inst-select" title="What period the rate is for — pick 'day' to actually grow this balance daily"
+        <span class="sav-int-lbl">% /yr, paid</span>
+        <select class="nec-inst-select" title="How often the interest is credited into this balance"
           onchange="savingsItems[${i}].intPeriod=this.value; savingsItems[${i}].lastAccr=todayLocalStr(); updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">${perOpts}</select>
         <span class="sav-int-lbl">· tax</span>
         <input class="sav-int-input" type="number" value="${escH(intTax)}" style="width:44px;"
           min="0" max="100" step="0.01" inputmode="decimal" title="Withholding tax on interest (PH default 20%)"
-          oninput="savingsItems[${i}].intTax=this.value; updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
+          oninput="savingsItems[${i}].intTax=this.value; savingsItems[${i}].lastAccr=todayLocalStr(); updateSavItemInterest(${i}); updateSavingsSummary(); saveData()">
         <span class="sav-int-lbl">%</span>
+        ${intGrown > 0.005
+          ? `<button class="del-btn" style="padding:2px 6px; font-size:11px;"
+               title="Undo the interest added so far and put the balance back"
+               onclick="resetSavGrown(${i})">↺</button>`
+          : ''}
         <span class="sav-int-earned" id="savIntEarned-${i}"></span>
       </div>
     `;
@@ -5477,7 +5579,7 @@ function renderNec() {
     if (!isInc(row)) tr.classList.add('inc-off');
     if (row.inst && mult === 0) tr.style.opacity = '0.45';
     tr.innerHTML = `
-      <td><input class="nec-cat-input" value="${row.cat}" placeholder="Category" oninput="necData[${i}].cat=this.value; bclSoon(); saveData()"></td>
+      <td><input class="nec-cat-input" value="${escH(row.cat)}" placeholder="Category" oninput="necData[${i}].cat=this.value; bclSoon(); saveData()"></td>
       <td style="text-align:right">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;">
           ${incBtn(row, `toggleNecInc(${i})`)}
@@ -5591,7 +5693,11 @@ function isPLBillingInRange(month, billingDay, startStr, endStr) {
   if (!startStr || !endStr) return true;
   const start = new Date(startStr + 'T00:00:00');
   const end   = new Date(endStr   + 'T00:00:00');
-  if (isNaN(start) || isNaN(end) || end < start) return true;
+  if (isNaN(start) || isNaN(end)) return true;
+  // An inverted range (end before start) is an empty window — necRowMult
+  // returns 0 for it, so returning true here made necessities vanish while
+  // PayLater totals stayed at full value. Treat it as empty on both sides.
+  if (end < start) return false;
   const startYear = start.getFullYear();
   const endYear   = end.getFullYear();
   for (let yr = startYear; yr <= endYear; yr++) {
@@ -5608,8 +5714,11 @@ function addNec() {
   renderNec();
   saveData();
   setTimeout(() => {
-    const all = document.querySelectorAll('.nec-cat-input');
-    if (all.length) all[all.length-2].focus();
+    // Scope to the necessities table — '.nec-cat-input' is reused all over the
+    // app (OT day type, hangout items, wishlist, debts, the interest
+    // calculator), so an unscoped query focused a field on another tab.
+    const all = document.querySelectorAll('#necBody .nec-cat-input');
+    if (all.length) all[all.length - 1].focus();
   }, 40);
 }
 
@@ -6236,8 +6345,8 @@ function calcUseAsExpense() {
   const necTable = document.getElementById('necBody');
   if (necTable) necTable.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   setTimeout(() => {
-    const all = document.querySelectorAll('.nec-cat-input');
-    if (all.length) all[all.length - 2].focus();
+    const all = document.querySelectorAll('#necBody .nec-cat-input');
+    if (all.length) all[all.length - 1].focus();
   }, 350);
   showToast('Added ₱' + amt.toLocaleString('en-PH', { maximumFractionDigits: 2 }) + ' — name the category');
 }
@@ -9288,14 +9397,14 @@ function getCashFlowEvents(year, month) {
     .filter(r => r.month === month && isInc(r))
     .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
   if (tiktokAmt > 0)
-    events.push({ day: 1, type: 'bill', label: 'TikTok PayLater', amount: tiktokAmt });
+    events.push({ day: PL_BILLING_DAY.tiktok, type: 'bill', label: 'TikTok PayLater', amount: tiktokAmt });
 
   // ── Bills: Shopee SPayLater on 5th ───────────────────────
   const shopeeAmt = plData.shopee
     .filter(r => r.month === month && isInc(r))
     .reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
   if (shopeeAmt > 0)
-    events.push({ day: 5, type: 'bill', label: 'SPayLater (Shopee)', amount: shopeeAmt });
+    events.push({ day: PL_BILLING_DAY.shopee, type: 'bill', label: 'SPayLater (Shopee)', amount: shopeeAmt });
 
   // ── Bills: Maya Black Credit Card on 21st ────────────────
   const mayaAmt = plData.maya
@@ -9461,8 +9570,8 @@ function renderCalendar() {
 
   // Bill days: paylater, necessities with a day, subscriptions with billingDay
   const billDays = new Set();
-  if (plData.tiktok.some(r => r.month === calMonth && isInc(r))) billDays.add(1);
-  if (plData.shopee.some(r => r.month === calMonth && isInc(r))) billDays.add(5);
+  if (plData.tiktok.some(r => r.month === calMonth && isInc(r))) billDays.add(PL_BILLING_DAY.tiktok);
+  if (plData.shopee.some(r => r.month === calMonth && isInc(r))) billDays.add(PL_BILLING_DAY.shopee);
   if (plData.maya.some(r => r.month === calMonth && isInc(r)))   billDays.add(PL_BILLING_DAY.maya);
   necData.forEach(row => {
     if (!isInc(row)) return;                 // unmarked — hidden from calendar
@@ -9758,7 +9867,20 @@ renderPL('tiktok');
 renderPL('maya');
 initPLPurchaseForms();
 renderSavingsItems();
-runDailyAccrual(true);   // grow any "per day" savings buckets by interest earned since last open
+// Rates are read as ANNUAL from this build on. Migrate first so nothing
+// back-accrues under the old "rate is per-day" reading, then credit.
+(function () {
+  const reinterpreted = migrateSavingsInterestBasis();
+  runDailyAccrual(true);   // credit any interest earned since the last open
+  if (reinterpreted > 0) {
+    renderSavingsItems();
+    saveData();
+    setTimeout(function () {
+      showToast('💹 Interest rates now read as % per YEAR — check your '
+        + reinterpreted + ' daily-credited allocation' + (reinterpreted > 1 ? 's' : ''), true);
+    }, 1200);
+  }
+})();
 loadCachedRate(); // show last known rate immediately while live fetch runs
 fetchRate(false); // then fetch a fresh live rate in the background
 
@@ -9845,6 +9967,16 @@ function renderBillChecklist() {
     if (necRowBase(row) > 0 && (row.cat || '').trim())
       items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec' });
   });
+  // Two necessities with the same name AND pay day used to share one key, so
+  // ticking one ticked both. Suffix the repeats (_2, _3…) — the first keeps
+  // its original key, so existing checkmarks for this month survive.
+  {
+    const seen = {};
+    items.forEach(it => {
+      seen[it.key] = (seen[it.key] || 0) + 1;
+      if (seen[it.key] > 1) it.key += '_' + seen[it.key];
+    });
+  }
   subscriptions.forEach(sub => {
     if (!isInc(sub)) return;                 // unmarked — hidden from checklist
     if ((parseFloat(sub.amt) || 0) > 0 && (sub.name || '').trim())
@@ -9871,7 +10003,7 @@ function renderBillChecklist() {
   c.innerHTML = items.map(it => {
     const checked = !!billChecks.checks[it.key];
     const srcLabel = it.src === 'nec' ? 'bill' : it.src === 'sub' ? 'sub' : 'pay';
-    return `<div class="bcl-row${checked ? ' bcl-done' : ''}" onclick="toggleBillCheck('${escH(it.key)}')">
+    return `<div class="bcl-row${checked ? ' bcl-done' : ''}" onclick="toggleBillCheck('${escJS(it.key)}')">
       <span class="bcl-check">${checked ? '✓' : ''}</span>
       <span class="bcl-label">${escH(it.label)}</span>
       <span class="bcl-source ${it.src}">${srcLabel}</span>
@@ -10043,7 +10175,7 @@ function trkrRenderPersonList() {
   c.innerHTML = trkrPersons.map(name => `
     <div class="trkr-person-tag">
       <span>${escH(name)}</span>
-      <button class="del-btn" style="padding:2px 6px; font-size:12px;" onclick="trkrRemovePerson('${escH(name).replace(/'/g,"\\'")}')">✕</button>
+      <button class="del-btn" style="padding:2px 6px; font-size:12px;" onclick="trkrRemovePerson('${escJS(name)}')">✕</button>
     </div>
   `).join('');
 }
@@ -10216,7 +10348,7 @@ function trkrRenderTable() {
       return `<td class="${cls}"
         title="Click to edit"
         style="cursor:pointer;"
-        onclick="trkrCellClick(this, '${escH(person)}', ${trkrViewYear}, ${mi}, ${amt})"
+        onclick="trkrCellClick(this, '${escJS(person)}', ${trkrViewYear}, ${mi}, ${amt})"
       >${amt > 0 ? trkrFmt(amt) : '<span style="color:var(--text3);">—</span>'}</td>`;
     }).join('');
 
@@ -11537,6 +11669,12 @@ const STORAGE_KEY_LABELS = {
   va_interest_calc:      'Interest calculator',
   va_theme:              'Theme',
   va_wallet_qrs:         'Wallet QR images',
+  va_whatif:             'What-If simulator',
+  va_sr_history:         'Savings-rate streak',
+  va_conv_pins:          'Pinned currencies',
+  va_calc_tape:          'Calculator history',
+  va_unit_sel:           'Unit converter choice',
+  va_last_tab:           'Last open tab',
 };
 
 function fmtBytes(b) {
