@@ -1139,6 +1139,16 @@
       bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
     }
 
+    /* Chat FAB stacks directly above the scroll-to-top slot */
+    #chatFab {
+      bottom: calc(136px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    #chatModal .chat-panel {
+      max-width: none; border-radius: var(--radius) var(--radius) 0 0;
+      max-height: 88dvh;
+    }
+    #chatModal { align-items: flex-end !important; padding: 0 !important; }
+
     /* ── Section titles ───────────────────────────────────── */
     .section-title { font-size: 10px; margin-bottom: 12px; }
 
@@ -1590,6 +1600,95 @@
     .section-title.collapsed { margin-bottom: 4px; }
   }
 
+  /* ═══ CHAT COMMAND BAR ═══════════════════════════════════ */
+  #chatFab {
+    position: fixed; right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--teal); background: var(--teal-dim);
+    color: var(--teal-text); font-size: 19px; line-height: 1;
+    cursor: pointer; z-index: 900;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    transition: transform .15s ease;
+  }
+  #chatFab:hover { transform: translateY(-2px); }
+
+  .chat-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 100%; max-width: 480px;
+    box-shadow: 0 16px 48px var(--shadow-modal);
+    display: flex; flex-direction: column;
+    max-height: calc(100dvh - 40px);
+  }
+  .chat-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+  }
+  .chat-log {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 180px;
+  }
+  .chat-msg {
+    max-width: 86%; padding: 9px 13px; border-radius: 14px;
+    font-size: 13px; line-height: 1.55; white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .chat-msg.you {
+    align-self: flex-end; background: var(--teal-dim);
+    color: var(--teal-text); border-bottom-right-radius: 4px;
+  }
+  .chat-msg.app {
+    align-self: flex-start; background: var(--surface2);
+    color: var(--text2); border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.err { border-color: var(--red); color: var(--red-text); }
+  .chat-msg b { color: var(--text); font-weight: 600; }
+
+  .chat-confirm {
+    align-self: flex-start; width: 86%;
+    background: var(--surface2); border: 1px solid var(--teal);
+    border-radius: 14px; border-bottom-left-radius: 4px; padding: 12px 14px;
+  }
+  .chat-confirm .cc-line { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 3px; }
+  .chat-confirm .cc-sub  { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .chat-confirm .cc-btns { display: flex; gap: 8px; }
+  .chat-confirm button {
+    flex: 1; padding: 8px 0; border-radius: var(--radius-sm);
+    font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .cc-ok  { background: var(--teal-dim); border: 1px solid var(--teal); color: var(--teal-text); }
+  .cc-no  { background: transparent; border: 1px solid var(--border); color: var(--text3); }
+  .chat-confirm.done { border-color: var(--border); opacity: .6; }
+
+  .chat-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 16px 10px; flex: 0 0 auto; }
+  .chat-chip {
+    padding: 5px 11px; border-radius: 999px; font-size: 11.5px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text3); cursor: pointer; font-family: 'DM Mono', monospace;
+  }
+  .chat-chip:hover { border-color: var(--teal); color: var(--teal-text); }
+
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 12px 16px 16px;
+    border-top: 1px solid var(--border); flex: 0 0 auto;
+  }
+  .chat-input-row input {
+    flex: 1; min-width: 0; padding: 11px 13px;
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 999px;
+    font-family: 'Outfit', sans-serif; font-size: 14px;
+  }
+  .chat-input-row input:focus { outline: none; border-color: var(--teal); }
+  .chat-send {
+    width: 42px; flex: 0 0 42px; border-radius: 50%;
+    background: var(--teal-dim); border: 1px solid var(--teal);
+    color: var(--teal-text); font-size: 15px; cursor: pointer;
+  }
+  .chat-ai-note { font-size: 10.5px; color: var(--text3); padding: 0 16px 8px; text-align: center; }
 </style>
 </head>
 <body>
@@ -1637,7 +1736,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23d</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1802,12 +1901,58 @@
       </button>
     </div>
 
+    <!-- AI assist for the chat command bar -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🤖 Chat — AI fallback <span style="font-size:10px; font-weight:400; color:var(--text3);">optional</span></div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        The 💬 command bar understands plain commands on its own — offline, instantly, no key needed.
+        Pick a provider here and anything it <em>can't</em> parse gets passed to that model instead,
+        which handles messy phrasing and questions. The model only ever
+        <strong style="color:var(--text2);">proposes</strong> a change — you still confirm it, and Undo still works.
+      </div>
+      <select id="aiProviderSel" class="trkr-select" onchange="onAiProviderChange()" style="width:100%; margin-bottom:10px;">
+        <option value="off">Off — offline parser only</option>
+        <option value="gemini">Gemini (free tier)</option>
+        <option value="anthropic">Anthropic (paid)</option>
+      </select>
+      <div id="aiProviderNote" style="font-size:11.5px; color:var(--text3); margin-bottom:10px; line-height:1.5;"></div>
+      <div id="aiKeyRows" style="display:none;">
+        <input id="aiKeyInput" type="password" autocomplete="off" style="
+          width:100%; box-sizing:border-box; padding:10px; margin-bottom:8px;
+          background:var(--surface3); border:1px solid var(--border);
+          color:var(--text); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:12px;">
+        <input id="aiModelInput" type="text" autocomplete="off" style="
+          width:100%; box-sizing:border-box; padding:10px; margin-bottom:8px;
+          background:var(--surface3); border:1px solid var(--border);
+          color:var(--text); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:12px;">
+        <div style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5;">
+          Second field is the model ID — leave it as-is unless a request comes back saying the model
+          was not found, in which case check your provider's console for a current one.
+          <br><strong style="color:var(--text2);">The key is stored in this browser only.</strong>
+          It is never synced, exported, or included in a backup — so you'll paste it once per device.
+          Don't add one on a shared computer.
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="saveAiKey()" style="
+            flex:1; padding:9px 14px; background:var(--teal-dim); border:1px solid var(--teal);
+            color:var(--teal-text); border-radius:var(--radius-sm); cursor:pointer;
+            font-family:'Outfit',sans-serif; font-size:13px; font-weight:500;">Save key</button>
+          <button onclick="clearAiKey()" style="
+            padding:9px 14px; background:transparent; border:1px solid var(--border);
+            color:var(--text3); border-radius:var(--radius-sm); cursor:pointer;
+            font-family:'Outfit',sans-serif; font-size:13px;">Remove</button>
+        </div>
+      </div>
+      <div id="aiKeyMsg" style="font-size:11.5px; color:var(--text3); margin-top:8px; min-height:16px;"></div>
+    </div>
+
     <!-- Keyboard shortcuts (desktop) -->
     <div style="margin-top:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">⌨️ Keyboard shortcuts (desktop)</div>
       <div style="font-size:12px; color:var(--text3); line-height:2;">
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Alt + 1–5</code> switch tabs (Expenses → Tracker)<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">N</code> new entry on the current page<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + K</code> open the 💬 command bar<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + Z</code> undo last change<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Esc</code> close this popup<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">0–9 + − × ÷ Enter</code> type into the calculator (Expenses page)
@@ -1836,6 +1981,36 @@
     font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
     ✕ Close
   </button>
+</div>
+
+<!-- ═══ CHAT COMMAND BAR ═══════════════════════════════════════ -->
+<div id="chatModal" style="
+  display:none; position:fixed; inset:0; z-index:1050;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+  align-items:center; justify-content:center; padding:20px;">
+  <div class="chat-panel">
+    <div class="chat-head">
+      <div style="font-size:15px; font-weight:600; color:var(--text);">
+        💬 Command
+        <span id="chatModeTag" style="font-size:10px; font-weight:400; color:var(--text3);"></span>
+      </div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button onclick="chatClear()" title="Clear this conversation"
+          style="background:none; border:none; color:var(--text3); font-size:14px; cursor:pointer; padding:0 6px;">🗑</button>
+        <button onclick="closeChat()"
+          style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
+      </div>
+    </div>
+    <div class="chat-log" id="chatLogEl"></div>
+    <div class="chat-chips" id="chatChips"></div>
+    <div class="chat-ai-note" id="chatAiNote"></div>
+    <div class="chat-input-row">
+      <input id="chatInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+        placeholder="e.g. add 250 on gcash"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); chatSubmit();}">
+      <button class="chat-send" onclick="chatSubmit()" title="Send">➤</button>
+    </div>
+  </div>
 </div>
 
 <!-- PAGE NAV + FX BAR — sticky on desktop -->
@@ -9968,17 +10143,10 @@ function toggleBillCheck(key) {
   renderBillChecklist();
 }
 
-function renderBillChecklist() {
-  const c = document.getElementById('bclContainer');
-  if (!c) return;
-
-  // Auto-reset new month
-  const cur = bclPeriod();
-  if (billChecks.period !== cur) {
-    billChecks = { period: cur, checks: {} };
-    saveBillChecks();
-  }
-
+// Builds the current month's checklist rows. Extracted from
+// renderBillChecklist so the chat command bar can resolve a bill by
+// name against the exact same keys the UI ticks.
+function bclBuildItems() {
   const items = [];
   const bclMonth = new Date().getMonth();
   necData.forEach((row, i) => {
@@ -10009,6 +10177,22 @@ function renderBillChecklist() {
   if (tiktokAmt > 0) items.push({ key: 'pl_tiktok', label: 'TikTok PayLater', amt: tiktokAmt, src: 'pay' });
   const mayaAmt = plData.maya.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
   if (mayaAmt > 0) items.push({ key: 'pl_maya', label: 'Maya Black CC', amt: mayaAmt, src: 'pay' });
+
+  return items;
+}
+
+function renderBillChecklist() {
+  const c = document.getElementById('bclContainer');
+  if (!c) return;
+
+  // Auto-reset new month
+  const cur = bclPeriod();
+  if (billChecks.period !== cur) {
+    billChecks = { period: cur, checks: {} };
+    saveBillChecks();
+  }
+
+  const items = bclBuildItems();
 
   const done = items.filter(it => billChecks.checks[it.key]).length;
   const progEl = document.getElementById('bclProgress');
@@ -11272,8 +11456,18 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const qr = document.getElementById('qrOverlay');
     const sm = document.getElementById('settingsModal');
+    const ch = document.getElementById('chatModal');
     if (qr && qr.style.display === 'flex')      { closeQROverlay(); return; }
     else if (sm && sm.style.display === 'flex') { closeSettings();  return; }
+    else if (ch && ch.style.display === 'flex') { closeChat();      return; }
+  }
+
+  // Ctrl/Cmd + K — open the command bar from anywhere, even while typing
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    const ch = document.getElementById('chatModal');
+    if (ch && ch.style.display === 'flex') closeChat(); else openChat();
+    return;
   }
 
   const el     = document.activeElement;
@@ -11885,6 +12079,843 @@ if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {});
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CHAT COMMAND BAR
+// A chat-style bar that turns typed commands ("add 250 on gcash")
+// into changes on your data.
+//
+// Two brains, one destination:
+//   1. A LOCAL parser handles the regular shapes — verb + amount +
+//      target. Instant, offline, free, no key. This covers ~all real
+//      usage and is the only path that runs by default.
+//   2. If the parser can't understand it AND an Anthropic API key is
+//      saved in Settings, the text is handed to Claude, which returns
+//      a structured intent — never a write.
+//
+// BOTH routes end at the same place: chatApply() validates the intent
+// and applies it through saveData()/savePlanData(), so the existing
+// Undo stack picks it up like any other edit. Nothing mutates until
+// you tap Apply.
+// ═══════════════════════════════════════════════════════════════
+
+const CHAT_LOG_KEY   = 'va_chat_log';    // per-device transcript (not synced)
+// Per-device secrets — deliberately never synced, exported, or backed up.
+// Actual key/model storage keys live per provider in AI_PROVIDERS below.
+const AI_DEVICE_KEYS  = ['va_ai_provider', 'va_ai_key', 'va_ai_model', 'va_ai_key_g', 'va_ai_model_g'];
+const CHAT_MAX_MSGS  = 40;
+
+let chatMsgs      = [];   // [{who:'you'|'app', text, cls}]
+let _chatIntents  = {};   // id -> intent awaiting confirm
+let _chatIntentSeq = 1;
+let _chatBusy     = false;
+
+// ─── TEXT HELPERS ─────────────────────────────────────────────
+function chatNorm(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Levenshtein, capped — used so "gcsh" still finds GCash.
+function chatLev(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Scores how well a typed word matches a candidate name. 0 = no match.
+function chatScore(q, cand) {
+  const a = chatNorm(q), b = chatNorm(cand);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (b.startsWith(a) || a.startsWith(b)) return 84 - Math.abs(a.length - b.length);
+  if (b.includes(a) || a.includes(b)) return 70 - Math.abs(a.length - b.length);
+  const d = chatLev(a, b);
+  if (d <= 1) return 66;
+  if (d === 2 && Math.max(a.length, b.length) >= 5) return 55;
+  return 0;
+}
+
+// "1,250" · "1.5k" · "₱250" · "250.50" · "+300" · "-1k"
+function chatAmt(tok) {
+  const m = String(tok).match(/^([+-])?(\d+(?:\.\d+)?)(k|m)?$/i);
+  if (!m) return null;
+  let n = parseFloat(m[2]);
+  if (!isFinite(n)) return null;
+  if (m[3]) n *= (m[3].toLowerCase() === 'k' ? 1e3 : 1e6);
+  return { n: n, sign: m[1] || '' };
+}
+
+const CHAT_FILLER = new Set([
+  'on', 'to', 'in', 'into', 'at', 'my', 'the', 'a', 'of', 'for', 'is', 'it',
+  'sa', 'ko', 'po', 'na', 'ang', 'yung', 'ung', 'yong', 'nasa', 'ni',
+  'account', 'acct', 'wallet', 'savings', 'saving', 'balance', 'bal',
+  'please', 'pls', 'bank', 'pesos', 'peso', 'php',
+]);
+
+const CHAT_VERBS = {
+  add:    ['add', 'added', 'deposit', 'deposited', 'dagdag', 'magdagdag', 'plus', 'put', 'topup',
+           'credit', 'credited', 'received', 'receive', 'recieved', 'got', 'save', 'saved', 'ipasok'],
+  deduct: ['deduct', 'minus', 'less', 'subtract', 'withdraw', 'withdrew', 'spend', 'spent',
+           'bawas', 'magbawas', 'kaltas', 'took', 'take', 'remove', 'gastos', 'ginastos', 'used'],
+  set:    ['set', 'itakda', 'correct', 'exactly'],
+  move:   ['move', 'transfer', 'lipat', 'ilipat', 'shift'],
+  query:  ['howmuch', 'magkano', 'check', 'show', 'whats', 'what'],
+  paybill:['pay', 'paid', 'bayad', 'binayaran', 'bayaran', 'tick'],
+  wish:   ['wish', 'want', 'wishlist'],
+};
+const CHAT_VERB_OF = (() => {
+  const m = {};
+  Object.keys(CHAT_VERBS).forEach(v => CHAT_VERBS[v].forEach(w => { if (!(w in m)) m[w] = v; }));
+  return m;
+})();
+
+// ─── TARGET RESOLUTION ────────────────────────────────────────
+// Matches free text against the savings allocations you actually have.
+function chatFindSav(q) {
+  const words = chatNorm(q);
+  if (!words) return null;
+  let best = null;
+  savingsItems.forEach((item, i) => {
+    const bank = BANKS.find(b => b.id === (item.bankId || 'custom'));
+    const names = [item.label, bank && bank.name, bank && bank.id].filter(Boolean);
+    names.forEach(nm => {
+      const s = chatScore(q, nm);
+      if (s > 0 && (!best || s > best.score)) best = { idx: i, score: s, name: (item.label || (bank && bank.name) || 'Allocation') };
+    });
+  });
+  return (best && best.score >= 55) ? best : null;
+}
+
+function chatSavName(i) {
+  const item = savingsItems[i];
+  if (!item) return 'Allocation';
+  if ((item.label || '').trim()) return item.label.trim();
+  const bank = BANKS.find(b => b.id === (item.bankId || 'custom'));
+  return bank ? bank.name : 'Allocation';
+}
+
+function chatFindBill(q) {
+  let items = [];
+  try { items = bclBuildItems(); } catch (e) { return null; }
+  let best = null;
+  items.forEach(it => {
+    const s = chatScore(q, it.label);
+    if (s > 0 && (!best || s > best.score)) best = { item: it, score: s };
+  });
+  return (best && best.score >= 55) ? best.item : null;
+}
+
+// ─── PARSER ───────────────────────────────────────────────────
+// Returns an intent object, or {error:'…'} , or null when it has no idea.
+function chatParse(raw) {
+  let t = String(raw || '')
+    .toLowerCase()
+    .replace(/[₱$]/g, ' ')
+    .replace(/(\d),(?=\d{3}\b)/g, '$1')          // 1,250 → 1250
+    .replace(/\btop\s*up\b/g, 'topup')
+    .replace(/\bmake\s+it\b/g, 'set')
+    .replace(/\bhow\s+much\b/g, 'howmuch')
+    .replace(/\bfree\s+to\s+spend\b/g, 'freetospend')
+    .replace(/[?!.]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) return null;
+
+  // ── whole-string commands ──
+  if (/^(help|\?|commands?|what can you do)$/.test(t)) return { action: 'help' };
+  if (/^undo$/.test(t))                                return { action: 'undo' };
+  if (/^(total|totals|total savings|all savings)$/.test(t))       return { action: 'total' };
+  if (/^(net|net summary|freetospend|left|remaining)$/.test(t))   return { action: 'net' };
+  if (/^(bills?|due|checklist)$/.test(t))                          return { action: 'bills' };
+
+  // ── move / transfer: needs two targets ──
+  let mv = t.match(/\b(?:move|transfer|lipat|ilipat|shift)\b\s*(.*)$/);
+  if (mv) {
+    const body = mv[1];
+    const m2 = body.match(/^(?:from\s+)?(.*?)\s+(?:to|into|sa|papunta)\s+(.+)$/);
+    let amtTok = null, fromTxt = '', toTxt = '';
+    if (m2) {
+      // amount may sit before "from" or right after the verb
+      const left = m2[1].split(' ').filter(Boolean);
+      const kept = [];
+      left.forEach(w => { const a = chatAmt(w); if (a && amtTok == null) amtTok = a; else kept.push(w); });
+      fromTxt = kept.filter(w => !CHAT_FILLER.has(w)).join(' ');
+      toTxt   = m2[2].split(' ').filter(w => !CHAT_FILLER.has(w) && chatAmt(w) == null).join(' ');
+    }
+    if (amtTok == null || !fromTxt || !toTxt) return { error: 'Try: `move 500 from gcash to maya`' };
+    const from = chatFindSav(fromTxt), to = chatFindSav(toTxt);
+    if (!from) return { error: `No allocation matching “${fromTxt}”.` };
+    if (!to)   return { error: `No allocation matching “${toTxt}”.` };
+    if (from.idx === to.idx) return { error: 'That is the same allocation on both sides.' };
+    return { action: 'move', from: from.idx, to: to.idx, amount: amtTok.n };
+  }
+
+  // ── tokenise: pull out the first verb and the first amount ──
+  const words = t.split(' ');
+  let verb = null, amt = null, rest = [];
+  words.forEach(w => {
+    const v = CHAT_VERB_OF[w];
+    if (v && verb == null) { verb = v; return; }
+    const a = chatAmt(w);
+    if (a && amt == null) { amt = a; return; }
+    rest.push(w);
+  });
+  const targetTxt = rest.filter(w => !CHAT_FILLER.has(w)).join(' ').trim();
+
+  // ── bare sign forms: "+250 gcash" / "gcash -500" ──
+  if (verb == null && amt && amt.sign) verb = (amt.sign === '-') ? 'deduct' : 'add';
+
+  // ── wishlist ──
+  if (verb === 'wish') {
+    if (!targetTxt) return { error: 'Try: `wish airpods 12000`' };
+    return { action: 'wish', name: targetTxt, amount: amt ? amt.n : 0 };
+  }
+
+  // ── pay a bill (no amount → tick the checklist) ──
+  if (verb === 'paybill') {
+    const bill = targetTxt ? chatFindBill(targetTxt) : null;
+    if (bill) return { action: 'paybill', key: bill.key, label: bill.label, amount: bill.amt };
+    if (amt && targetTxt) {
+      const sav = chatFindSav(targetTxt);
+      if (sav) return { action: 'deduct', target: sav.idx, amount: amt.n };
+    }
+    return { error: targetTxt ? `No bill or allocation matching “${targetTxt}”.` : 'Try: `pay electricity`' };
+  }
+
+  // ── explicit query ──
+  if (verb === 'query') {
+    if (!targetTxt) return { action: 'total' };
+    if (/^(net|freetospend|left)$/.test(targetTxt)) return { action: 'net' };
+    if (/^(total|savings|all)$/.test(targetTxt))    return { action: 'total' };
+    const sav = chatFindSav(targetTxt);
+    if (sav) return { action: 'query', target: sav.idx };
+    return { error: `No allocation matching “${targetTxt}”.` };
+  }
+
+  // ── bare name, no verb and no amount → show that balance ──
+  if (verb == null && amt == null && targetTxt) {
+    const sav = chatFindSav(targetTxt);
+    if (sav) return { action: 'query', target: sav.idx };
+    return null;   // unknown — let the AI fallback have a go
+  }
+
+  // ── the main shape: verb + amount + target ──
+  if (amt == null) return { error: 'I need an amount — try `add 250 gcash`.' };
+  if (!targetTxt)  return { error: 'Which allocation? Try `add 250 gcash`.' };
+
+  const sav = chatFindSav(targetTxt);
+  if (!sav) return { error: `No allocation matching “${targetTxt}”. Open Savings Allocation to see the names.` };
+
+  // No verb at all ("gcash 250") — assume Add, but say so on the chip.
+  const assumed = (verb == null);
+  const action  = verb || 'add';
+  if (!['add', 'deduct', 'set'].includes(action)) return null;
+  return { action: action, target: sav.idx, amount: amt.n, assumed: assumed };
+}
+
+// ─── APPLY ────────────────────────────────────────────────────
+// The single write path. Both the parser and the AI land here.
+function chatApply(intent) {
+  if (!intent) return 'Nothing to apply.';
+  const a = intent.action;
+
+  if (a === 'add' || a === 'deduct' || a === 'set') {
+    const item = savingsItems[intent.target];
+    if (!item) return 'That allocation no longer exists.';
+    const before = parseFloat(item.amt) || 0;
+    let after;
+    if (a === 'add')    after = before + intent.amount;
+    if (a === 'deduct') after = before - intent.amount;
+    if (a === 'set')    after = intent.amount;
+    after = Math.round(after * 100) / 100;
+    item.amt = String(after);
+    renderSavingsItems();
+    updateSavingsSummary();
+    recalcAll();
+    saveData();
+    const name = chatSavName(intent.target);
+    return `✓ <b>${escH(name)}</b> ${fPHP(before)} → <b>${fPHP(after)}</b>`
+         + (after < 0 ? '\n⚠️ That balance is now negative.' : '');
+  }
+
+  if (a === 'move') {
+    const f = savingsItems[intent.from], tgt = savingsItems[intent.to];
+    if (!f || !tgt) return 'One of those allocations no longer exists.';
+    const fb = parseFloat(f.amt) || 0, tb = parseFloat(tgt.amt) || 0;
+    const fa = Math.round((fb - intent.amount) * 100) / 100;
+    const ta = Math.round((tb + intent.amount) * 100) / 100;
+    f.amt = String(fa); tgt.amt = String(ta);
+    renderSavingsItems();
+    updateSavingsSummary();
+    recalcAll();
+    saveData();
+    return `✓ Moved <b>${fPHP(intent.amount)}</b>\n${escH(chatSavName(intent.from))} → ${fPHP(fa)}\n`
+         + `${escH(chatSavName(intent.to))} → ${fPHP(ta)}`
+         + (fa < 0 ? '\n⚠️ The source is now negative.' : '');
+  }
+
+  if (a === 'paybill') {
+    if (billChecks.checks[intent.key]) return `<b>${escH(intent.label)}</b> was already ticked.`;
+    toggleBillCheck(intent.key);
+    let items = [];
+    try { items = bclBuildItems(); } catch (e) {}
+    const done = items.filter(it => billChecks.checks[it.key]).length;
+    return `✓ Ticked <b>${escH(intent.label)}</b> — ${done} of ${items.length} bills paid this month.`;
+  }
+
+  if (a === 'wish') {
+    wishlistItems.push({
+      id: planId(), name: intent.name, price: intent.amount ? String(intent.amount) : '',
+      mode: 'save', months: '6', startYM: wishDefaultStartYM(),
+    });
+    renderWishlist();
+    savePlanData();
+    return `✓ Added <b>${escH(intent.name)}</b> to your Wishlist`
+         + (intent.amount ? ` at ${fPHP(intent.amount)}.` : '. Set a price on the Plan tab.');
+  }
+
+  return 'I did not recognise that action.';
+}
+
+// ─── READ-ONLY ANSWERS (no confirm needed) ────────────────────
+function chatAnswer(intent) {
+  const a = intent.action;
+
+  if (a === 'help') {
+    return 'Things I understand:\n\n'
+      + '<b>add 250 gcash</b> · <b>+250 gcash</b>\n'
+      + '<b>deduct 500 from maya</b> · <b>-500 maya</b>\n'
+      + '<b>set gcash 3000</b>\n'
+      + '<b>move 500 from gcash to bdo</b>\n'
+      + '<b>gcash</b> — show that balance\n'
+      + '<b>total</b> · <b>net</b> · <b>bills</b>\n'
+      + '<b>pay electricity</b> — tick a bill\n'
+      + '<b>wish airpods 12000</b>\n'
+      + '<b>undo</b>\n\n'
+      + 'Tagalog works too — dagdag, bawas, lipat, bayad.';
+  }
+
+  if (a === 'query') {
+    const item = savingsItems[intent.target];
+    if (!item) return 'That allocation no longer exists.';
+    const bal = parseFloat(item.amt) || 0;
+    let out = `<b>${escH(chatSavName(intent.target))}</b> — ${fPHP(bal)}`;
+    if (!isInc(item)) out += '\n(unmarked — not counted in your totals)';
+    const yr = savItemNetInterestPerYear(item);
+    if (yr > 0) out += `\n💹 earning ≈ ${fPHP(yr / 12)}/mo net of tax`;
+    return out;
+  }
+
+  if (a === 'total') {
+    if (!savingsItems.length) return 'No savings allocations yet — add some on the Expenses tab.';
+    const lines = savingsItems.map((it, i) =>
+      `${isInc(it) ? '·' : '×'} ${escH(chatSavName(i))} — ${fPHP(parseFloat(it.amt) || 0)}`);
+    let total = 0;
+    savingsItems.forEach(it => { if (isInc(it)) total += parseFloat(it.amt) || 0; });
+    return lines.join('\n') + `\n\n<b>Total — ${fPHP(total)}</b>`;
+  }
+
+  if (a === 'net') {
+    const el = document.getElementById('netBalance');
+    return el ? `<b>Net summary — ${el.textContent}</b>\n(savings + income − everything committed)`
+              : 'Net summary is not available right now.';
+  }
+
+  if (a === 'bills') {
+    let items = [];
+    try { items = bclBuildItems(); } catch (e) {}
+    if (!items.length) return 'No bills this month — add them under Necessities or Subscriptions.';
+    const open = items.filter(it => !billChecks.checks[it.key]);
+    if (!open.length) return '✓ Every bill this month is ticked. Nice.';
+    const sum = open.reduce((s, it) => s + it.amt, 0);
+    return open.map(it => `· ${escH(it.label)} — ${fPHP(it.amt)}`).join('\n')
+      + `\n\n<b>${open.length} unpaid — ${fPHP(sum)}</b>`;
+  }
+
+  if (a === 'undo') {
+    if (typeof undoStack !== 'undefined' && undoStack.length === 0) return 'Nothing to undo.';
+    undo();
+    return '↩ Undone.';
+  }
+
+  return null;
+}
+
+// ─── AI FALLBACK (optional, opt-in, multi-provider) ───────────
+// Providers are interchangeable: each one's job is to turn a sentence
+// into intent JSON. They all return through chatValidateIntent(), so
+// no provider can widen what a model is allowed to do.
+const AI_PROVIDERS = {
+  gemini: {
+    label: 'Gemini (free tier)',
+    keyKey: 'va_ai_key_g',
+    modelKey: 'va_ai_model_g',
+    defModel: 'gemini-2.5-flash-lite',
+    keyHint: 'AIza… — from aistudio.google.com',
+    note: 'Free tier: no credit card, works on phone and desktop. Google may use free-tier '
+        + 'requests to improve their models, and this sends your allocation names and balances. '
+        + 'Keep billing OFF on the project or the free tier disappears.',
+  },
+  anthropic: {
+    label: 'Anthropic (paid)',
+    keyKey: 'va_ai_key',
+    modelKey: 'va_ai_model',
+    defModel: 'claude-haiku-4-5-20251001',
+    keyHint: 'sk-ant-… — from console.anthropic.com',
+    note: 'Billed per request, separate from any Claude subscription. Needs credit on the account.',
+  },
+};
+
+function aiProvider() {
+  try {
+    const p = localStorage.getItem('va_ai_provider') || 'off';
+    return AI_PROVIDERS[p] ? p : 'off';
+  } catch (e) { return 'off'; }
+}
+function aiCfg()   { return AI_PROVIDERS[aiProvider()] || null; }
+function aiKey()   { const c = aiCfg(); if (!c) return ''; try { return localStorage.getItem(c.keyKey) || ''; } catch (e) { return ''; } }
+function aiModel() { const c = aiCfg(); if (!c) return ''; try { return localStorage.getItem(c.modelKey) || c.defModel; } catch (e) { return c.defModel; } }
+function aiReady() { return aiProvider() !== 'off' && !!aiKey(); }
+
+function onAiProviderChange() {
+  const sel = document.getElementById('aiProviderSel');
+  try { localStorage.setItem('va_ai_provider', sel.value); } catch (e) {}
+  loadAiKeyUI();
+  chatUpdateModeTag();
+}
+
+function saveAiKey() {
+  const p   = aiProvider();
+  const msg = document.getElementById('aiKeyMsg');
+  if (p === 'off') { msg.textContent = 'Pick a provider first.'; msg.style.color = 'var(--text3)'; return; }
+  const c = AI_PROVIDERS[p];
+  const k = (document.getElementById('aiKeyInput').value || '').trim();
+  const m = (document.getElementById('aiModelInput').value || '').trim();
+  try {
+    if (k) localStorage.setItem(c.keyKey, k); else localStorage.removeItem(c.keyKey);
+    localStorage.setItem(c.modelKey, m || c.defModel);
+    msg.textContent = k ? '✓ Saved on this device. Chat falls back to ' + c.label + ' when it cannot parse.'
+                        : '✓ Cleared — chat stays fully offline.';
+    msg.style.color = 'var(--green-text)';
+  } catch (e) {
+    msg.textContent = 'Could not save to this browser.';
+    msg.style.color = 'var(--red-text)';
+  }
+  chatUpdateModeTag();
+}
+
+function clearAiKey() {
+  const c = aiCfg();
+  if (c) { try { localStorage.removeItem(c.keyKey); } catch (e) {} }
+  const ki = document.getElementById('aiKeyInput');
+  if (ki) ki.value = '';
+  const msg = document.getElementById('aiKeyMsg');
+  if (msg) { msg.textContent = '✓ Removed — chat stays fully offline.'; msg.style.color = 'var(--text3)'; }
+  chatUpdateModeTag();
+}
+
+function loadAiKeyUI() {
+  const p    = aiProvider();
+  const c    = AI_PROVIDERS[p];
+  const sel  = document.getElementById('aiProviderSel');
+  const rows = document.getElementById('aiKeyRows');
+  const note = document.getElementById('aiProviderNote');
+  const ki   = document.getElementById('aiKeyInput');
+  const mi   = document.getElementById('aiModelInput');
+  if (sel) sel.value = p;
+  if (rows) rows.style.display = c ? 'block' : 'none';
+  if (note) note.textContent = c ? c.note : 'Chat runs fully offline on the built-in parser.';
+  if (c) {
+    if (ki) { ki.placeholder = c.keyHint; ki.value = aiKey(); }
+    if (mi) { mi.placeholder = c.defModel; mi.value = aiModel(); }
+  }
+  const msg = document.getElementById('aiKeyMsg');
+  if (msg) { msg.textContent = ''; msg.style.color = 'var(--text3)'; }
+}
+
+// Shared instruction — identical wording whichever provider answers, so
+// switching providers can't quietly change what the model is asked for.
+function chatAISystemPrompt() {
+  const snapshot = savingsItems.map((it, i) => ({
+    i: i, name: chatSavName(i), balance: parseFloat(it.amt) || 0, counted: isInc(it),
+  }));
+  let bills = [];
+  try { bills = bclBuildItems().map(b => ({ key: b.key, label: b.label, amt: b.amt, paid: !!billChecks.checks[b.key] })); } catch (e) {}
+
+  return [
+    'You turn a personal-finance app user\'s message into ONE JSON intent object.',
+    'Reply with raw JSON only — no prose, no markdown fences.',
+    '',
+    'Schema (pick one action):',
+    '{"action":"add"|"deduct"|"set","target":<allocation index>,"amount":<number>}',
+    '{"action":"move","from":<index>,"to":<index>,"amount":<number>}',
+    '{"action":"paybill","key":"<bill key>"}',
+    '{"action":"wish","name":"<text>","amount":<number>}',
+    '{"action":"query","target":<index>}',
+    '{"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"help"}',
+    '{"action":"none","reply":"<one short sentence back to the user>"}',
+    '',
+    'Use "none" with a helpful reply when the message is a question you can answer from the data below,',
+    'or when it is too ambiguous to act on. Never invent an index that is not listed.',
+    'Amounts are Philippine pesos. The user may write Taglish.',
+    '',
+    'Allocations: ' + JSON.stringify(snapshot),
+    'Bills this month: ' + JSON.stringify(bills),
+  ].join('\n');
+}
+
+function chatParseAIText(out) {
+  const clean = String(out || '').replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  let intent;
+  try { intent = JSON.parse(clean); } catch (e) { throw new Error('The AI did not return usable JSON.'); }
+  return chatValidateIntent(intent);
+}
+
+// Anthropic — needs the explicit browser-access header or CORS blocks it.
+async function chatAskAnthropic(text, key, model, sys) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model: model, max_tokens: 400, system: sys, messages: [{ role: 'user', content: text }] }),
+  });
+  if (!res.ok) throw new Error(await aiErrText(res));
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+}
+
+// Gemini — plain generateContent call, which is CORS-open to browsers.
+// responseMimeType pins it to JSON so there is nothing to strip.
+async function chatAskGemini(text, key, model, sys) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+            + encodeURIComponent(model) + ':generateContent';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: sys }] },
+      contents: [{ role: 'user', parts: [{ text: text }] }],
+      generationConfig: { temperature: 0, maxOutputTokens: 400, responseMimeType: 'application/json' },
+    }),
+  });
+  if (!res.ok) throw new Error(await aiErrText(res));
+  const data = await res.json();
+  const cand = (data.candidates || [])[0];
+  if (!cand) {
+    const blocked = data.promptFeedback && data.promptFeedback.blockReason;
+    throw new Error(blocked ? ('Request blocked (' + blocked + ')') : 'Empty response.');
+  }
+  return ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('').trim();
+}
+
+// Pull the useful sentence out of either provider's error envelope.
+async function aiErrText(res) {
+  let detail = '';
+  try {
+    const j = await res.json();
+    detail = (j.error && (j.error.message || j.error.status)) || '';
+  } catch (e) {}
+  if (res.status === 429) detail = detail || 'Rate limit or free-tier quota reached — try again shortly.';
+  if (res.status === 401 || res.status === 403) detail = detail || 'Key rejected. Check it is correct and unrestricted for this API.';
+  return detail || ('API error ' + res.status);
+}
+
+// Sends the command plus a tiny snapshot of allocation names/balances.
+// The model returns intent JSON only — it never touches storage.
+async function chatAskAI(text) {
+  const p = aiProvider();
+  const key = aiKey();
+  if (p === 'off' || !key) return null;
+  const sys   = chatAISystemPrompt();
+  const model = aiModel();
+  const out = (p === 'gemini')
+    ? await chatAskGemini(text, key, model, sys)
+    : await chatAskAnthropic(text, key, model, sys);
+  return chatParseAIText(out);
+}
+
+// Guard rail: everything from the model is re-checked against real data
+// before it is allowed anywhere near chatApply().
+function chatValidateIntent(o) {
+  if (!o || typeof o !== 'object') throw new Error('Empty response.');
+  const a = o.action;
+  const idxOK = v => Number.isInteger(v) && v >= 0 && v < savingsItems.length;
+  const amtOK = v => typeof v === 'number' && isFinite(v) && v >= 0 && v < 1e12;
+
+  if (a === 'none')  return { action: 'none', reply: String(o.reply || 'I am not sure how to do that.').slice(0, 400) };
+  if (['help', 'total', 'net', 'bills'].includes(a)) return { action: a };
+  if (a === 'query') { if (!idxOK(o.target)) throw new Error('Unknown allocation.'); return { action: 'query', target: o.target }; }
+  if (['add', 'deduct', 'set'].includes(a)) {
+    if (!idxOK(o.target)) throw new Error('Unknown allocation.');
+    if (!amtOK(o.amount)) throw new Error('Bad amount.');
+    return { action: a, target: o.target, amount: o.amount, viaAI: true };
+  }
+  if (a === 'move') {
+    if (!idxOK(o.from) || !idxOK(o.to)) throw new Error('Unknown allocation.');
+    if (o.from === o.to) throw new Error('Same allocation on both sides.');
+    if (!amtOK(o.amount)) throw new Error('Bad amount.');
+    return { action: 'move', from: o.from, to: o.to, amount: o.amount, viaAI: true };
+  }
+  if (a === 'paybill') {
+    let items = [];
+    try { items = bclBuildItems(); } catch (e) {}
+    const hit = items.find(it => it.key === o.key);
+    if (!hit) throw new Error('Unknown bill.');
+    return { action: 'paybill', key: hit.key, label: hit.label, amount: hit.amt, viaAI: true };
+  }
+  if (a === 'wish') {
+    const nm = String(o.name || '').trim().slice(0, 60);
+    if (!nm) throw new Error('No item name.');
+    return { action: 'wish', name: nm, amount: amtOK(o.amount) ? o.amount : 0, viaAI: true };
+  }
+  throw new Error('Unknown action.');
+}
+
+// ─── TRANSCRIPT ───────────────────────────────────────────────
+function chatPush(who, text, cls) {
+  chatMsgs.push({ who: who, text: text, cls: cls || '' });
+  if (chatMsgs.length > CHAT_MAX_MSGS) chatMsgs = chatMsgs.slice(-CHAT_MAX_MSGS);
+  chatSaveLog();
+  chatRender();
+}
+
+function chatSaveLog() {
+  try { localStorage.setItem(CHAT_LOG_KEY, JSON.stringify(chatMsgs)); } catch (e) {}
+}
+
+function chatLoadLog() {
+  try {
+    const raw = localStorage.getItem(CHAT_LOG_KEY);
+    chatMsgs = raw ? (JSON.parse(raw) || []) : [];
+    if (!Array.isArray(chatMsgs)) chatMsgs = [];
+  } catch (e) { chatMsgs = []; }
+}
+
+function chatClear() {
+  chatMsgs = [];
+  _chatIntents = {};
+  chatSaveLog();
+  chatRender();
+}
+
+function chatRender() {
+  const box = document.getElementById('chatLogEl');
+  if (!box) return;
+  if (!chatMsgs.length) {
+    box.innerHTML = '<div class="chat-msg app">Type a command and I will show you exactly what it changes before anything is saved.\n\nTry <b>add 250 on gcash</b>, or <b>help</b> for the full list.</div>';
+  } else {
+    box.innerHTML = chatMsgs.map(m => {
+      if (m.who === 'confirm') return m.text;   // pre-built confirm card
+      return `<div class="chat-msg ${m.who} ${m.cls}">${m.text}</div>`;
+    }).join('');
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+// Confirm card — the only gateway to a write.
+function chatConfirmCard(intent, line, sub) {
+  const id = _chatIntentSeq++;
+  _chatIntents[id] = intent;
+  return `<div class="chat-confirm" id="chatCC-${id}">
+      <div class="cc-line">${line}</div>
+      <div class="cc-sub">${sub || ''}</div>
+      <div class="cc-btns">
+        <button class="cc-ok" onclick="chatConfirm(${id})">Apply</button>
+        <button class="cc-no" onclick="chatCancel(${id})">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function chatConfirm(id) {
+  const intent = _chatIntents[id];
+  if (!intent) return;
+  delete _chatIntents[id];
+  const card = document.getElementById('chatCC-' + id);
+  if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Applied</span>'; }
+  // freeze the card in the stored transcript too
+  const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCC-' + id + '"') !== -1);
+  if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/, '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">Applied</span></div>')
+                        .replace('class="chat-confirm"', 'class="chat-confirm done"');
+  let res;
+  try { res = chatApply(intent); } catch (e) { res = 'Something went wrong applying that: ' + e.message; }
+  chatPush('app', res);
+  showToast('💬 ' + String(res).replace(/<[^>]*>/g, '').split('\n')[0]);
+}
+
+function chatCancel(id) {
+  delete _chatIntents[id];
+  const card = document.getElementById('chatCC-' + id);
+  if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Cancelled</span>'; }
+  const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCC-' + id + '"') !== -1);
+  if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/, '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">Cancelled</span></div>')
+                        .replace('class="chat-confirm"', 'class="chat-confirm done"');
+  chatSaveLog();
+}
+
+// Turns an intent into the human sentence shown on the confirm card.
+function chatPreview(intent) {
+  const a = intent.action;
+  if (a === 'add' || a === 'deduct' || a === 'set') {
+    const item = savingsItems[intent.target];
+    const before = parseFloat(item.amt) || 0;
+    const after = a === 'add' ? before + intent.amount
+                : a === 'deduct' ? before - intent.amount
+                : intent.amount;
+    const verb = a === 'add' ? 'Add' : a === 'deduct' ? 'Deduct' : 'Set';
+    const arrow = a === 'set'
+      ? `${fPHP(before)} → ${fPHP(Math.round(after * 100) / 100)}`
+      : `${fPHP(before)} → ${fPHP(Math.round(after * 100) / 100)}`;
+    let line = `${verb} <b>${fPHP(intent.amount)}</b> ${a === 'deduct' ? 'from' : a === 'set' ? '—' : '→'} <b>${escH(chatSavName(intent.target))}</b>`;
+    if (intent.assumed) line += ' <span style="font-size:10.5px;color:var(--text3);">(assumed “add”)</span>';
+    if (intent.viaAI)   line += ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>';
+    return { line: line, sub: arrow + (after < 0 ? '  ⚠️ goes negative' : '') };
+  }
+  if (a === 'move') {
+    const fb = parseFloat(savingsItems[intent.from].amt) || 0;
+    const tb = parseFloat(savingsItems[intent.to].amt) || 0;
+    return {
+      line: `Move <b>${fPHP(intent.amount)}</b> — <b>${escH(chatSavName(intent.from))}</b> → <b>${escH(chatSavName(intent.to))}</b>`
+            + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+      sub: `${escH(chatSavName(intent.from))} ${fPHP(fb)} → ${fPHP(fb - intent.amount)}   ·   ${escH(chatSavName(intent.to))} ${fPHP(tb)} → ${fPHP(tb + intent.amount)}`
+           + ((fb - intent.amount) < 0 ? '  ⚠️ source goes negative' : ''),
+    };
+  }
+  if (a === 'paybill') {
+    return { line: `Tick <b>${escH(intent.label)}</b> as paid`, sub: fPHP(intent.amount) + ' · bill checklist, this month' };
+  }
+  if (a === 'wish') {
+    return { line: `Add <b>${escH(intent.name)}</b> to your Wishlist`, sub: intent.amount ? fPHP(intent.amount) : 'no price set' };
+  }
+  return { line: 'Apply this change?', sub: '' };
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────
+async function chatSubmit() {
+  if (_chatBusy) return;
+  const input = document.getElementById('chatInput');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  chatPush('you', escH(text));
+
+  let intent = null;
+  try { intent = chatParse(text); } catch (e) { intent = { error: 'I could not read that.' }; }
+
+  // Read-only answers go straight out.
+  if (intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'undo'].includes(intent.action)) {
+    const ans = chatAnswer(intent);
+    if (ans != null) { chatPush('app', ans); return; }
+  }
+
+  // Anything that writes gets a confirm card.
+  if (intent && !intent.error && intent.action) {
+    const p = chatPreview(intent);
+    chatMsgs.push({ who: 'confirm', text: chatConfirmCard(intent, p.line, p.sub) });
+    chatSaveLog();
+    chatRender();
+    return;
+  }
+
+  // Parser had no idea (or bailed) — hand to AI if a key exists.
+  if (aiReady()) {
+    _chatBusy = true;
+    chatPush('app', '<span style="color:var(--text3);">thinking…</span>');
+    try {
+      const ai = await chatAskAI(text);
+      chatMsgs.pop();                                  // drop the "thinking" bubble
+      if (!ai) { chatPush('app', intent && intent.error ? intent.error : 'I did not understand that.', 'err'); }
+      else if (ai.action === 'none') { chatPush('app', escH(ai.reply)); }
+      else if (['help', 'query', 'total', 'net', 'bills'].includes(ai.action)) {
+        const ans = chatAnswer(ai);
+        chatPush('app', ans != null ? ans : 'I did not understand that.');
+      } else {
+        const p = chatPreview(ai);
+        chatMsgs.push({ who: 'confirm', text: chatConfirmCard(ai, p.line, p.sub) });
+        chatSaveLog();
+        chatRender();
+      }
+    } catch (e) {
+      chatMsgs.pop();
+      chatPush('app', 'AI fallback failed: ' + escH(e.message || 'unknown error')
+        + '\nThe offline commands still work — type <b>help</b>.', 'err');
+    } finally { _chatBusy = false; }
+    return;
+  }
+
+  chatPush('app', (intent && intent.error ? intent.error : 'I did not catch that.')
+    + '\nType <b>help</b> to see what I understand.', 'err');
+}
+
+// ─── PANEL ────────────────────────────────────────────────────
+const CHAT_CHIPS = ['add 250 gcash', 'total', 'net', 'bills', 'help'];
+
+function chatUpdateModeTag() {
+  const tag = document.getElementById('chatModeTag');
+  const cfg = aiCfg();
+  if (tag) tag.textContent = aiReady() ? '· offline + ' + cfg.label.split(' ')[0] : '· offline';
+  const note = document.getElementById('chatAiNote');
+  if (note) {
+    note.innerHTML = aiReady()
+      ? 'Understood locally first; anything unclear goes to ' + escH(cfg.label.split(' ')[0])
+        + '. Nothing saves until you tap Apply.'
+      : 'Runs fully offline. Pick a provider in Settings to handle messier phrasing.';
+  }
+}
+
+function openChat() {
+  const m = document.getElementById('chatModal');
+  m.style.display = 'flex';
+  chatUpdateModeTag();
+  const chips = document.getElementById('chatChips');
+  if (chips) chips.innerHTML = CHAT_CHIPS.map(c =>
+    `<span class="chat-chip" onclick="chatChip('${escJS(c)}')">${escH(c)}</span>`).join('');
+  chatRender();
+  // Don't autofocus on touch devices — the keyboard covering the panel
+  // on open is worse than one extra tap.
+  if (!('ontouchstart' in window)) setTimeout(() => document.getElementById('chatInput').focus(), 60);
+}
+
+function closeChat() {
+  document.getElementById('chatModal').style.display = 'none';
+}
+
+function chatChip(txt) {
+  const input = document.getElementById('chatInput');
+  input.value = txt;
+  chatSubmit();
+}
+
+document.getElementById('chatModal').addEventListener('click', function (e) {
+  if (e.target === this) closeChat();
+});
+
+// Floating 💬 launcher — sits above the scroll-to-top slot.
+(function () {
+  const b = document.createElement('button');
+  b.id = 'chatFab';
+  b.textContent = '💬';
+  b.title = 'Command bar (Ctrl+K)';
+  b.setAttribute('aria-label', 'Open command bar');
+  b.onclick = openChat;
+  document.body.appendChild(b);
+})();
+
+chatLoadLog();
+loadAiKeyUI();
+chatUpdateModeTag();
+
 // ─── SCROLL-TO-TOP BUTTON ──────────────────────────────────────
 // Floating ↑ that fades in after 300px of scroll — the Plan and
 // Tracker tabs get LONG.
@@ -12054,7 +13085,10 @@ if (navigator.storage && navigator.storage.persist) {
   function modalOpen() {
     const sm = document.getElementById('settingsModal');
     const qr = document.getElementById('qrOverlay');
-    return (sm && sm.style.display === 'flex') || (qr && qr.style.display === 'flex');
+    const ch = document.getElementById('chatModal');
+    return (sm && sm.style.display === 'flex')
+        || (qr && qr.style.display === 'flex')
+        || (ch && ch.style.display === 'flex');
   }
 
   document.addEventListener('touchstart', (e) => {
