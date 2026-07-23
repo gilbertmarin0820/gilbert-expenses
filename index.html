@@ -1736,7 +1736,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23d</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23e</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -12459,10 +12459,11 @@ const AI_PROVIDERS = {
     keyKey: 'va_ai_key_g',
     modelKey: 'va_ai_model_g',
     defModel: 'gemini-2.5-flash-lite',
-    keyHint: 'AIza… — from aistudio.google.com',
+    keyHint: 'AQ.… or AIza… — from aistudio.google.com',
     note: 'Free tier: no credit card, works on phone and desktop. Google may use free-tier '
         + 'requests to improve their models, and this sends your allocation names and balances. '
-        + 'Keep billing OFF on the project or the free tier disappears.',
+        + 'Keep billing OFF on the project or the free tier disappears. Stick to a Flash or '
+        + 'Flash-Lite model — bigger models return the same JSON, slower, with far tighter daily caps.',
   },
   anthropic: {
     label: 'Anthropic (paid)',
@@ -12598,26 +12599,54 @@ async function chatAskAnthropic(text, key, model, sys) {
 
 // Gemini — plain generateContent call, which is CORS-open to browsers.
 // responseMimeType pins it to JSON so there is nothing to strip.
+// Gemini — plain generateContent call, which is CORS-open to browsers.
+// responseMimeType pins it to JSON so there is nothing to strip.
+//
+// thinkingBudget: 0 matters here. Newer Flash models think by default,
+// which for "sentence → small JSON object" buys nothing and costs real
+// latency, plus thinking tokens bill as output and eat the free tier's
+// per-minute allowance. Some models (Pro especially) refuse a zero
+// budget, so a 400 that names thinking is retried once without it
+// rather than surfaced as an error the user can't act on.
 async function chatAskGemini(text, key, model, sys) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
             + encodeURIComponent(model) + ':generateContent';
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: sys }] },
-      contents: [{ role: 'user', parts: [{ text: text }] }],
-      generationConfig: { temperature: 0, maxOutputTokens: 400, responseMimeType: 'application/json' },
-    }),
-  });
+
+  const send = (noThinkCfg) => {
+    const gen = { temperature: 0, maxOutputTokens: 400, responseMimeType: 'application/json' };
+    if (!noThinkCfg) gen.thinkingConfig = { thinkingBudget: 0 };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sys }] },
+        contents: [{ role: 'user', parts: [{ text: text }] }],
+        generationConfig: gen,
+      }),
+    });
+  };
+
+  let res = await send(false);
+  if (!res.ok && res.status === 400) {
+    const msg = await aiErrText(res);
+    if (/thinking|thought|budget/i.test(msg)) res = await send(true);  // model insists on thinking
+    else throw new Error(msg);
+  }
   if (!res.ok) throw new Error(await aiErrText(res));
+
   const data = await res.json();
   const cand = (data.candidates || [])[0];
   if (!cand) {
     const blocked = data.promptFeedback && data.promptFeedback.blockReason;
     throw new Error(blocked ? ('Request blocked (' + blocked + ')') : 'Empty response.');
   }
-  return ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('').trim();
+  const out = ((cand.content && cand.content.parts) || [])
+    .filter(p => !p.thought)                 // ignore thought parts if a model returns them
+    .map(p => p.text || '').join('').trim();
+  if (!out && cand.finishReason === 'MAX_TOKENS') {
+    throw new Error('Model hit the output limit before answering — try a Flash or Flash-Lite model.');
+  }
+  return out;
 }
 
 // Pull the useful sentence out of either provider's error envelope.
