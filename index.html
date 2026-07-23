@@ -1736,7 +1736,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23e</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23f</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1925,9 +1925,16 @@
           width:100%; box-sizing:border-box; padding:10px; margin-bottom:8px;
           background:var(--surface3); border:1px solid var(--border);
           color:var(--text); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:12px;">
+        <button onclick="aiListModels()" id="aiListBtn" style="
+          width:100%; padding:8px 14px; margin-bottom:8px; background:transparent;
+          border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm);
+          cursor:pointer; font-family:'Outfit',sans-serif; font-size:12.5px;">
+          ↻ List available models</button>
+        <div id="aiModelList" style="margin-bottom:10px;"></div>
         <div style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5;">
-          Second field is the model ID — leave it as-is unless a request comes back saying the model
-          was not found, in which case check your provider's console for a current one.
+          Second field is the model ID. If a request comes back saying the model is gone,
+          tap <strong style="color:var(--text2);">List available models</strong> above — it asks your
+          own key what it can actually call today, then tap one to use it.
           <br><strong style="color:var(--text2);">The key is stored in this browser only.</strong>
           It is never synced, exported, or included in a backup — so you'll paste it once per device.
           Don't add one on a shared computer.
@@ -12458,12 +12465,13 @@ const AI_PROVIDERS = {
     label: 'Gemini (free tier)',
     keyKey: 'va_ai_key_g',
     modelKey: 'va_ai_model_g',
-    defModel: 'gemini-2.5-flash-lite',
+    defModel: 'gemini-3.5-flash-lite',
     keyHint: 'AQ.… or AIza… — from aistudio.google.com',
     note: 'Free tier: no credit card, works on phone and desktop. Google may use free-tier '
         + 'requests to improve their models, and this sends your allocation names and balances. '
-        + 'Keep billing OFF on the project or the free tier disappears. Stick to a Flash or '
-        + 'Flash-Lite model — bigger models return the same JSON, slower, with far tighter daily caps.',
+        + 'Keep billing OFF on the project or the free tier disappears. Stick to a Flash-Lite '
+        + 'model — bigger models return the same JSON, slower, with far tighter daily caps. '
+        + 'Google retires model IDs regularly, so use "List available models" if one stops working.',
   },
   anthropic: {
     label: 'Anthropic (paid)',
@@ -12599,22 +12607,32 @@ async function chatAskAnthropic(text, key, model, sys) {
 
 // Gemini — plain generateContent call, which is CORS-open to browsers.
 // responseMimeType pins it to JSON so there is nothing to strip.
-// Gemini — plain generateContent call, which is CORS-open to browsers.
-// responseMimeType pins it to JSON so there is nothing to strip.
 //
-// thinkingBudget: 0 matters here. Newer Flash models think by default,
-// which for "sentence → small JSON object" buys nothing and costs real
-// latency, plus thinking tokens bill as output and eat the free tier's
-// per-minute allowance. Some models (Pro especially) refuse a zero
-// budget, so a 400 that names thinking is retried once without it
-// rather than surfaced as an error the user can't act on.
+// Google churns this API faster than a personal app can track, so the
+// request is built defensively rather than to one snapshot of the spec:
+//
+//  * Sampling params (temperature/top_p/top_k) are DEPRECATED from the
+//    3.x models onward — sending them to gemini-3.x is an error, while
+//    older models still want them. Keyed off the model ID.
+//  * Thinking costs latency and output tokens for what is a one-line
+//    classification, so it is turned down where the model allows it.
+//  * If the API rejects the config anyway, we retry on a stripped-down
+//    body instead of surfacing a parameter complaint the user cannot
+//    act on. Model-not-found is NOT retried — that needs a real fix.
 async function chatAskGemini(text, key, model, sys) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
             + encodeURIComponent(model) + ':generateContent';
+  const isGen3Plus = /gemini-([3-9]|\d{2,})/i.test(model);
 
-  const send = (noThinkCfg) => {
-    const gen = { temperature: 0, maxOutputTokens: 400, responseMimeType: 'application/json' };
-    if (!noThinkCfg) gen.thinkingConfig = { thinkingBudget: 0 };
+  // 0 = full config · 1 = drop thinking · 2 = bare minimum
+  const send = (level) => {
+    const gen = { maxOutputTokens: 800, responseMimeType: 'application/json' };
+    if (level < 2) {
+      if (!isGen3Plus) gen.temperature = 0;        // removed in 3.x
+      if (level < 1) {
+        gen.thinkingConfig = isGen3Plus ? { thinkingLevel: 'low' } : { thinkingBudget: 0 };
+      }
+    }
     return fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
@@ -12626,13 +12644,20 @@ async function chatAskGemini(text, key, model, sys) {
     });
   };
 
-  let res = await send(false);
-  if (!res.ok && res.status === 400) {
-    const msg = await aiErrText(res);
-    if (/thinking|thought|budget/i.test(msg)) res = await send(true);  // model insists on thinking
-    else throw new Error(msg);
+  let res = await send(0), lastMsg = '';
+  for (let level = 1; level <= 2 && !res.ok && res.status === 400; level++) {
+    lastMsg = await aiErrText(res);
+    // A missing/retired model is a real problem — don't paper over it.
+    if (/not found|not available|no longer|unsupported model|does not exist/i.test(lastMsg)) break;
+    res = await send(level);
   }
-  if (!res.ok) throw new Error(await aiErrText(res));
+  if (!res.ok) {
+    const msg = lastMsg || await aiErrText(res);
+    if (/not found|not available|no longer|unsupported model|does not exist/i.test(msg)) {
+      throw new Error(msg + ' — open Settings and tap “List available models” to pick a current one.');
+    }
+    throw new Error(msg);
+  }
 
   const data = await res.json();
   const cand = (data.candidates || [])[0];
@@ -12644,9 +12669,50 @@ async function chatAskGemini(text, key, model, sys) {
     .filter(p => !p.thought)                 // ignore thought parts if a model returns them
     .map(p => p.text || '').join('').trim();
   if (!out && cand.finishReason === 'MAX_TOKENS') {
-    throw new Error('Model hit the output limit before answering — try a Flash or Flash-Lite model.');
+    throw new Error('Model spent its whole output budget thinking — pick a Flash-Lite model.');
   }
   return out;
+}
+
+// Asks the key itself which models it can use. Beats any hardcoded list:
+// Google retires model IDs on their own schedule, and this reflects what
+// THIS key can actually call today.
+async function aiListModels() {
+  const p = aiProvider(), key = aiKey();
+  const box = document.getElementById('aiModelList');
+  const msg = document.getElementById('aiKeyMsg');
+  if (p !== 'gemini') { msg.textContent = 'Model listing is only available for Gemini.'; return; }
+  if (!key) { msg.textContent = 'Save a key first.'; return; }
+  box.innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Loading…</span>';
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
+      { headers: { 'x-goog-api-key': key } });
+    if (!res.ok) throw new Error(await aiErrText(res));
+    const data = await res.json();
+    const names = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1)
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(n => n && !/embedding|aqa|imagen|veo|tts|image|native-audio/i.test(n))
+      .sort();
+    if (!names.length) { box.innerHTML = '<span style="font-size:11.5px;color:var(--text3);">No text models returned.</span>'; return; }
+    // Cheapest/fastest first — those are the right pick for this job.
+    names.sort((a, b) => (/flash-lite/.test(b) - /flash-lite/.test(a)) || (/flash/.test(b) - /flash/.test(a)));
+    box.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">'
+      + names.length + ' available — tap to use. Flash-Lite is the right pick here.</div>'
+      + names.map(n => '<span class="chat-chip" style="margin:0 4px 4px 0;display:inline-block;"'
+        + ' onclick="aiPickModel(\'' + escJS(n) + '\')">' + escH(n) + '</span>').join('');
+    msg.textContent = '';
+  } catch (e) {
+    box.innerHTML = '';
+    msg.textContent = 'Could not list models: ' + (e.message || 'unknown error');
+    msg.style.color = 'var(--red-text)';
+  }
+}
+
+function aiPickModel(name) {
+  const mi = document.getElementById('aiModelInput');
+  if (mi) mi.value = name;
+  saveAiKey();
 }
 
 // Pull the useful sentence out of either provider's error envelope.
