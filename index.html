@@ -1736,7 +1736,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23f</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23h</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -7366,6 +7366,7 @@ function ccUndo() {
     ccPeople    = Array.isArray(data.people) ? data.people : [];
     ccStores    = Array.isArray(data.stores) ? data.stores : [];
     ccPersonSeq = typeof data.personSeq === 'number' ? data.personSeq : 1;
+    reseedIdSeqs();
     ccNote      = typeof data.note === 'string' ? data.note : '';
     syncSessionNoteInput('cc');
     renderCCPeople();
@@ -7410,6 +7411,7 @@ function loadCC() {
     if (Array.isArray(data.people)) ccPeople = data.people;
     if (Array.isArray(data.stores)) ccStores = data.stores;
     if (typeof data.personSeq === 'number') ccPersonSeq = data.personSeq;
+    reseedIdSeqs();
     ccNote = typeof data.note === 'string' ? data.note : '';
   } catch(e) { console.warn('CC load failed', e); }
   syncSessionNoteInput('cc');
@@ -7883,6 +7885,7 @@ function hsUndo() {
     hsPeople    = data.people;
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
+    reseedIdSeqs();
     hsNote      = data.note;
     hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
     syncSessionNoteInput('hs');
@@ -7928,6 +7931,7 @@ function loadHS() {
     hsPeople    = data.people;
     hsItems     = data.items;
     hsPersonSeq = data.personSeq;
+    reseedIdSeqs();
     hsNote      = data.note;
     hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
   } catch(e) { console.warn('HS load failed', e); }
@@ -7951,6 +7955,40 @@ let _cfVAWeeklyPHP   = 0;
 let _cfCorpPerCutoff = 0;
 let planSeq = 1;
 function planId() { return planSeq++; }
+
+// ─── ID SEQUENCE SELF-HEAL ────────────────────────────────────
+// Every collection below stores its own rows plus the counter that mints
+// their ids. Those two can drift apart: an older backup, an import written
+// before a counter existed, or a partial write leaves the rows but not the
+// number — and the counter then restarts at 1 while ids up to N already
+// exist. New rows silently reuse an id, and any lookup by id (edit, delete,
+// toggle) lands on the wrong row.
+//
+// Rather than trust the stored counter, re-derive the floor from the data
+// itself after every load. Math.max means this can only ever move a counter
+// forward, so it is safe to call from any path, repeatedly.
+function maxIdIn(arr) {
+  let m = 0;
+  if (Array.isArray(arr)) {
+    arr.forEach(x => {
+      const n = (x && typeof x.id === 'number' && isFinite(x.id)) ? x.id : 0;
+      if (n > m) m = n;
+    });
+  }
+  return m;
+}
+
+function reseedIdSeqs() {
+  // Each group is guarded separately so one failure can't skip the others.
+  try {
+    planSeq = Math.max(planSeq,
+      maxIdIn(savingsGoals) + 1, maxIdIn(wishlistItems) + 1, maxIdIn(subscriptions) + 1,
+      maxIdIn(installments) + 1, maxIdIn(personalDebts) + 1, maxIdIn(payoffDebts) + 1);
+  } catch (e) {}
+  try { ccPersonSeq = Math.max(ccPersonSeq, maxIdIn(ccPeople) + 1); } catch (e) {}
+  try { hsPersonSeq = Math.max(hsPersonSeq, maxIdIn(hsPeople) + 1); } catch (e) {}
+  try { trkrSeq     = Math.max(trkrSeq,     maxIdIn(trkrEntries) + 1); } catch (e) {}
+}
 
 // ─── SAVINGS GOALS ────────────────────────────────────────────
 // Updates only the progress bar / percentage / info text for goal[i]
@@ -9892,6 +9930,7 @@ function planUndo() {
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
     if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
+    reseedIdSeqs();
     const pb = document.getElementById('payoffBudget');
     if (pb) pb.value = typeof d.payoffBudget === 'string' ? d.payoffBudget : '';
     const cs = document.getElementById('cfStartBal');
@@ -9960,6 +9999,7 @@ function loadPlanData() {
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
     if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
+    reseedIdSeqs();
     const pb = document.getElementById('payoffBudget');
     if (pb && typeof d.payoffBudget === 'string') pb.value = d.payoffBudget;
     const cs = document.getElementById('cfStartBal');
@@ -10340,6 +10380,7 @@ function trkrLoad() {
     if (Array.isArray(d.trkrYears))   trkrYears    = d.trkrYears;
     if (typeof d.trkrSeq === 'number') trkrSeq     = d.trkrSeq;
     if (typeof d.trkrViewYear === 'number') trkrViewYear = d.trkrViewYear;
+    reseedIdSeqs();
   } catch(e) {}
   // Always have the current year
   const curY = new Date().getFullYear();
@@ -12113,6 +12154,11 @@ const CHAT_MAX_MSGS  = 40;
 
 let chatMsgs      = [];   // [{who:'you'|'app', text, cls}]
 let _chatIntents  = {};   // id -> intent awaiting confirm
+// Ids are namespaced per page load. A confirm card is persisted as HTML in
+// the transcript, but the intent behind it lives only in memory — so after a
+// reload the buttons on an old card must not resolve against a fresh intent
+// that happens to reuse the same number.
+const CHAT_SESSION = Math.random().toString(36).slice(2, 8);
 let _chatIntentSeq = 1;
 let _chatBusy     = false;
 
@@ -12796,6 +12842,26 @@ function chatLoadLog() {
     chatMsgs = raw ? (JSON.parse(raw) || []) : [];
     if (!Array.isArray(chatMsgs)) chatMsgs = [];
   } catch (e) { chatMsgs = []; }
+  chatExpireRestoredCards();
+}
+
+// A pending confirm card cannot survive a reload: the intent it would apply
+// lived in memory only. Left alone the card comes back with working-looking
+// buttons that either do nothing or — worse — resolve against a later
+// intent. So every card restored from storage is retired on load.
+function chatExpireRestoredCards() {
+  let changed = false;
+  chatMsgs.forEach(m => {
+    if (m.who !== 'confirm') return;
+    if (m.text.indexOf('chatConfirm(') === -1) return;   // already settled
+    m.text = m.text
+      .replace(/<div class="cc-btns">[\s\S]*?<\/div>\s*<\/div>/,
+        '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">'
+        + 'Expired — retype the command</span></div></div>')
+      .replace('class="chat-confirm"', 'class="chat-confirm done"');
+    changed = true;
+  });
+  if (changed) chatSaveLog();
 }
 
 function chatClear() {
@@ -12821,21 +12887,24 @@ function chatRender() {
 
 // Confirm card — the only gateway to a write.
 function chatConfirmCard(intent, line, sub) {
-  const id = _chatIntentSeq++;
+  const id = CHAT_SESSION + '-' + (_chatIntentSeq++);
   _chatIntents[id] = intent;
   return `<div class="chat-confirm" id="chatCC-${id}">
       <div class="cc-line">${line}</div>
       <div class="cc-sub">${sub || ''}</div>
       <div class="cc-btns">
-        <button class="cc-ok" onclick="chatConfirm(${id})">Apply</button>
-        <button class="cc-no" onclick="chatCancel(${id})">Cancel</button>
+        <button class="cc-ok" onclick="chatConfirm('${id}')">Apply</button>
+        <button class="cc-no" onclick="chatCancel('${id}')">Cancel</button>
       </div>
     </div>`;
 }
 
 function chatConfirm(id) {
   const intent = _chatIntents[id];
-  if (!intent) return;
+  if (!intent) {
+    chatPush('app', 'That card is no longer active — retype the command.', 'err');
+    return;
+  }
   delete _chatIntents[id];
   const card = document.getElementById('chatCC-' + id);
   if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Applied</span>'; }
