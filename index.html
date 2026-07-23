@@ -1637,7 +1637,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -4098,13 +4098,21 @@ function whatifBuyCalc(it) {
 }
 
 function whatifBuySum() {
-  return whatifBuy.reduce((s, it) => s + whatifBuyCalc(it).counted, 0);
+  // Unmarked rows (inc === false) stay on screen but don't hit the total.
+  return whatifBuy.reduce((s, it) => s + (isInc(it) ? whatifBuyCalc(it).counted : 0), 0);
 }
 
 // The little grey recap under an installment item.
 function whatifBuySummaryHTML(it) {
   const calc = whatifBuyCalc(it);
   if (!calc.inst) return '';
+  if (!isInc(it)) {
+    const rangeOff = calc.startAbs != null
+      ? whatifAbsMonthLabel(calc.startAbs) + ' – ' + whatifAbsMonthLabel(calc.endAbs)
+      : 'pick a start month';
+    return fPHP(calc.perMonth) + '/mo · ' + fPHP(calc.total) + ' total · ' + rangeOff
+         + '<br>excluded — not deducted from the projection';
+  }
   const range = calc.startAbs != null
     ? whatifAbsMonthLabel(calc.startAbs) + ' – ' + whatifAbsMonthLabel(calc.endAbs)
     : 'pick a start month';
@@ -4132,6 +4140,17 @@ function refreshWhatifBuyRows() {
   whatifBuy.forEach((_, i) => updateWhatifBuyRow(i));
 }
 
+// Tap the round ✓ to keep a planned purchase on the list but leave it out of
+// the projection (same include/exclude behaviour as necessities & savings).
+function toggleWhatifBuyInc(i) {
+  const it = whatifBuy[i];
+  if (!it) return;
+  it.inc = !isInc(it);
+  renderWhatifBuy();
+  calcWhatif();
+  saveWhatif();
+}
+
 // Toggle one item between one-off and installment.
 function setWhatifBuyInst(i, on) {
   const it = whatifBuy[i];
@@ -4155,7 +4174,7 @@ function renderWhatifBuy() {
     const isInst = !!it.inst;
     const amtLabel = isInst ? (it.mode === 'total' ? 'Total (split)' : 'Per month') : 'Amount';
     const div = document.createElement('div');
-    div.className = 'whatif-buy-row';
+    div.className = 'whatif-buy-row' + (isInc(it) ? '' : ' inc-off');
     div.innerHTML =
       '<div class="whatif-buy-top">' +
         '<input class="nec-cat-input" value="' + escH(it.label || '') + '" placeholder="e.g. new phone, trip, laptop" ' +
@@ -4165,6 +4184,7 @@ function renderWhatifBuy() {
       '<div class="whatif-buy-mid">' +
         '<div class="whatif-buy-amt">' +
           '<span class="whatif-buy-amtlabel">' + amtLabel + '</span>' +
+          incBtn(it, 'toggleWhatifBuyInc(' + i + ')') +
           '<span style="font-size:12px;color:var(--text3);">₱</span>' +
           '<input class="nec-amt-input" type="number" value="' + (it.amt != null ? it.amt : '') + '" placeholder="0.00" min="0" step="0.01" ' +
             'oninput="whatifBuy[' + i + '].amt=this.value; updateWhatifBuyRow(' + i + '); calcWhatif(); saveWhatif()"></div>' +
