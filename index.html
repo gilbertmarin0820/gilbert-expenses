@@ -1689,6 +1689,48 @@
     color: var(--teal-text); font-size: 15px; cursor: pointer;
   }
   .chat-ai-note { font-size: 10.5px; color: var(--text3); padding: 0 16px 8px; text-align: center; }
+
+  .chat-icon-btn {
+    width: 40px; flex: 0 0 40px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-size: 16px; cursor: pointer; line-height: 1;
+  }
+  .chat-icon-btn:hover { border-color: var(--teal); }
+  .chat-icon-btn.rec {
+    border-color: var(--red); color: var(--red-text);
+    animation: chatMicPulse 1s ease-in-out infinite;
+  }
+  @keyframes chatMicPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .chat-send:disabled { opacity: .5; cursor: default; }
+  .chat-msg code, .chat-confirm code {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    background: var(--surface3); padding: 1px 5px; border-radius: 4px;
+  }
+  .chat-msg.app i { color: var(--text3); font-style: italic; }
+
+  /* Receipt / SMS review table */
+  .chat-review {
+    align-self: flex-start; width: 90%;
+    background: var(--surface2); border: 1px solid var(--amber);
+    border-radius: 14px; border-bottom-left-radius: 4px; padding: 12px 14px;
+  }
+  .chat-review .cc-line { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 8px; }
+  .chat-review .cc-sub  { font-size: 11px; color: var(--text3); margin: 8px 0 10px; }
+  .chat-review .cc-btns { display: flex; gap: 8px; }
+  .chat-review button {
+    flex: 1; padding: 8px 0; border-radius: var(--radius-sm);
+    font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500; cursor: pointer;
+  }
+  .chat-review.done { border-color: var(--border); opacity: .6; }
+  .rv-scroll { max-height: 180px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; border-radius: var(--radius-sm); }
+  .rv-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rv-table th {
+    text-align: left; color: var(--text3); font-weight: 500; font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px;
+    position: sticky; top: 0; background: var(--surface2);
+  }
+  .rv-table td { padding: 5px 8px; color: var(--text2); border-top: 1px solid var(--border); }
+  .rv-table td:nth-child(2) { font-family: 'DM Mono', monospace; color: var(--text); text-align: right; }
 </style>
 </head>
 <body>
@@ -1736,7 +1778,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23h</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23j</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1903,12 +1945,14 @@
 
     <!-- AI assist for the chat command bar -->
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
-      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🤖 Chat — AI fallback <span style="font-size:10px; font-weight:400; color:var(--text3);">optional</span></div>
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🤖 Chat AI <span style="font-size:10px; font-weight:400; color:var(--text3);">optional</span></div>
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        The 💬 command bar understands plain commands on its own — offline, instantly, no key needed.
-        Pick a provider here and anything it <em>can't</em> parse gets passed to that model instead,
-        which handles messy phrasing and questions. The model only ever
-        <strong style="color:var(--text2);">proposes</strong> a change — you still confirm it, and Undo still works.
+        The 💬 chat understands plain commands on its own — offline, instantly, no key needed.
+        Pick a provider here and it becomes a full assistant you can <strong style="color:var(--text2);">ask anything</strong> —
+        questions about your money (“how much on subscriptions?”), or anything unrelated to budgeting.
+        It can also read a <strong style="color:var(--text2);">receipt photo</strong> into the Hangout or CC Split tab and parse a pasted
+        <strong style="color:var(--text2);">bank/GCash SMS</strong> into expenses (prefix <code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">sms:</code>).
+        Any change to your data is only ever <strong style="color:var(--text2);">proposed</strong> — you confirm it, and Undo still works.
       </div>
       <select id="aiProviderSel" class="trkr-select" onchange="onAiProviderChange()" style="width:100%; margin-bottom:10px;">
         <option value="off">Off — offline parser only</option>
@@ -1951,6 +1995,15 @@
         </div>
       </div>
       <div id="aiKeyMsg" style="font-size:11.5px; color:var(--text3); margin-top:8px; min-height:16px;"></div>
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-top:12px; cursor:pointer;">
+        <input type="checkbox" id="aiLabelsOnly" onchange="toggleAiLabelsOnly()" style="margin-top:2px; flex-shrink:0;">
+        <span style="font-size:11.5px; color:var(--text3); line-height:1.5;">
+          <strong style="color:var(--text2);">Send labels only — never balances.</strong>
+          The model still sees your allocation and bill <em>names</em> so it can act, but every amount is blanked out.
+          Answers about specific figures won't work, but nothing about how much you have leaves the device.
+        </span>
+      </label>
+      <div id="aiQuotaMsg" style="font-size:11px; color:var(--text3); margin-top:10px; min-height:14px; font-family:'DM Mono',monospace;"></div>
     </div>
 
     <!-- Keyboard shortcuts (desktop) -->
@@ -1959,7 +2012,7 @@
       <div style="font-size:12px; color:var(--text3); line-height:2;">
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Alt + 1–5</code> switch tabs (Expenses → Tracker)<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">N</code> new entry on the current page<br>
-        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + K</code> open the 💬 command bar<br>
+        <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + K</code> open the 💬 chat (ask anything / commands)<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Ctrl + Z</code> undo last change<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">Esc</code> close this popup<br>
         <code style="background:var(--surface3); padding:1px 6px; border-radius:3px;">0–9 + − × ÷ Enter</code> type into the calculator (Expenses page)
@@ -2012,8 +2065,11 @@
     <div class="chat-chips" id="chatChips"></div>
     <div class="chat-ai-note" id="chatAiNote"></div>
     <div class="chat-input-row">
+      <button class="chat-icon-btn" id="chatMic" onclick="chatMic()" title="Voice input">🎤</button>
+      <button class="chat-icon-btn" id="chatAttach" onclick="chatPickImage()" title="Send a receipt photo" style="display:none;">📎</button>
+      <input id="chatFile" type="file" accept="image/*" style="display:none;" onchange="chatOnFile(this)">
       <input id="chatInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-        placeholder="e.g. add 250 on gcash"
+        placeholder="Ask anything, or type a command…"
         onkeydown="if(event.key==='Enter'){event.preventDefault(); chatSubmit();}">
       <button class="chat-send" onclick="chatSubmit()" title="Send">➤</button>
     </div>
@@ -12128,39 +12184,46 @@ if (navigator.storage && navigator.storage.persist) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CHAT COMMAND BAR
-// A chat-style bar that turns typed commands ("add 250 on gcash")
-// into changes on your data.
+// CHAT COMMAND BAR  +  GENERAL AI CHAT
+// A chat-style bar that (a) turns typed commands ("add 250 on gcash")
+// into changes on your data, and (b) — when a provider is set — acts
+// as a general assistant you can ask ANYTHING, budget or not.
 //
 // Two brains, one destination:
-//   1. A LOCAL parser handles the regular shapes — verb + amount +
-//      target. Instant, offline, free, no key. This covers ~all real
-//      usage and is the only path that runs by default.
-//   2. If the parser can't understand it AND an Anthropic API key is
-//      saved in Settings, the text is handed to Claude, which returns
-//      a structured intent — never a write.
+//   1. A LOCAL parser handles the regular command shapes — verb +
+//      amount + target. Instant, offline, free, no key. Covers ~all
+//      real command usage and is the only path that runs by default.
+//   2. If the parser can't understand it (or matches only weakly) AND
+//      a provider key is saved in Settings, the message goes to the AI.
+//      For a budget command the model returns a structured INTENT
+//      (never a write); for anything else it just answers you.
 //
-// BOTH routes end at the same place: chatApply() validates the intent
+// Every write still ends at chatApply(), which re-validates the intent
 // and applies it through saveData()/savePlanData(), so the existing
 // Undo stack picks it up like any other edit. Nothing mutates until
-// you tap Apply.
+// you tap Apply. A whole batch shares one Undo step (the 600ms save
+// debounce coalesces the writes).
 // ═══════════════════════════════════════════════════════════════
 
 const CHAT_LOG_KEY   = 'va_chat_log';    // per-device transcript (not synced)
-// Per-device secrets — deliberately never synced, exported, or backed up.
+// Per-device secrets/prefs — deliberately never synced, exported, or backed up.
 // Actual key/model storage keys live per provider in AI_PROVIDERS below.
-const AI_DEVICE_KEYS  = ['va_ai_provider', 'va_ai_key', 'va_ai_model', 'va_ai_key_g', 'va_ai_model_g'];
+const AI_DEVICE_KEYS  = ['va_ai_provider', 'va_ai_key', 'va_ai_model', 'va_ai_key_g',
+                         'va_ai_model_g', 'va_ai_labels_only', 'va_ai_reqcount'];
 const CHAT_MAX_MSGS  = 40;
+const CHAT_HIST_TURNS = 6;               // recent turns sent to the model for context
 
-let chatMsgs      = [];   // [{who:'you'|'app', text, cls}]
-let _chatIntents  = {};   // id -> intent awaiting confirm
-// Ids are namespaced per page load. A confirm card is persisted as HTML in
-// the transcript, but the intent behind it lives only in memory — so after a
-// reload the buttons on an old card must not resolve against a fresh intent
-// that happens to reuse the same number.
+let chatMsgs      = [];   // [{who:'you'|'app'|'confirm', text, cls}]
+let _chatIntents  = {};   // id -> intent (or intent[]) awaiting confirm
+let _chatReviews  = {};   // id -> {kind, rows} awaiting a review-table apply
+// Ids are namespaced per page load. A card is persisted as HTML in the
+// transcript, but the intent behind it lives only in memory — so after a
+// reload an old card must not resolve against a fresh intent that happens
+// to reuse the same number.
 const CHAT_SESSION = Math.random().toString(36).slice(2, 8);
 let _chatIntentSeq = 1;
 let _chatBusy     = false;
+const _chatAiCache = {};  // contextSig|text -> validated intent (session cache)
 
 // ─── TEXT HELPERS ─────────────────────────────────────────────
 function chatNorm(s) {
@@ -12184,6 +12247,7 @@ function chatLev(a, b) {
 }
 
 // Scores how well a typed word matches a candidate name. 0 = no match.
+// 84+ = strong (exact/prefix), 70 = substring, 55-66 = fuzzy (typo).
 function chatScore(q, cand) {
   const a = chatNorm(q), b = chatNorm(cand);
   if (!a || !b) return 0;
@@ -12268,6 +12332,9 @@ function chatFindBill(q) {
 
 // ─── PARSER ───────────────────────────────────────────────────
 // Returns an intent object, or {error:'…'} , or null when it has no idea.
+// Write intents carry a `_score` = how confident the target match was, so
+// chatSubmit can escalate a weak (typo-level) match to the AI for a second
+// opinion instead of silently acting on a shaky guess.
 function chatParse(raw) {
   let t = String(raw || '')
     .toLowerCase()
@@ -12296,7 +12363,6 @@ function chatParse(raw) {
     const m2 = body.match(/^(?:from\s+)?(.*?)\s+(?:to|into|sa|papunta)\s+(.+)$/);
     let amtTok = null, fromTxt = '', toTxt = '';
     if (m2) {
-      // amount may sit before "from" or right after the verb
       const left = m2[1].split(' ').filter(Boolean);
       const kept = [];
       left.forEach(w => { const a = chatAmt(w); if (a && amtTok == null) amtTok = a; else kept.push(w); });
@@ -12308,7 +12374,7 @@ function chatParse(raw) {
     if (!from) return { error: `No allocation matching “${fromTxt}”.` };
     if (!to)   return { error: `No allocation matching “${toTxt}”.` };
     if (from.idx === to.idx) return { error: 'That is the same allocation on both sides.' };
-    return { action: 'move', from: from.idx, to: to.idx, amount: amtTok.n };
+    return { action: 'move', from: from.idx, to: to.idx, amount: amtTok.n, _score: Math.min(from.score, to.score) };
   }
 
   // ── tokenise: pull out the first verb and the first amount ──
@@ -12338,7 +12404,7 @@ function chatParse(raw) {
     if (bill) return { action: 'paybill', key: bill.key, label: bill.label, amount: bill.amt };
     if (amt && targetTxt) {
       const sav = chatFindSav(targetTxt);
-      if (sav) return { action: 'deduct', target: sav.idx, amount: amt.n };
+      if (sav) return { action: 'deduct', target: sav.idx, amount: amt.n, _score: sav.score };
     }
     return { error: targetTxt ? `No bill or allocation matching “${targetTxt}”.` : 'Try: `pay electricity`' };
   }
@@ -12350,14 +12416,14 @@ function chatParse(raw) {
     if (/^(total|savings|all)$/.test(targetTxt))    return { action: 'total' };
     const sav = chatFindSav(targetTxt);
     if (sav) return { action: 'query', target: sav.idx };
-    return { error: `No allocation matching “${targetTxt}”.` };
+    return null;   // unknown — let the AI answer it
   }
 
   // ── bare name, no verb and no amount → show that balance ──
   if (verb == null && amt == null && targetTxt) {
     const sav = chatFindSav(targetTxt);
-    if (sav) return { action: 'query', target: sav.idx };
-    return null;   // unknown — let the AI fallback have a go
+    if (sav && sav.score >= 66) return { action: 'query', target: sav.idx };
+    return null;   // unknown / weak — let the AI have a go
   }
 
   // ── the main shape: verb + amount + target ──
@@ -12367,16 +12433,25 @@ function chatParse(raw) {
   const sav = chatFindSav(targetTxt);
   if (!sav) return { error: `No allocation matching “${targetTxt}”. Open Savings Allocation to see the names.` };
 
-  // No verb at all ("gcash 250") — assume Add, but say so on the chip.
   const assumed = (verb == null);
   const action  = verb || 'add';
   if (!['add', 'deduct', 'set'].includes(action)) return null;
-  return { action: action, target: sav.idx, amount: amt.n, assumed: assumed };
+  return { action: action, target: sav.idx, amount: amt.n, assumed: assumed, _score: sav.score };
 }
 
 // ─── APPLY ────────────────────────────────────────────────────
 // The single write path. Both the parser and the AI land here.
+// Accepts a single intent OR an array of intents (batch); a batch is
+// applied in order and, thanks to the save debounce, forms one Undo step.
 function chatApply(intent) {
+  if (Array.isArray(intent)) {
+    const lines = intent.map(chatApplyOne);
+    return lines.join('\n');
+  }
+  return chatApplyOne(intent);
+}
+
+function chatApplyOne(intent) {
   if (!intent) return 'Nothing to apply.';
   const a = intent.action;
 
@@ -12396,7 +12471,7 @@ function chatApply(intent) {
     saveData();
     const name = chatSavName(intent.target);
     return `✓ <b>${escH(name)}</b> ${fPHP(before)} → <b>${fPHP(after)}</b>`
-         + (after < 0 ? '\n⚠️ That balance is now negative.' : '');
+         + (after < 0 ? '  ⚠️ negative' : '');
   }
 
   if (a === 'move') {
@@ -12443,17 +12518,17 @@ function chatAnswer(intent) {
   const a = intent.action;
 
   if (a === 'help') {
-    return 'Things I understand:\n\n'
-      + '<b>add 250 gcash</b> · <b>+250 gcash</b>\n'
+    return 'I do two things.\n\n'
+      + '<b>① Commands</b> (offline, instant):\n'
+      + '<b>add 250 gcash</b> · <b>+250 gcash</b> · <b>add 250 gcash and 100 maya</b>\n'
       + '<b>deduct 500 from maya</b> · <b>-500 maya</b>\n'
-      + '<b>set gcash 3000</b>\n'
-      + '<b>move 500 from gcash to bdo</b>\n'
-      + '<b>gcash</b> — show that balance\n'
-      + '<b>total</b> · <b>net</b> · <b>bills</b>\n'
-      + '<b>pay electricity</b> — tick a bill\n'
-      + '<b>wish airpods 12000</b>\n'
-      + '<b>undo</b>\n\n'
-      + 'Tagalog works too — dagdag, bawas, lipat, bayad.';
+      + '<b>set gcash 3000</b> · <b>move 500 from gcash to bdo</b>\n'
+      + '<b>gcash</b> — show a balance · <b>total</b> · <b>net</b> · <b>bills</b>\n'
+      + '<b>pay electricity</b> — tick a bill · <b>wish airpods 12000</b> · <b>undo</b>\n'
+      + 'Tagalog works — dagdag, bawas, lipat, bayad.\n\n'
+      + '<b>② Ask me anything</b> (needs a provider in Settings):\n'
+      + 'Questions about your money — “how much on subscriptions?”, “can I afford the ₱12k lens before payday?” — or anything else at all. '
+      + '📎 send a receipt photo to fill the Hangout or CC Split tab, or prefix <b>sms:</b> a bank/GCash text to log it.';
   }
 
   if (a === 'query') {
@@ -12502,10 +12577,80 @@ function chatAnswer(intent) {
   return null;
 }
 
-// ─── AI FALLBACK (optional, opt-in, multi-provider) ───────────
-// Providers are interchangeable: each one's job is to turn a sentence
-// into intent JSON. They all return through chatValidateIntent(), so
-// no provider can widen what a model is allowed to do.
+// ─── FINANCE CONTEXT ──────────────────────────────────────────
+// A compact snapshot of everything the app has ALREADY computed, handed
+// to the model so it quotes real figures instead of guessing. Reads the
+// numbers the UI is already showing (recalcAll keeps them current). With
+// "labels only" on, names are sent but every amount is nulled.
+function chatDomNum(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const n = parseFloat(String(el.textContent).replace(/[^0-9.\-]/g, ''));
+  return isFinite(n) ? n : null;
+}
+
+function chatFinanceContext(labelsOnly) {
+  const money = v => labelsOnly ? null : v;
+
+  const allocations = savingsItems.map((it, i) => ({
+    i: i, name: chatSavName(i), balance: money(parseFloat(it.amt) || 0), counted: isInc(it),
+  }));
+  let savTotal = 0;
+  savingsItems.forEach(it => { if (isInc(it)) savTotal += parseFloat(it.amt) || 0; });
+
+  let bills = [];
+  try {
+    bills = bclBuildItems().map(b => ({ key: b.key, label: b.label, amt: money(b.amt), paid: !!billChecks.checks[b.key] }));
+  } catch (e) {}
+
+  const subsSum  = (typeof getSubsSum === 'function') ? getSubsSum() : 0;
+  const instsSum = (typeof getInstsMonthlySum === 'function') ? getInstsMonthlySum() : 0;
+  const debts    = (typeof getDebtTotals === 'function') ? getDebtTotals() : { lent: 0, owe: 0 };
+  const shopee = chatDomNum('shopeeTotal') || 0;
+  const tiktok = chatDomNum('tiktokTotal') || 0;
+  const maya   = chatDomNum('mayaTotal')   || 0;
+
+  let freeMo = null, freePd = null;
+  try { freeMo = wishMonthlyFree(); freePd = wishFreePerPayday(); } catch (e) {}
+
+  let forecast = null;
+  try { forecast = [1, 2, 3].map(k => money(forecastMonthCommitted(k, true))); } catch (e) {}
+
+  return {
+    currency: 'PHP',
+    net_summary: money(chatDomNum('netBalance')),
+    savings_total: money(savTotal),
+    allocations: allocations,
+    monthly_committed: {
+      necessities:        money(chatDomNum('necTotal')),
+      subscriptions:      money(subsSum),
+      installments:       money(instsSum),
+      paylater_shopee:    money(shopee),
+      paylater_tiktok:    money(tiktok),
+      paylater_maya:      money(maya),
+      paylater_total:     money(shopee + tiktok + maya),
+    },
+    free_to_spend: {
+      per_month:  (freeMo == null) ? null : money(Math.max(0, freeMo)),
+      per_payday: (freePd == null) ? null : money(Math.max(0, freePd)),
+      note: 'income minus fixed commitments; VA pays weekly (Thursdays)',
+    },
+    forecast_installments_next_3_months: forecast,
+    subscriptions_list: subscriptions.map(s => ({ name: s.name || 'Subscription', amt: money(parseFloat(s.amt) || 0), counted: isInc(s) })),
+    installments_list:  installments.map(x => ({ name: x.name || 'Installment', monthly: money(parseFloat(x.monthlyAmt) || 0), remaining: parseInt(x.remaining) || 0, counted: isInc(x) })),
+    wishlist:           wishlistItems.map(w => ({ name: w.name || 'Item', price: money(parseFloat(w.price) || 0), mode: w.mode === 'inst' ? 'installment' : 'save-up' })),
+    debts: { they_owe_me: money(debts.lent), i_owe: money(debts.owe) },
+    bills_this_month: bills,
+  };
+}
+
+// A cheap signature of the numbers so the cache invalidates when data changes.
+function chatContextSig(labelsOnly) {
+  try { return (labelsOnly ? 'L|' : 'F|') + JSON.stringify(chatFinanceContext(labelsOnly)); }
+  catch (e) { return String(Date.now()); }
+}
+
+// ─── AI PROVIDERS ─────────────────────────────────────────────
 const AI_PROVIDERS = {
   gemini: {
     label: 'Gemini (free tier)',
@@ -12513,8 +12658,9 @@ const AI_PROVIDERS = {
     modelKey: 'va_ai_model_g',
     defModel: 'gemini-3.5-flash-lite',
     keyHint: 'AQ.… or AIza… — from aistudio.google.com',
-    note: 'Free tier: no credit card, works on phone and desktop. Google may use free-tier '
-        + 'requests to improve their models, and this sends your allocation names and balances. '
+    multimodal: true,
+    note: 'Free tier: no credit card, works on phone and desktop, and can read receipt photos. '
+        + 'Google may use free-tier requests to improve their models, and this sends your allocation names and balances. '
         + 'Keep billing OFF on the project or the free tier disappears. Stick to a Flash-Lite '
         + 'model — bigger models return the same JSON, slower, with far tighter daily caps. '
         + 'Google retires model IDs regularly, so use "List available models" if one stops working.',
@@ -12525,7 +12671,9 @@ const AI_PROVIDERS = {
     modelKey: 'va_ai_model',
     defModel: 'claude-haiku-4-5-20251001',
     keyHint: 'sk-ant-… — from console.anthropic.com',
-    note: 'Billed per request, separate from any Claude subscription. Needs credit on the account.',
+    multimodal: false,
+    note: 'Billed per request, separate from any Claude subscription. Needs credit on the account. '
+        + 'Receipt-photo reading is Gemini-only for now.',
   },
 };
 
@@ -12539,11 +12687,18 @@ function aiCfg()   { return AI_PROVIDERS[aiProvider()] || null; }
 function aiKey()   { const c = aiCfg(); if (!c) return ''; try { return localStorage.getItem(c.keyKey) || ''; } catch (e) { return ''; } }
 function aiModel() { const c = aiCfg(); if (!c) return ''; try { return localStorage.getItem(c.modelKey) || c.defModel; } catch (e) { return c.defModel; } }
 function aiReady() { return aiProvider() !== 'off' && !!aiKey(); }
+function aiLabelsOnly() { try { return localStorage.getItem('va_ai_labels_only') === '1'; } catch (e) { return false; } }
 
 function onAiProviderChange() {
   const sel = document.getElementById('aiProviderSel');
   try { localStorage.setItem('va_ai_provider', sel.value); } catch (e) {}
   loadAiKeyUI();
+  chatUpdateModeTag();
+}
+
+function toggleAiLabelsOnly() {
+  const cb = document.getElementById('aiLabelsOnly');
+  try { localStorage.setItem('va_ai_labels_only', cb.checked ? '1' : '0'); } catch (e) {}
   chatUpdateModeTag();
 }
 
@@ -12557,7 +12712,7 @@ function saveAiKey() {
   try {
     if (k) localStorage.setItem(c.keyKey, k); else localStorage.removeItem(c.keyKey);
     localStorage.setItem(c.modelKey, m || c.defModel);
-    msg.textContent = k ? '✓ Saved on this device. Chat falls back to ' + c.label + ' when it cannot parse.'
+    msg.textContent = k ? '✓ Saved on this device. The 💬 chat now uses ' + c.label + ' for anything the parser can\'t handle.'
                         : '✓ Cleared — chat stays fully offline.';
     msg.style.color = 'var(--green-text)';
   } catch (e) {
@@ -12587,44 +12742,97 @@ function loadAiKeyUI() {
   const mi   = document.getElementById('aiModelInput');
   if (sel) sel.value = p;
   if (rows) rows.style.display = c ? 'block' : 'none';
-  if (note) note.textContent = c ? c.note : 'Chat runs fully offline on the built-in parser.';
+  if (note) note.textContent = c ? c.note : 'Chat runs fully offline on the built-in parser. Set a provider to ask free-form questions.';
   if (c) {
     if (ki) { ki.placeholder = c.keyHint; ki.value = aiKey(); }
     if (mi) { mi.placeholder = c.defModel; mi.value = aiModel(); }
   }
+  const cb = document.getElementById('aiLabelsOnly');
+  if (cb) cb.checked = aiLabelsOnly();
   const msg = document.getElementById('aiKeyMsg');
   if (msg) { msg.textContent = ''; msg.style.color = 'var(--text3)'; }
+  aiUpdateQuotaUI();
 }
 
-// Shared instruction — identical wording whichever provider answers, so
-// switching providers can't quietly change what the model is asked for.
-function chatAISystemPrompt() {
-  const snapshot = savingsItems.map((it, i) => ({
-    i: i, name: chatSavName(i), balance: parseFloat(it.amt) || 0, counted: isInc(it),
-  }));
-  let bills = [];
-  try { bills = bclBuildItems().map(b => ({ key: b.key, label: b.label, amt: b.amt, paid: !!billChecks.checks[b.key] })); } catch (e) {}
+// ─── DAILY REQUEST COUNTER ────────────────────────────────────
+// Not a hard cap — just visibility, so a free-tier quota doesn't surprise
+// you. One counter per calendar day, stored per device.
+function aiToday() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function aiReqCount() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('va_ai_reqcount') || '{}');
+    return (raw && raw.d === aiToday()) ? (raw.n || 0) : 0;
+  } catch (e) { return 0; }
+}
+function aiBumpReqCount() {
+  try { localStorage.setItem('va_ai_reqcount', JSON.stringify({ d: aiToday(), n: aiReqCount() + 1 })); } catch (e) {}
+  aiUpdateQuotaUI();
+}
+function aiUpdateQuotaUI() {
+  const el = document.getElementById('aiQuotaMsg');
+  if (el) el.textContent = aiReady() ? ('AI requests today: ' + aiReqCount()) : '';
+}
 
-  return [
-    'You turn a personal-finance app user\'s message into ONE JSON intent object.',
-    'Reply with raw JSON only — no prose, no markdown fences.',
+// ─── SYSTEM PROMPT ────────────────────────────────────────────
+// Identical wording whichever provider answers, so switching providers
+// can't quietly change behaviour. The model is BOTH a command parser and
+// a general assistant: budget commands come back as intent JSON; anything
+// else is answered directly in a "say" action.
+function chatAISystemPrompt(parserHint) {
+  const ctx = chatFinanceContext(aiLabelsOnly());
+  const lines = [
+    'You are the assistant inside "Gibsxpenses", a personal-finance web app for one user in the Philippines (currency ₱, PHP).',
+    'Every reply MUST be a single raw JSON object — no prose outside it, no markdown fences.',
     '',
-    'Schema (pick one action):',
-    '{"action":"add"|"deduct"|"set","target":<allocation index>,"amount":<number>}',
-    '{"action":"move","from":<index>,"to":<index>,"amount":<number>}',
-    '{"action":"paybill","key":"<bill key>"}',
-    '{"action":"wish","name":"<text>","amount":<number>}',
-    '{"action":"query","target":<index>}',
-    '{"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"help"}',
-    '{"action":"none","reply":"<one short sentence back to the user>"}',
+    'Decide what the user wants:',
     '',
-    'Use "none" with a helpful reply when the message is a question you can answer from the data below,',
-    'or when it is too ambiguous to act on. Never invent an index that is not listed.',
-    'Amounts are Philippine pesos. The user may write Taglish.',
+    'A) A COMMAND that changes their data → return ONE intent, or {"intents":[…]} for several in one message:',
+    '   {"action":"add"|"deduct"|"set","target":<allocation index>,"amount":<number>}',
+    '   {"action":"move","from":<index>,"to":<index>,"amount":<number>}',
+    '   {"action":"paybill","key":"<bill key from the list below>"}',
+    '   {"action":"wish","name":"<text>","amount":<number>}',
+    '   Batch example — "add 250 gcash and 100 maya": {"intents":[{"action":"add","target":0,"amount":250},{"action":"add","target":3,"amount":100}]}',
     '',
-    'Allocations: ' + JSON.stringify(snapshot),
-    'Bills this month: ' + JSON.stringify(bills),
-  ].join('\n');
+    'B) A read-only budget lookup that maps exactly to a screen → {"action":"query","target":<index>} | {"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"help"}',
+    '',
+    'C) ANYTHING ELSE — a question about their finances you can answer from the data below (e.g. "how much on subscriptions?", "can I afford the ₱12k lens before payday?"), OR a general question/request with nothing to do with this app (math, advice, explanations, chit-chat) → answer the user directly and helpfully:',
+    '   {"action":"say","reply":"<your full answer, plain text, ₱ for pesos>"}',
+    '   Quote the real figures from the data below rather than deriving or guessing them. If a needed figure is null (the user turned off sending balances), say you can see the labels but not the amounts.',
+    '',
+    'Rules: never invent an allocation/bill index or key that is not listed. Amounts are pesos. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
+    '',
+    'CURRENT DATA (already computed by the app — treat as ground truth):',
+    JSON.stringify(ctx),
+  ];
+  if (parserHint) {
+    lines.push('', 'The offline parser\'s best guess for this message (confirm or correct it): ' + parserHint);
+  }
+  return lines.join('\n');
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────
+// The last few turns, as role/content pairs, so follow-ups like
+// "actually make it 300" or "and maya too" have something to refer to.
+// Confirm/review cards and the transient "thinking…" bubble are skipped;
+// consecutive same-role turns are merged and the list is trimmed to start
+// on a user turn (both APIs want that).
+function chatHistoryTurns() {
+  const out = [];
+  chatMsgs.forEach(m => {
+    if (m.who !== 'you' && m.who !== 'app') return;
+    const text = String(m.text || '').replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+    if (!text || /^thinking…?$/i.test(text)) return;
+    out.push({ role: m.who === 'you' ? 'user' : 'assistant', text: text });
+  });
+  // merge consecutive same-role
+  const merged = [];
+  out.forEach(t => {
+    const last = merged[merged.length - 1];
+    if (last && last.role === t.role) last.text += '\n' + t.text;
+    else merged.push({ role: t.role, text: t.text });
+  });
+  while (merged.length && merged[0].role !== 'user') merged.shift();
+  return merged.slice(-CHAT_HIST_TURNS);
 }
 
 function chatParseAIText(out) {
@@ -12634,8 +12842,14 @@ function chatParseAIText(out) {
   return chatValidateIntent(intent);
 }
 
+// ─── PROVIDER CALLS ───────────────────────────────────────────
 // Anthropic — needs the explicit browser-access header or CORS blocks it.
-async function chatAskAnthropic(text, key, model, sys) {
+async function chatAskAnthropic(text, key, model, sys, history, imagePart) {
+  const msgs = (history || []).map(t => ({ role: t.role, content: t.text }));
+  const content = imagePart
+    ? [{ type: 'image', source: { type: 'base64', media_type: imagePart.mime, data: imagePart.data } }, { type: 'text', text: text }]
+    : text;
+  msgs.push({ role: 'user', content: content });
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -12644,35 +12858,30 @@ async function chatAskAnthropic(text, key, model, sys) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify({ model: model, max_tokens: 400, system: sys, messages: [{ role: 'user', content: text }] }),
+    body: JSON.stringify({ model: model, max_tokens: 1500, system: sys, messages: msgs }),
   });
   if (!res.ok) throw new Error(await aiErrText(res));
   const data = await res.json();
   return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
 }
 
-// Gemini — plain generateContent call, which is CORS-open to browsers.
-// responseMimeType pins it to JSON so there is nothing to strip.
-//
-// Google churns this API faster than a personal app can track, so the
-// request is built defensively rather than to one snapshot of the spec:
-//
-//  * Sampling params (temperature/top_p/top_k) are DEPRECATED from the
-//    3.x models onward — sending them to gemini-3.x is an error, while
-//    older models still want them. Keyed off the model ID.
-//  * Thinking costs latency and output tokens for what is a one-line
-//    classification, so it is turned down where the model allows it.
-//  * If the API rejects the config anyway, we retry on a stripped-down
-//    body instead of surfacing a parameter complaint the user cannot
-//    act on. Model-not-found is NOT retried — that needs a real fix.
-async function chatAskGemini(text, key, model, sys) {
+// Gemini — generateContent, CORS-open to browsers. responseMimeType pins
+// it to JSON. Built defensively: 3.x rejects the deprecated sampling params
+// older models want, thinking is turned down, and a config the API refuses
+// retries on a stripped-down body (model-not-found is NOT retried).
+async function chatAskGemini(text, key, model, sys, history, imagePart) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
             + encodeURIComponent(model) + ':generateContent';
   const isGen3Plus = /gemini-([3-9]|\d{2,})/i.test(model);
 
+  const contents = (history || []).map(t => ({ role: t.role === 'assistant' ? 'model' : 'user', parts: [{ text: t.text }] }));
+  const userParts = [{ text: text }];
+  if (imagePart) userParts.unshift({ inline_data: { mime_type: imagePart.mime, data: imagePart.data } });
+  contents.push({ role: 'user', parts: userParts });
+
   // 0 = full config · 1 = drop thinking · 2 = bare minimum
   const send = (level) => {
-    const gen = { maxOutputTokens: 800, responseMimeType: 'application/json' };
+    const gen = { maxOutputTokens: 2048, responseMimeType: 'application/json' };
     if (level < 2) {
       if (!isGen3Plus) gen.temperature = 0;        // removed in 3.x
       if (level < 1) {
@@ -12684,7 +12893,7 @@ async function chatAskGemini(text, key, model, sys) {
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sys }] },
-        contents: [{ role: 'user', parts: [{ text: text }] }],
+        contents: contents,
         generationConfig: gen,
       }),
     });
@@ -12693,7 +12902,6 @@ async function chatAskGemini(text, key, model, sys) {
   let res = await send(0), lastMsg = '';
   for (let level = 1; level <= 2 && !res.ok && res.status === 400; level++) {
     lastMsg = await aiErrText(res);
-    // A missing/retired model is a real problem — don't paper over it.
     if (/not found|not available|no longer|unsupported model|does not exist/i.test(lastMsg)) break;
     res = await send(level);
   }
@@ -12712,7 +12920,7 @@ async function chatAskGemini(text, key, model, sys) {
     throw new Error(blocked ? ('Request blocked (' + blocked + ')') : 'Empty response.');
   }
   const out = ((cand.content && cand.content.parts) || [])
-    .filter(p => !p.thought)                 // ignore thought parts if a model returns them
+    .filter(p => !p.thought)
     .map(p => p.text || '').join('').trim();
   if (!out && cand.finishReason === 'MAX_TOKENS') {
     throw new Error('Model spent its whole output budget thinking — pick a Flash-Lite model.');
@@ -12720,9 +12928,6 @@ async function chatAskGemini(text, key, model, sys) {
   return out;
 }
 
-// Asks the key itself which models it can use. Beats any hardcoded list:
-// Google retires model IDs on their own schedule, and this reflects what
-// THIS key can actually call today.
 async function aiListModels() {
   const p = aiProvider(), key = aiKey();
   const box = document.getElementById('aiModelList');
@@ -12741,7 +12946,6 @@ async function aiListModels() {
       .filter(n => n && !/embedding|aqa|imagen|veo|tts|image|native-audio/i.test(n))
       .sort();
     if (!names.length) { box.innerHTML = '<span style="font-size:11.5px;color:var(--text3);">No text models returned.</span>'; return; }
-    // Cheapest/fastest first — those are the right pick for this job.
     names.sort((a, b) => (/flash-lite/.test(b) - /flash-lite/.test(a)) || (/flash/.test(b) - /flash/.test(a)));
     box.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">'
       + names.length + ' available — tap to use. Flash-Lite is the right pick here.</div>'
@@ -12761,7 +12965,6 @@ function aiPickModel(name) {
   saveAiKey();
 }
 
-// Pull the useful sentence out of either provider's error envelope.
 async function aiErrText(res) {
   let detail = '';
   try {
@@ -12773,29 +12976,54 @@ async function aiErrText(res) {
   return detail || ('API error ' + res.status);
 }
 
-// Sends the command plus a tiny snapshot of allocation names/balances.
-// The model returns intent JSON only — it never touches storage.
-async function chatAskAI(text) {
-  const p = aiProvider();
-  const key = aiKey();
+// One entry point for both providers. Sends the message + finance context
+// + recent history (+ optional parser hint). Returns a validated intent.
+async function chatAskAI(text, parserHint) {
+  const p = aiProvider(), key = aiKey();
   if (p === 'off' || !key) return null;
-  const sys   = chatAISystemPrompt();
+
+  const labelsOnly = aiLabelsOnly();
+  const cacheKey = chatContextSig(labelsOnly) + '|' + (parserHint || '') + '|' + text.toLowerCase().trim();
+  if (_chatAiCache[cacheKey]) return _chatAiCache[cacheKey];
+
+  const sys   = chatAISystemPrompt(parserHint);
   const model = aiModel();
+  const hist  = chatHistoryTurns();
+  aiBumpReqCount();
   const out = (p === 'gemini')
-    ? await chatAskGemini(text, key, model, sys)
-    : await chatAskAnthropic(text, key, model, sys);
-  return chatParseAIText(out);
+    ? await chatAskGemini(text, key, model, sys, hist, null)
+    : await chatAskAnthropic(text, key, model, sys, hist, null);
+  const intent = chatParseAIText(out);
+  _chatAiCache[cacheKey] = intent;
+  return intent;
 }
 
 // Guard rail: everything from the model is re-checked against real data
 // before it is allowed anywhere near chatApply().
 function chatValidateIntent(o) {
   if (!o || typeof o !== 'object') throw new Error('Empty response.');
+
+  // Batch — {"intents":[…]} or a bare array.
+  const list = Array.isArray(o) ? o : (Array.isArray(o.intents) ? o.intents : null);
+  if (list) {
+    if (!list.length) throw new Error('Empty batch.');
+    const out = list.map(chatValidateOne);
+    // A batch only makes sense for writes; a read/say inside a batch is dropped.
+    const writes = out.filter(x => ['add', 'deduct', 'set', 'move', 'paybill', 'wish'].includes(x.action));
+    if (!writes.length) throw new Error('Nothing to apply in that batch.');
+    return writes.length === 1 ? writes[0] : writes;
+  }
+  return chatValidateOne(o);
+}
+
+function chatValidateOne(o) {
+  if (!o || typeof o !== 'object') throw new Error('Empty response.');
   const a = o.action;
   const idxOK = v => Number.isInteger(v) && v >= 0 && v < savingsItems.length;
   const amtOK = v => typeof v === 'number' && isFinite(v) && v >= 0 && v < 1e12;
 
-  if (a === 'none')  return { action: 'none', reply: String(o.reply || 'I am not sure how to do that.').slice(0, 400) };
+  if (a === 'say')   return { action: 'say',  reply: String(o.reply || '').slice(0, 4000) };
+  if (a === 'none')  return { action: 'say',  reply: String(o.reply || 'I am not sure how to do that.').slice(0, 4000) };
   if (['help', 'total', 'net', 'bills'].includes(a)) return { action: a };
   if (a === 'query') { if (!idxOK(o.target)) throw new Error('Unknown allocation.'); return { action: 'query', target: o.target }; }
   if (['add', 'deduct', 'set'].includes(a)) {
@@ -12825,6 +13053,15 @@ function chatValidateIntent(o) {
 }
 
 // ─── TRANSCRIPT ───────────────────────────────────────────────
+// Render a model "say" answer: escape, then allow **bold**, `code`, and
+// keep newlines (the bubble is white-space:pre-wrap).
+function chatFormatReply(s) {
+  let h = escH(String(s || ''));
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return h;
+}
+
 function chatPush(who, text, cls) {
   chatMsgs.push({ who: who, text: text, cls: cls || '' });
   if (chatMsgs.length > CHAT_MAX_MSGS) chatMsgs = chatMsgs.slice(-CHAT_MAX_MSGS);
@@ -12845,20 +13082,21 @@ function chatLoadLog() {
   chatExpireRestoredCards();
 }
 
-// A pending confirm card cannot survive a reload: the intent it would apply
-// lived in memory only. Left alone the card comes back with working-looking
-// buttons that either do nothing or — worse — resolve against a later
-// intent. So every card restored from storage is retired on load.
+// A pending confirm/review card cannot survive a reload: the intent it
+// would apply lived in memory only. Left alone the card comes back with
+// working-looking buttons that either do nothing or resolve against a
+// later intent. So every live card restored from storage is retired.
 function chatExpireRestoredCards() {
   let changed = false;
   chatMsgs.forEach(m => {
     if (m.who !== 'confirm') return;
-    if (m.text.indexOf('chatConfirm(') === -1) return;   // already settled
+    if (m.text.indexOf('chatConfirm(') === -1 && m.text.indexOf('chatReviewApply(') === -1) return;
     m.text = m.text
       .replace(/<div class="cc-btns">[\s\S]*?<\/div>\s*<\/div>/,
         '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">'
         + 'Expired — retype the command</span></div></div>')
-      .replace('class="chat-confirm"', 'class="chat-confirm done"');
+      .replace('class="chat-confirm"', 'class="chat-confirm done"')
+      .replace('class="chat-review"', 'class="chat-review done"');
     changed = true;
   });
   if (changed) chatSaveLog();
@@ -12867,6 +13105,7 @@ function chatExpireRestoredCards() {
 function chatClear() {
   chatMsgs = [];
   _chatIntents = {};
+  _chatReviews = {};
   chatSaveLog();
   chatRender();
 }
@@ -12875,25 +13114,27 @@ function chatRender() {
   const box = document.getElementById('chatLogEl');
   if (!box) return;
   if (!chatMsgs.length) {
-    box.innerHTML = '<div class="chat-msg app">Type a command and I will show you exactly what it changes before anything is saved.\n\nTry <b>add 250 on gcash</b>, or <b>help</b> for the full list.</div>';
+    box.innerHTML = '<div class="chat-msg app">Ask me anything, or run a command.\n\nTry <b>add 250 on gcash</b>, <b>how much am I paying for subscriptions?</b>, or <b>help</b> for the full list.</div>';
   } else {
     box.innerHTML = chatMsgs.map(m => {
-      if (m.who === 'confirm') return m.text;   // pre-built confirm card
+      if (m.who === 'confirm') return m.text;   // pre-built confirm / review card
       return `<div class="chat-msg ${m.who} ${m.cls}">${m.text}</div>`;
     }).join('');
   }
   box.scrollTop = box.scrollHeight;
 }
 
-// Confirm card — the only gateway to a write.
-function chatConfirmCard(intent, line, sub) {
+// ─── CONFIRM CARD (single or batch) ───────────────────────────
+function chatConfirmCard(intent, rows) {
   const id = CHAT_SESSION + '-' + (_chatIntentSeq++);
   _chatIntents[id] = intent;
+  const body = rows.map(r =>
+    `<div class="cc-line">${r.line}</div><div class="cc-sub">${r.sub || ''}</div>`).join('');
+  const okLabel = rows.length > 1 ? 'Apply all ' + rows.length : 'Apply';
   return `<div class="chat-confirm" id="chatCC-${id}">
-      <div class="cc-line">${line}</div>
-      <div class="cc-sub">${sub || ''}</div>
+      ${body}
       <div class="cc-btns">
-        <button class="cc-ok" onclick="chatConfirm('${id}')">Apply</button>
+        <button class="cc-ok" onclick="chatConfirm('${id}')">${okLabel}</button>
         <button class="cc-no" onclick="chatCancel('${id}')">Cancel</button>
       </div>
     </div>`;
@@ -12908,7 +13149,6 @@ function chatConfirm(id) {
   delete _chatIntents[id];
   const card = document.getElementById('chatCC-' + id);
   if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Applied</span>'; }
-  // freeze the card in the stored transcript too
   const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCC-' + id + '"') !== -1);
   if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/, '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">Applied</span></div>')
                         .replace('class="chat-confirm"', 'class="chat-confirm done"');
@@ -12928,8 +13168,8 @@ function chatCancel(id) {
   chatSaveLog();
 }
 
-// Turns an intent into the human sentence shown on the confirm card.
-function chatPreview(intent) {
+// Turns one intent into the {line, sub} shown on a confirm card.
+function chatPreviewOne(intent) {
   const a = intent.action;
   if (a === 'add' || a === 'deduct' || a === 'set') {
     const item = savingsItems[intent.target];
@@ -12938,13 +13178,10 @@ function chatPreview(intent) {
                 : a === 'deduct' ? before - intent.amount
                 : intent.amount;
     const verb = a === 'add' ? 'Add' : a === 'deduct' ? 'Deduct' : 'Set';
-    const arrow = a === 'set'
-      ? `${fPHP(before)} → ${fPHP(Math.round(after * 100) / 100)}`
-      : `${fPHP(before)} → ${fPHP(Math.round(after * 100) / 100)}`;
     let line = `${verb} <b>${fPHP(intent.amount)}</b> ${a === 'deduct' ? 'from' : a === 'set' ? '—' : '→'} <b>${escH(chatSavName(intent.target))}</b>`;
     if (intent.assumed) line += ' <span style="font-size:10.5px;color:var(--text3);">(assumed “add”)</span>';
     if (intent.viaAI)   line += ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>';
-    return { line: line, sub: arrow + (after < 0 ? '  ⚠️ goes negative' : '') };
+    return { line: line, sub: `${fPHP(before)} → ${fPHP(Math.round(after * 100) / 100)}` + (after < 0 ? '  ⚠️ goes negative' : '') };
   }
   if (a === 'move') {
     const fb = parseFloat(savingsItems[intent.from].amt) || 0;
@@ -12965,77 +13202,330 @@ function chatPreview(intent) {
   return { line: 'Apply this change?', sub: '' };
 }
 
+// Post a confirm card for a single intent or a batch.
+function chatPostConfirm(intent) {
+  const rows = (Array.isArray(intent) ? intent : [intent]).map(chatPreviewOne);
+  chatMsgs.push({ who: 'confirm', text: chatConfirmCard(intent, rows) });
+  chatSaveLog();
+  chatRender();
+}
+
+// ─── RECEIPT / SMS REVIEW TABLE ───────────────────────────────
+// Multimodal + text extraction land here: a table you eyeball before it
+// writes. Rows live in memory (session-namespaced) like confirm cards.
+function chatReviewCard(kind, rows) {
+  const id = CHAT_SESSION + '-r' + (_chatIntentSeq++);
+  _chatReviews[id] = { kind: kind, rows: rows };
+  const title = kind === 'hangout' ? '🧾 Receipt items — send to…' : '🧾 → Necessities';
+  const head = kind === 'hangout'
+    ? '<tr><th>Item</th><th>Amt</th><th>Cur</th></tr>'
+    : '<tr><th>Item</th><th>₱ Amt</th></tr>';
+  const body = rows.map(r => kind === 'hangout'
+    ? `<tr><td>${escH(r.name)}</td><td>${escH(String(r.amt))}</td><td>${escH(r.cur || 'PHP')}</td></tr>`
+    : `<tr><td>${escH(r.name)}</td><td>${escH(String(r.amt))}</td></tr>`
+  ).join('');
+  return `<div class="chat-review" id="chatCC-${id}">
+      <div class="cc-line">${title} — ${rows.length} item${rows.length === 1 ? '' : 's'}</div>
+      <div class="rv-scroll"><table class="rv-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+      <div class="cc-sub">${kind === 'hangout' ? 'Check the numbers, then pick where to send them — you can edit there after.' : 'Check the numbers, then add them. You can edit on the Expenses tab after.'}</div>
+      <div class="cc-btns">
+        ${kind === 'hangout'
+          ? `<button class="cc-ok" onclick="chatReviewApply('${id}','hangout')">→ Hangout</button>
+        <button class="cc-ok" onclick="chatReviewApply('${id}','cc')">→ CC Split</button>`
+          : `<button class="cc-ok" onclick="chatReviewApply('${id}','nec')">Add all</button>`}
+        <button class="cc-no" onclick="chatReviewCancel('${id}')">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function chatReviewApply(id, dest) {
+  const rev = _chatReviews[id];
+  if (!rev) { chatPush('app', 'That table is no longer active — resend the receipt.', 'err'); return; }
+  delete _chatReviews[id];
+  const card = document.getElementById('chatCC-' + id);
+  if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Added</span>'; }
+  const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCC-' + id + '"') !== -1);
+  if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/, '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">Added</span></div>')
+                        .replace('class="chat-review"', 'class="chat-review done"');
+
+  let res = '';
+  try {
+    const to = dest || (rev.kind === 'hangout' ? 'hangout' : 'nec');
+    if (to === 'hangout') {
+      rev.rows.forEach(r => {
+        const cur = CURRENCY_META[r.cur] ? r.cur : 'PHP';
+        hsItems.push({ name: String(r.name || '').slice(0, 60), amt: String(r.amt || ''), tag: HS_TAG_LABEL[r.tag] ? r.tag : 'food', cur: cur, people: [] });
+        hsLastCur = cur;
+      });
+      renderHSItems(); updateHSSummary(); saveHS();
+      res = `✓ Added ${rev.rows.length} item${rev.rows.length === 1 ? '' : 's'} to the Hangout tab — assign people and tags there.`;
+    } else if (to === 'cc') {
+      // CC Split is store-based and PHP-only: one store per line item, foreign
+      // amounts converted to ₱ at live rates. Items with no rate yet are skipped.
+      let added = 0, skipped = 0;
+      rev.rows.forEach(r => {
+        const cur = CURRENCY_META[r.cur] ? r.cur : 'PHP';
+        const php = curToPhp(parseFloat(r.amt) || 0, cur);
+        if (php === null) { skipped++; return; }
+        ccStores.push({ name: String(r.name || '').slice(0, 60), amt: String(Math.round(php * 100) / 100), date: localISODate(), people: [] });
+        added++;
+      });
+      renderCCStores(); updateCCSummary(); saveCC();
+      res = `✓ Added ${added} store${added === 1 ? '' : 's'} to CC Split — tap each to tick who shared it.`
+          + (skipped ? `  (${skipped} skipped — no live ₱ rate yet; resend once rates load.)` : '');
+    } else {
+      rev.rows.forEach(r => {
+        necData.push({ cat: String(r.name || '').slice(0, 60), amt: String(r.amt || ''), day: '', inst: false, instMode: 'per',
+          instFrom: new Date().getMonth(), instTo: new Date().getMonth() });
+      });
+      renderNec(); recalcAll(); saveData();
+      res = `✓ Added ${rev.rows.length} row${rev.rows.length === 1 ? '' : 's'} to Necessities on the Expenses tab.`;
+    }
+  } catch (e) { res = 'Could not add those: ' + e.message; }
+  chatPush('app', res);
+  showToast('💬 ' + res.replace(/<[^>]*>/g, ''));
+}
+
+function chatReviewCancel(id) {
+  delete _chatReviews[id];
+  const card = document.getElementById('chatCC-' + id);
+  if (card) { card.classList.add('done'); card.querySelector('.cc-btns').innerHTML = '<span style="font-size:11.5px;color:var(--text3);">Cancelled</span>'; }
+  const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCC-' + id + '"') !== -1);
+  if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/, '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">Cancelled</span></div>')
+                        .replace('class="chat-review"', 'class="chat-review done"');
+  chatSaveLog();
+}
+
 // ─── SUBMIT ───────────────────────────────────────────────────
 async function chatSubmit() {
   if (_chatBusy) return;
   const input = document.getElementById('chatInput');
-  const text = (input.value || '').trim();
+  let text = (input.value || '').trim();
   if (!text) return;
   input.value = '';
   chatPush('you', escH(text));
 
+  // `ai:` forces the AI path (handy for testing, or to skip a stubborn parse).
+  let forceAI = false;
+  if (/^ai:\s*/i.test(text)) { forceAI = true; text = text.replace(/^ai:\s*/i, '').trim(); }
+
+  // `sms:` / `receipt:` — parse a pasted bank/GCash message into rows.
+  const smsM = text.match(/^(sms|receipt|txn|transaction)\s*:\s*(.+)$/is);
+  if (smsM) { await chatIngestText(smsM[2].trim()); return; }
+
   let intent = null;
-  try { intent = chatParse(text); } catch (e) { intent = { error: 'I could not read that.' }; }
+  if (!forceAI) {
+    try { intent = chatParse(text); } catch (e) { intent = { error: 'I could not read that.' }; }
+  }
 
   // Read-only answers go straight out.
-  if (intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'undo'].includes(intent.action)) {
+  if (!forceAI && intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'undo'].includes(intent.action)) {
     const ans = chatAnswer(intent);
     if (ans != null) { chatPush('app', ans); return; }
   }
 
-  // Anything that writes gets a confirm card.
-  if (intent && !intent.error && intent.action) {
-    const p = chatPreview(intent);
-    chatMsgs.push({ who: 'confirm', text: chatConfirmCard(intent, p.line, p.sub) });
-    chatSaveLog();
-    chatRender();
+  // A confident write goes to a confirm card. A WEAK match (typo-level, and
+  // only when a provider is available) is escalated to the AI for a second
+  // opinion instead of acting on a shaky guess.
+  const isWrite = intent && !intent.error && ['add', 'deduct', 'set', 'move', 'wish', 'paybill'].includes(intent.action);
+  const weak = isWrite && typeof intent._score === 'number' && intent._score < 66;
+  if (!forceAI && isWrite && !(weak && aiReady())) {
+    chatPostConfirm(intent);
     return;
   }
 
-  // Parser had no idea (or bailed) — hand to AI if a key exists.
-  if (aiReady()) {
+  // Otherwise hand to the AI — with the parser's best guess as a hint when
+  // there is one (so the model can confirm or correct it).
+  if (forceAI || aiReady()) {
+    if (!aiReady()) { chatPush('app', 'Set a provider in Settings first to use `ai:`.', 'err'); return; }
+    let hint = '';
+    if (isWrite) { const h = Object.assign({}, intent); delete h._score; delete h.assumed; delete h.viaAI; hint = JSON.stringify(h); }
+    else if (intent && intent.error) hint = 'parser error: ' + intent.error;
+
     _chatBusy = true;
+    chatSetBusy(true);
     chatPush('app', '<span style="color:var(--text3);">thinking…</span>');
     try {
-      const ai = await chatAskAI(text);
+      const ai = await chatAskAI(text, hint);
       chatMsgs.pop();                                  // drop the "thinking" bubble
       if (!ai) { chatPush('app', intent && intent.error ? intent.error : 'I did not understand that.', 'err'); }
-      else if (ai.action === 'none') { chatPush('app', escH(ai.reply)); }
+      else if (ai.action === 'say')  { chatPush('app', chatFormatReply(ai.reply)); }
       else if (['help', 'query', 'total', 'net', 'bills'].includes(ai.action)) {
         const ans = chatAnswer(ai);
         chatPush('app', ans != null ? ans : 'I did not understand that.');
       } else {
-        const p = chatPreview(ai);
-        chatMsgs.push({ who: 'confirm', text: chatConfirmCard(ai, p.line, p.sub) });
-        chatSaveLog();
-        chatRender();
+        chatPostConfirm(ai);
       }
     } catch (e) {
       chatMsgs.pop();
-      chatPush('app', 'AI fallback failed: ' + escH(e.message || 'unknown error')
+      chatPush('app', 'AI request failed: ' + escH(e.message || 'unknown error')
         + '\nThe offline commands still work — type <b>help</b>.', 'err');
-    } finally { _chatBusy = false; }
+    } finally { _chatBusy = false; chatSetBusy(false); }
     return;
   }
 
   chatPush('app', (intent && intent.error ? intent.error : 'I did not catch that.')
-    + '\nType <b>help</b> to see what I understand.', 'err');
+    + '\nSet a provider in Settings to ask free-form questions, or type <b>help</b>.', 'err');
+}
+
+// ─── RECEIPT PHOTO + SMS TEXT INGESTION ───────────────────────
+// Both go through the model with a strict JSON contract, then a review
+// table. Photo reading needs a multimodal provider (Gemini free tier).
+async function chatIngestImage(imagePart) {
+  const p = aiProvider(), key = aiKey(), cfg = aiCfg();
+  if (!aiReady())        { chatPush('app', 'Set a provider in Settings first (Gemini reads receipt photos on the free tier).', 'err'); return; }
+  if (!cfg.multimodal)   { chatPush('app', escH(cfg.label) + ' can\'t read images. Switch to Gemini in Settings for receipt photos.', 'err'); return; }
+
+  const sys = [
+    'You read a photo of a receipt for a bill-splitting app. Return raw JSON only:',
+    '{"items":[{"name":"<short item name>","amt":<number>,"cur":"<3-letter code, default PHP>","tag":"food"|"drink"|"fare"|"service"|"tip"|"others"}]}',
+    'One entry per purchased line item. Use the printed price per line (not the running subtotal). Include a service charge or tip line if shown, tagged accordingly. Omit the grand total. If you cannot read it, return {"items":[]}. Currency defaults to PHP unless the receipt clearly shows another.',
+  ].join('\n');
+
+  _chatBusy = true; chatSetBusy(true);
+  chatPush('app', '<span style="color:var(--text3);">reading the receipt…</span>');
+  try {
+    const out = (p === 'gemini')
+      ? await chatAskGemini('Extract the line items from this receipt.', key, aiModel(), sys, [], imagePart)
+      : await chatAskAnthropic('Extract the line items from this receipt.', key, aiModel(), sys, [], imagePart);
+    aiBumpReqCount();
+    chatMsgs.pop();
+    const rows = chatParseItems(out, 'hangout');
+    if (!rows.length) { chatPush('app', 'I couldn\'t read any line items off that. Try a clearer, straight-on photo.', 'err'); return; }
+    chatMsgs.push({ who: 'confirm', text: chatReviewCard('hangout', rows) });
+    chatSaveLog(); chatRender();
+  } catch (e) {
+    chatMsgs.pop();
+    chatPush('app', 'Couldn\'t read the receipt: ' + escH(e.message || 'unknown error'), 'err');
+  } finally { _chatBusy = false; chatSetBusy(false); }
+}
+
+async function chatIngestText(raw) {
+  const p = aiProvider(), key = aiKey();
+  if (!aiReady()) { chatPush('app', 'Set a provider in Settings first to parse a pasted receipt/SMS.', 'err'); return; }
+  const sys = [
+    'You read a pasted bank / e-wallet / credit-card SMS or receipt text from a Philippine user and turn each spending line into an expense row. Return raw JSON only:',
+    '{"items":[{"name":"<merchant or description>","amt":<number in PHP>}]}',
+    'Include only money the user SPENT or was charged (ignore balance-only, OTP, and credit/refund lines unless clearly a purchase). Strip currency symbols and thousands separators from amt. If nothing spendable is found, return {"items":[]}.',
+  ].join('\n');
+
+  _chatBusy = true; chatSetBusy(true);
+  chatPush('app', '<span style="color:var(--text3);">reading that…</span>');
+  try {
+    const out = (p === 'gemini')
+      ? await chatAskGemini(raw, key, aiModel(), sys, [], null)
+      : await chatAskAnthropic(raw, key, aiModel(), sys, [], null);
+    aiBumpReqCount();
+    chatMsgs.pop();
+    const rows = chatParseItems(out, 'nec');
+    if (!rows.length) { chatPush('app', 'I didn\'t spot a charge in that text.', 'err'); return; }
+    chatMsgs.push({ who: 'confirm', text: chatReviewCard('nec', rows) });
+    chatSaveLog(); chatRender();
+  } catch (e) {
+    chatMsgs.pop();
+    chatPush('app', 'Couldn\'t parse that: ' + escH(e.message || 'unknown error'), 'err');
+  } finally { _chatBusy = false; chatSetBusy(false); }
+}
+
+// Validate the extracted item list — clamp amounts, cap names, drop junk.
+function chatParseItems(out, kind) {
+  const clean = String(out || '').replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  let obj; try { obj = JSON.parse(clean); } catch (e) { return []; }
+  const arr = Array.isArray(obj) ? obj : (Array.isArray(obj.items) ? obj.items : []);
+  const rows = [];
+  arr.forEach(it => {
+    if (!it || typeof it !== 'object') return;
+    // Strip currency symbols, thousands separators and stray text before parsing,
+    // so "₱1,234.56" reads as 1234.56 rather than parseFloat's lenient 1.
+    const amt = parseFloat(String(it.amt).replace(/[^0-9.\-]/g, ''));
+    if (!isFinite(amt) || amt <= 0 || amt >= 1e9) return;
+    const name = String(it.name || '').trim().slice(0, 60) || 'Item';
+    const row = { name: name, amt: Math.round(amt * 100) / 100 };
+    if (kind === 'hangout') {
+      row.cur = (typeof it.cur === 'string' && CURRENCY_META[it.cur.toUpperCase()]) ? it.cur.toUpperCase() : 'PHP';
+      row.tag = HS_TAG_LABEL[it.tag] ? it.tag : 'food';
+    }
+    rows.push(row);
+  });
+  return rows.slice(0, 40);
+}
+
+// File picker → base64 → chatIngestImage.
+function chatPickImage() {
+  if (!aiReady() || !(aiCfg() && aiCfg().multimodal)) {
+    chatPush('app', 'Receipt photos need Gemini (free tier) set in Settings.', 'err');
+    return;
+  }
+  const f = document.getElementById('chatFile');
+  if (f) f.click();
+}
+
+function chatOnFile(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = '';
+  if (!file) return;
+  if (!/^image\//.test(file.type)) { chatPush('app', 'That\'s not an image.', 'err'); return; }
+  if (file.size > 6 * 1024 * 1024)  { chatPush('app', 'That image is over 6 MB — try a smaller photo.', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || '');
+    const comma = dataUrl.indexOf(',');
+    const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : '';
+    if (!b64) { chatPush('app', 'Could not read that image.', 'err'); return; }
+    chatPush('you', '📷 <i>receipt photo</i>');
+    chatIngestImage({ mime: file.type, data: b64 });
+  };
+  reader.onerror = () => chatPush('app', 'Could not read that image.', 'err');
+  reader.readAsDataURL(file);
+}
+
+// ─── VOICE INPUT ──────────────────────────────────────────────
+// Web Speech API — no key, free, best on Android Chrome. Fills the box and
+// sends, so "dagdag 250 sa gcash" works hands-light while walking.
+let _chatRecog = null;
+function chatMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = document.getElementById('chatMic');
+  if (!SR) { chatPush('app', 'Voice input isn\'t supported in this browser. Chrome on Android works best.', 'err'); return; }
+  if (_chatRecog) { try { _chatRecog.stop(); } catch (e) {} _chatRecog = null; return; }
+  const r = new SR();
+  _chatRecog = r;
+  r.lang = 'en-PH';
+  r.interimResults = false;
+  r.maxAlternatives = 1;
+  if (btn) btn.classList.add('rec');
+  r.onresult = (ev) => {
+    const said = (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript || '').trim();
+    const input = document.getElementById('chatInput');
+    if (input && said) { input.value = said; chatSubmit(); }
+  };
+  r.onerror = (ev) => {
+    if (ev && ev.error === 'not-allowed') chatPush('app', 'Microphone permission was blocked.', 'err');
+  };
+  r.onend = () => { _chatRecog = null; if (btn) btn.classList.remove('rec'); };
+  try { r.start(); } catch (e) { _chatRecog = null; if (btn) btn.classList.remove('rec'); }
+}
+
+function chatSetBusy(busy) {
+  const send = document.querySelector('#chatModal .chat-send');
+  if (send) send.disabled = !!busy;
 }
 
 // ─── PANEL ────────────────────────────────────────────────────
-const CHAT_CHIPS = ['add 250 gcash', 'total', 'net', 'bills', 'help'];
+const CHAT_CHIPS = ['add 250 gcash', 'how much on subscriptions?', 'net', 'bills', 'help'];
 
 function chatUpdateModeTag() {
   const tag = document.getElementById('chatModeTag');
   const cfg = aiCfg();
-  if (tag) tag.textContent = aiReady() ? '· offline + ' + cfg.label.split(' ')[0] : '· offline';
+  if (tag) tag.textContent = aiReady() ? '· ' + cfg.label.split(' ')[0] + (aiLabelsOnly() ? ' · labels-only' : '') : '· offline';
   const note = document.getElementById('chatAiNote');
   if (note) {
     note.innerHTML = aiReady()
-      ? 'Understood locally first; anything unclear goes to ' + escH(cfg.label.split(' ')[0])
-        + '. Nothing saves until you tap Apply.'
-      : 'Runs fully offline. Pick a provider in Settings to handle messier phrasing.';
+      ? 'Commands run offline; anything else goes to ' + escH(cfg.label.split(' ')[0])
+        + '. Nothing saves until you confirm.'
+      : 'Runs offline on the parser. Set a provider in Settings to ask anything.';
   }
+  aiUpdateQuotaUI();
 }
 
 function openChat() {
@@ -13045,13 +13535,15 @@ function openChat() {
   const chips = document.getElementById('chatChips');
   if (chips) chips.innerHTML = CHAT_CHIPS.map(c =>
     `<span class="chat-chip" onclick="chatChip('${escJS(c)}')">${escH(c)}</span>`).join('');
+  // Show the 📎 receipt button only when a multimodal provider is set.
+  const att = document.getElementById('chatAttach');
+  if (att) att.style.display = (aiReady() && aiCfg() && aiCfg().multimodal) ? '' : 'none';
   chatRender();
-  // Don't autofocus on touch devices — the keyboard covering the panel
-  // on open is worse than one extra tap.
   if (!('ontouchstart' in window)) setTimeout(() => document.getElementById('chatInput').focus(), 60);
 }
 
 function closeChat() {
+  if (_chatRecog) { try { _chatRecog.stop(); } catch (e) {} _chatRecog = null; }
   document.getElementById('chatModal').style.display = 'none';
 }
 
@@ -13070,8 +13562,8 @@ document.getElementById('chatModal').addEventListener('click', function (e) {
   const b = document.createElement('button');
   b.id = 'chatFab';
   b.textContent = '💬';
-  b.title = 'Command bar (Ctrl+K)';
-  b.setAttribute('aria-label', 'Open command bar');
+  b.title = 'Ask / command (Ctrl+K)';
+  b.setAttribute('aria-label', 'Open chat');
   b.onclick = openChat;
   document.body.appendChild(b);
 })();
@@ -13079,6 +13571,7 @@ document.getElementById('chatModal').addEventListener('click', function (e) {
 chatLoadLog();
 loadAiKeyUI();
 chatUpdateModeTag();
+
 
 // ─── SCROLL-TO-TOP BUTTON ──────────────────────────────────────
 // Floating ↑ that fades in after 300px of scroll — the Plan and
