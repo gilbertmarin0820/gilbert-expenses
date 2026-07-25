@@ -1648,6 +1648,16 @@
   .chat-msg.err { border-color: var(--red); color: var(--red-text); }
   .chat-msg b { color: var(--text); font-weight: 600; }
 
+  /* Source chips under a `web:` answer. */
+  .chat-src { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .chat-src-chip {
+    font-size: 10.5px; font-family: 'DM Mono', monospace; text-decoration: none;
+    color: var(--text2); background: var(--surface3); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 9px; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chat-src-chip:hover { color: var(--text); border-color: var(--text3); }
+
   .chat-confirm {
     align-self: flex-start; width: 86%;
     background: var(--surface2); border: 1px solid var(--teal);
@@ -1778,7 +1788,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-23j</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1950,8 +1960,13 @@
         The 💬 chat understands plain commands on its own — offline, instantly, no key needed.
         Pick a provider here and it becomes a full assistant you can <strong style="color:var(--text2);">ask anything</strong> —
         questions about your money (“how much on subscriptions?”), or anything unrelated to budgeting.
-        It can also read a <strong style="color:var(--text2);">receipt photo</strong> into the Hangout or CC Split tab and parse a pasted
+        It can create Necessities, Subscription, Installment and Savings-goal rows for you (always behind a confirm card), knows
+        today's date and your next payday, and can read a <strong style="color:var(--text2);">receipt photo</strong>
+        into the Hangout or CC Split tab and parse a pasted
         <strong style="color:var(--text2);">bank/GCash SMS</strong> into expenses (prefix <code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">sms:</code>).
+        For anything current — news, rates, scores — prefix <code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">web:</code> to run a
+        <strong style="color:var(--text2);">live search</strong> (Google Search on Gemini, web search on Anthropic). Answers come with sources and can never change your data.
+        Both cost an extra request; Anthropic bills per search.
         Any change to your data is only ever <strong style="color:var(--text2);">proposed</strong> — you confirm it, and Undo still works.
       </div>
       <select id="aiProviderSel" class="trkr-select" onchange="onAiProviderChange()" style="width:100%; margin-bottom:10px;">
@@ -12224,6 +12239,15 @@ const CHAT_SESSION = Math.random().toString(36).slice(2, 8);
 let _chatIntentSeq = 1;
 let _chatBusy     = false;
 const _chatAiCache = {};  // contextSig|text -> validated intent (session cache)
+// Every action that changes data — these are the ones that need a confirm card.
+const CHAT_WRITE_ACTIONS = ['add', 'deduct', 'set', 'move', 'paybill', 'wish',
+                            'addnec', 'addsub', 'addinst', 'addgoal'];
+// 1st / 2nd / 3rd / 4th — for "due on the 21st" in confirm cards.
+function ordSuffix(n) {
+  n = parseInt(n) || 0;
+  if (n % 100 >= 11 && n % 100 <= 13) return 'th';
+  return ['th', 'st', 'nd', 'rd'][n % 10] || 'th';
+}
 
 // ─── TEXT HELPERS ─────────────────────────────────────────────
 function chatNorm(s) {
@@ -12499,6 +12523,50 @@ function chatApplyOne(intent) {
     return `✓ Ticked <b>${escH(intent.label)}</b> — ${done} of ${items.length} bills paid this month.`;
   }
 
+  if (a === 'addnec') {
+    const m = new Date().getMonth();
+    necData.push({ cat: intent.name, amt: intent.amount ? String(intent.amount) : '',
+                   day: intent.day ? String(intent.day) : '',
+                   inst: false, instMode: 'per', instFrom: m, instTo: m });
+    renderNec();
+    recalcAll();
+    saveData();
+    return `✓ Added <b>${escH(intent.name)}</b> to Necessities`
+         + (intent.amount ? ` at ${fPHP(intent.amount)}` : '')
+         + (intent.day ? `, due on the ${intent.day}${ordSuffix(intent.day)}.` : '.');
+  }
+
+  if (a === 'addsub') {
+    subscriptions.push({ id: planId(), name: intent.name,
+                         amt: intent.amount ? String(intent.amount) : '',
+                         billingDay: intent.day ? String(intent.day) : '' });
+    renderSubs();
+    recalcAll();
+    savePlanData();
+    return `✓ Added <b>${escH(intent.name)}</b> to Subscriptions`
+         + (intent.amount ? ` at ${fPHP(intent.amount)}/mo.` : '.');
+  }
+
+  if (a === 'addinst') {
+    installments.push({ id: planId(), name: intent.name,
+                        monthlyAmt: String(intent.monthly),
+                        remaining: String(intent.months) });
+    renderInsts();
+    recalcAll();
+    savePlanData();
+    return `✓ Added <b>${escH(intent.name)}</b> — ${fPHP(intent.monthly)}/mo × ${intent.months} months`
+         + ` (${fPHP(intent.monthly * intent.months)} total).`;
+  }
+
+  if (a === 'addgoal') {
+    savingsGoals.push({ id: planId(), name: intent.name,
+                        target: String(intent.target),
+                        saved: intent.saved ? String(intent.saved) : '' });
+    renderGoals();
+    savePlanData();
+    return `✓ Added the goal <b>${escH(intent.name)}</b> — target ${fPHP(intent.target)}.`;
+  }
+
   if (a === 'wish') {
     wishlistItems.push({
       id: planId(), name: intent.name, price: intent.amount ? String(intent.amount) : '',
@@ -12528,7 +12596,14 @@ function chatAnswer(intent) {
       + 'Tagalog works — dagdag, bawas, lipat, bayad.\n\n'
       + '<b>② Ask me anything</b> (needs a provider in Settings):\n'
       + 'Questions about your money — “how much on subscriptions?”, “can I afford the ₱12k lens before payday?” — or anything else at all. '
-      + '📎 send a receipt photo to fill the Hangout or CC Split tab, or prefix <b>sms:</b> a bank/GCash text to log it.';
+      + 'It knows today’s date and your next payday, so “before payday” and “this month” mean the right thing.\n'
+      + 'It can also <b>create rows</b>: “add Meralco 1450 due on the 10th”, “new subscription Spotify 194”, '
+      + '“installment: 12k phone over 6 months”, “goal: emergency fund 50k”. Everything still shows a confirm card first.\n'
+      + '📎 send a receipt photo to fill the Hangout or CC Split tab, or prefix <b>sms:</b> a bank/GCash text to log it.\n\n'
+      + '<b>③ Live web search</b> — prefix <b>web:</b>\n'
+      + '<b>web: usd to php today</b> · <b>web: what team is lebron on</b>\n'
+      + 'Without it I answer from training data that stops months ago, so anything current will be stale. '
+      + 'Search answers come with sources and never touch your data.';
   }
 
   if (a === 'query') {
@@ -12589,6 +12664,32 @@ function chatDomNum(id) {
   return isFinite(n) ? n : null;
 }
 
+// Today, the weekday, and the nearest payday — the model has no clock of its
+// own, so without this every "before payday" / "this month" question is
+// answered against whatever date it guesses. Mirrors the Next Payday tile.
+function chatNextPayday() {
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysToVA = (4 - today.getDay() + 7) % 7;   // 4 = Thursday
+    const vaDate = new Date(today); vaDate.setDate(vaDate.getDate() + daysToVA);
+    let best = { who: 'VA (weekly, Thursdays)', date: localISODate(vaDate), days_left: daysToVA };
+    const corpEl = document.getElementById('corpEnabled');
+    if (corpEl && corpEl.checked && typeof getNextCorpPayday === 'function') {
+      const c = getNextCorpPayday();
+      if (c && typeof c.daysLeft === 'number') {
+        if (c.daysLeft < daysToVA)       best = { who: 'Corporate', date: localISODate(c.date), days_left: c.daysLeft };
+        else if (c.daysLeft === daysToVA) best = { who: 'VA + Corporate (same day)', date: localISODate(vaDate), days_left: daysToVA };
+      }
+    }
+    return best;
+  } catch (e) { return null; }
+}
+
+function chatElVal(id) {
+  const el = document.getElementById(id);
+  return el && el.value ? el.value : null;
+}
+
 function chatFinanceContext(labelsOnly) {
   const money = v => labelsOnly ? null : v;
 
@@ -12616,11 +12717,122 @@ function chatFinanceContext(labelsOnly) {
   let forecast = null;
   try { forecast = [1, 2, 3].map(k => money(forecastMonthCommitted(k, true))); } catch (e) {}
 
+  // ── Necessities, line by line (only a total was being sent before) ──
+  let necList = [];
+  try {
+    necList = (necData || []).map((r, i) => ({
+      i: i,
+      name: r.cat || 'Untitled',
+      amt: money(typeof necRowBase === 'function' ? necRowBase(r) : (parseFloat(r.amt) || 0)),
+      due_day: r.day ? parseInt(r.day) : null,
+      installment: !!r.inst,
+      counted: isInc(r),
+    }));
+  } catch (e) {}
+
+  // ── Savings goals ────────────────────────────────────────────
+  let goals = [];
+  try {
+    goals = (savingsGoals || []).map(g => {
+      const t = parseFloat(g.target) || 0, s = parseFloat(g.saved) || 0;
+      return {
+        name: g.name || 'Goal', target: money(t), saved: money(s),
+        remaining: money(Math.max(0, t - s)),
+        percent: t > 0 ? Math.round((s / t) * 1000) / 10 : null,
+      };
+    });
+  } catch (e) {}
+
+  // ── Interest being earned on allocations ─────────────────────
+  let interest = null;
+  try {
+    let perYear = 0;
+    const earning = [];
+    savingsItems.forEach((it, i) => {
+      const yr = savItemNetInterestPerYear(it);
+      if (yr > 0) {
+        perYear += yr;
+        earning.push({ name: chatSavName(i), annual_rate_pct: parseFloat(it.intRate) || 0,
+                       paid: it.intPeriod || 'year', net_per_year: money(Math.round(yr * 100) / 100) });
+      }
+    });
+    interest = { net_per_year: money(Math.round(perYear * 100) / 100),
+                 net_per_month: money(Math.round((perYear / 12) * 100) / 100), items: earning };
+  } catch (e) {}
+
+  // ── What-If projection (Plan tab) ────────────────────────────
+  let whatif = null;
+  try {
+    const c = whatifCommitments();
+    whatif = {
+      from: chatElVal('whatifFrom'), to: chatElVal('whatifTo'),
+      hypothetical_rate_usd: chatElVal('whatifRate'),
+      range_net_php:        money(chatDomNum('whatifNet')),
+      current_savings:      money(whatifCurrentSavings()),
+      bonus_php:            money(whatifBonusAmt()),
+      necessities_in_range: money(c.nec),
+      paylater_in_range:    money(c.pl),
+      planned_purchases:    money(whatifBuySum()),
+      projected_total:      money(chatDomNum('whatifGrandTotal')),
+    };
+  } catch (e) {}
+
+  // ── Payoff planner + person-to-person debts ──────────────────
+  let payoff = [];
+  try {
+    payoff = (payoffDebts || []).map(d => ({
+      name: d.name || 'Debt', balance: money(parseFloat(d.bal) || 0),
+      apr: parseFloat(d.apr) || 0, min_payment: money(parseFloat(d.min) || 0),
+    }));
+  } catch (e) {}
+  let debtList = [];
+  try {
+    debtList = (personalDebts || []).map(d => ({
+      person: d.person || '—', direction: d.type === 'lent' ? 'they owe me' : 'I owe them',
+      amt: money(parseFloat(d.amt) || 0), counted: isInc(d),
+    }));
+  } catch (e) {}
+
+  // ── Open splits ──────────────────────────────────────────────
+  let splits = null;
+  try {
+    splits = {
+      hangout: { items: (hsItems || []).length, people: (hsPeople || []).map(p => p.name),
+                 total_php: money(chatDomNum('hsGrandTotal')) },
+      cc_split: { stores: (ccStores || []).length, people: (ccPeople || []).map(p => p.name),
+                  total_php: money(chatDomNum('ccGrandTotal')) },
+    };
+  } catch (e) {}
+
+  // ── Payment tracker (viewed year) ────────────────────────────
+  let tracker = null;
+  try {
+    const yr = trkrViewYear;
+    const ye = (trkrEntries || []).filter(e => e.year === yr);
+    tracker = {
+      year: yr, entries: ye.length,
+      total: money(Math.round(ye.reduce((s, e) => s + (e.amount || 0), 0) * 100) / 100),
+      per_person: (trkrPersons || []).map(p => ({
+        person: p, total: money(Math.round(ye.filter(e => e.person === p).reduce((s, e) => s + (e.amount || 0), 0) * 100) / 100),
+      })),
+    };
+  } catch (e) {}
+
+  const now = new Date();
   return {
     currency: 'PHP',
+    today: todayLocalStr(),
+    weekday: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()],
+    current_month: MONTH_NAMES[now.getMonth()] + ' ' + now.getFullYear(),
+    days_left_in_month: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate(),
+    next_payday: chatNextPayday(),
+    expenses_date_range: { from: chatElVal('dateStart'), to: chatElVal('dateEnd') },
+    usd_php_rate: (typeof fxRate === 'number' && fxRate > 0) ? fxRate : null,
     net_summary: money(chatDomNum('netBalance')),
     savings_total: money(savTotal),
     allocations: allocations,
+    savings_interest: interest,
+    savings_goals: goals,
     monthly_committed: {
       necessities:        money(chatDomNum('necTotal')),
       subscriptions:      money(subsSum),
@@ -12636,10 +12848,15 @@ function chatFinanceContext(labelsOnly) {
       note: 'income minus fixed commitments; VA pays weekly (Thursdays)',
     },
     forecast_installments_next_3_months: forecast,
-    subscriptions_list: subscriptions.map(s => ({ name: s.name || 'Subscription', amt: money(parseFloat(s.amt) || 0), counted: isInc(s) })),
+    necessities_list:   necList,
+    subscriptions_list: subscriptions.map(s => ({ name: s.name || 'Subscription', amt: money(parseFloat(s.amt) || 0), billing_day: s.billingDay ? parseInt(s.billingDay) : null, counted: isInc(s) })),
     installments_list:  installments.map(x => ({ name: x.name || 'Installment', monthly: money(parseFloat(x.monthlyAmt) || 0), remaining: parseInt(x.remaining) || 0, counted: isInc(x) })),
     wishlist:           wishlistItems.map(w => ({ name: w.name || 'Item', price: money(parseFloat(w.price) || 0), mode: w.mode === 'inst' ? 'installment' : 'save-up' })),
-    debts: { they_owe_me: money(debts.lent), i_owe: money(debts.owe) },
+    debts: { they_owe_me: money(debts.lent), i_owe: money(debts.owe), list: debtList },
+    payoff_planner: payoff,
+    what_if: whatif,
+    open_splits: splits,
+    payment_tracker: tracker,
     bills_this_month: bills,
   };
 }
@@ -12671,9 +12888,9 @@ const AI_PROVIDERS = {
     modelKey: 'va_ai_model',
     defModel: 'claude-haiku-4-5-20251001',
     keyHint: 'sk-ant-… — from console.anthropic.com',
-    multimodal: false,
+    multimodal: true,
     note: 'Billed per request, separate from any Claude subscription. Needs credit on the account. '
-        + 'Receipt-photo reading is Gemini-only for now.',
+        + 'Reads receipt photos too — Claude models are multimodal, same 📎 button as Gemini.',
   },
 };
 
@@ -12791,6 +13008,10 @@ function chatAISystemPrompt(parserHint) {
     '   {"action":"move","from":<index>,"to":<index>,"amount":<number>}',
     '   {"action":"paybill","key":"<bill key from the list below>"}',
     '   {"action":"wish","name":"<text>","amount":<number>}',
+    '   {"action":"addnec","name":"<text>","amount":<number>,"day":<1-31, optional due day>}   — a new recurring bill under Necessities & Expenses',
+    '   {"action":"addsub","name":"<text>","amount":<monthly number>,"day":<1-31, optional billing day>}   — a new subscription',
+    '   {"action":"addinst","name":"<text>","monthly":<number>,"months":<whole number of months left>}   — a new installment plan',
+    '   {"action":"addgoal","name":"<text>","target":<number>,"saved":<number, optional>}   — a new savings goal',
     '   Batch example — "add 250 gcash and 100 maya": {"intents":[{"action":"add","target":0,"amount":250},{"action":"add","target":3,"amount":100}]}',
     '',
     'B) A read-only budget lookup that maps exactly to a screen → {"action":"query","target":<index>} | {"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"help"}',
@@ -12799,7 +13020,12 @@ function chatAISystemPrompt(parserHint) {
     '   {"action":"say","reply":"<your full answer, plain text, ₱ for pesos>"}',
     '   Quote the real figures from the data below rather than deriving or guessing them. If a needed figure is null (the user turned off sending balances), say you can see the labels but not the amounts.',
     '',
-    'Rules: never invent an allocation/bill index or key that is not listed. Amounts are pesos. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
+    'Rules: never invent an allocation/bill index or key that is not listed. Amounts are pesos. '
+    + 'Use add/deduct/set/move only for EXISTING savings allocations; use addnec/addsub/addinst/addgoal to CREATE a new row when the thing they name is not already in the data below. '
+    + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months.',
+    'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
+    + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
+    + 'So for news, sports, prices, elections, product releases, or anyone\'s current job or team, do not answer from memory as though it were current — say plainly that you cannot check and tell them to prefix their question with "web:" for a live search. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
     '',
     'CURRENT DATA (already computed by the app — treat as ground truth):',
     JSON.stringify(ctx),
@@ -12868,6 +13094,179 @@ async function chatAskAnthropic(text, key, model, sys, history, imagePart) {
 // Gemini — generateContent, CORS-open to browsers. responseMimeType pins
 // it to JSON. Built defensively: 3.x rejects the deprecated sampling params
 // older models want, thinking is turned down, and a config the API refuses
+// ─── LIVE WEB SEARCH (`web:`) ─────────────────────────────────
+// The normal chat path is deliberately airtight: one JSON object in, one
+// intent out. Search grounding breaks that contract — the providers answer
+// with tool-use blocks and multi-turn exchanges — so `web:` gets its own
+// path that returns PROSE plus a source list and can never write to your
+// data. chatValidateIntent is not involved here at all.
+const CHAT_WEB_SYS =
+  'You are answering a question with live web search available. Answer in plain prose — '
++ 'no JSON, no markdown fences. Be brief and concrete: lead with the answer, then a sentence '
++ 'or two of context. Search before answering anything time-sensitive (news, prices, scores, '
++ 'who currently holds a role) rather than relying on your training data, and say plainly when '
++ 'the search does not settle it. Today\'s date is given below. The user is in the Philippines; '
++ 'use ₱ for pesos. Never quote more than a few words from any single source.';
+
+// Only http(s) links are ever rendered — a source list is model-influenced
+// input, so a javascript: URL must not survive into the transcript.
+function chatSafeUrl(u) {
+  try {
+    const p = new URL(String(u));
+    return (p.protocol === 'http:' || p.protocol === 'https:') ? p.href : null;
+  } catch (e) { return null; }
+}
+
+function chatHostOf(u) {
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; }
+}
+
+// De-duplicate by URL, cap the list, drop anything unsafe.
+function chatCleanSources(list) {
+  const seen = {}, out = [];
+  (list || []).forEach(s => {
+    const url = chatSafeUrl(s && s.url);
+    if (!url || seen[url]) return;
+    seen[url] = 1;
+    out.push({ url: url, title: String((s && s.title) || chatHostOf(url)).slice(0, 120) });
+  });
+  return out.slice(0, 6);
+}
+
+// ── Gemini: Google Search grounding ──────────────────────────
+// NOTE: responseMimeType:'application/json' is deliberately NOT sent here.
+// Structured output and search grounding are mutually exclusive; asking for
+// both makes the request fail. Gen-2+ uses the `google_search` tool; older
+// models want `google_search_retrieval`, so a 400 about the tool retries.
+async function chatWebGemini(text, key, model, history) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+            + encodeURIComponent(model) + ':generateContent';
+  const isGen3Plus = /gemini-([3-9]|\d{2,})/i.test(model);
+  const contents = (history || []).map(t => ({ role: t.role === 'assistant' ? 'model' : 'user', parts: [{ text: t.text }] }));
+  contents.push({ role: 'user', parts: [{ text: text }] });
+
+  const send = (toolKey, withThinking) => {
+    const gen = { maxOutputTokens: 2048 };
+    if (withThinking) gen.thinkingConfig = isGen3Plus ? { thinkingLevel: 'low' } : { thinkingBudget: 0 };
+    const tool = {}; tool[toolKey] = {};
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: CHAT_WEB_SYS + '\nToday is ' + todayLocalStr() + '.' }] },
+        contents: contents,
+        tools: [tool],
+        generationConfig: gen,
+      }),
+    });
+  };
+
+  let res = await send('google_search', true), msg = '';
+  if (!res.ok && res.status === 400) {
+    msg = await aiErrText(res);
+    if (/tool|search|grounding/i.test(msg))      res = await send('google_search_retrieval', true);
+    else if (/thinking|thought|budget/i.test(msg)) res = await send('google_search', false);
+  }
+  if (!res.ok) throw new Error(msg || await aiErrText(res));
+
+  const data = await res.json();
+  const cand = (data.candidates || [])[0];
+  if (!cand) {
+    const blocked = data.promptFeedback && data.promptFeedback.blockReason;
+    throw new Error(blocked ? ('Request blocked (' + blocked + ')') : 'Empty response.');
+  }
+  const answer = ((cand.content && cand.content.parts) || [])
+    .filter(p => !p.thought).map(p => p.text || '').join('').trim();
+  const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
+  const sources = chunks.map(c => c.web ? { url: c.web.uri, title: c.web.title } : null).filter(Boolean);
+  if (!answer) throw new Error('The search came back empty.');
+  return { answer: answer, sources: chatCleanSources(sources) };
+}
+
+// ── Anthropic: server-side web search tool ───────────────────
+// Sources come from two places: web_search_tool_result blocks (everything the
+// tool found) and citations attached to text blocks (what was actually used).
+// Citations are preferred; the raw results fill in when there are none.
+async function chatWebAnthropic(text, key, model, history) {
+  const msgs = (history || []).map(t => ({ role: t.role, content: t.text }));
+  msgs.push({ role: 'user', content: text });
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: model,
+      max_tokens: 2048,
+      system: CHAT_WEB_SYS + '\nToday is ' + todayLocalStr() + '.',
+      messages: msgs,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+    }),
+  });
+  if (!res.ok) throw new Error(await aiErrText(res));
+
+  const data = await res.json();
+  const blocks = data.content || [];
+  const answer = blocks.filter(b => b.type === 'text').map(b => b.text || '').join('').trim();
+
+  const cited = [];
+  blocks.filter(b => b.type === 'text').forEach(b => {
+    (b.citations || []).forEach(c => { if (c && c.url) cited.push({ url: c.url, title: c.title }); });
+  });
+  const found = [];
+  blocks.filter(b => b.type === 'web_search_tool_result').forEach(b => {
+    const inner = Array.isArray(b.content) ? b.content : [];
+    inner.forEach(r => { if (r && r.url) found.push({ url: r.url, title: r.title }); });
+  });
+  if (!answer) throw new Error('The search came back empty.');
+  return { answer: answer, sources: chatCleanSources(cited.length ? cited : found) };
+}
+
+async function chatAskWeb(text) {
+  const p = aiProvider(), key = aiKey();
+  if (p === 'off' || !key) throw new Error('Set a provider in Settings first.');
+  aiBumpReqCount();
+  const hist = chatHistoryTurns();
+  return (p === 'gemini')
+    ? await chatWebGemini(text, key, aiModel(), hist)
+    : await chatWebAnthropic(text, key, aiModel(), hist);
+}
+
+// Prose + tappable sources. Everything from the model is escaped first; the
+// links are rebuilt from the vetted URL list, never from the answer text.
+function chatWebAnswerHTML(answer, sources) {
+  let h = chatFormatReply(answer);
+  if (sources && sources.length) {
+    h += '<div class="chat-src">' + sources.map(s =>
+      '<a class="chat-src-chip" href="' + escH(s.url) + '" target="_blank" rel="noopener noreferrer">'
+      + '🔗 ' + escH(chatHostOf(s.url)) + '</a>').join('');
+    h += '</div>';
+  }
+  return h;
+}
+
+async function chatHandleWeb(q) {
+  if (!q) { chatPush('app', 'Ask me something after <b>web:</b> — e.g. <b>web: usd to php today</b>.', 'err'); return; }
+  if (!aiReady()) {
+    chatPush('app', 'Live search needs a provider in Settings — Gemini (free tier) or Anthropic.', 'err');
+    return;
+  }
+  _chatBusy = true; chatSetBusy(true);
+  chatPush('app', '<span style="color:var(--text3);">searching the web…</span>');
+  try {
+    const r = await chatAskWeb(q);
+    chatMsgs.pop();
+    chatPush('app', chatWebAnswerHTML(r.answer, r.sources));
+  } catch (e) {
+    chatMsgs.pop();
+    chatPush('app', 'Search failed: ' + escH(e.message || 'unknown error')
+      + '\nYour budget commands still work offline — type <b>help</b>.', 'err');
+  } finally { _chatBusy = false; chatSetBusy(false); }
+}
+
 // retries on a stripped-down body (model-not-found is NOT retried).
 async function chatAskGemini(text, key, model, sys, history, imagePart) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
@@ -13009,7 +13408,7 @@ function chatValidateIntent(o) {
     if (!list.length) throw new Error('Empty batch.');
     const out = list.map(chatValidateOne);
     // A batch only makes sense for writes; a read/say inside a batch is dropped.
-    const writes = out.filter(x => ['add', 'deduct', 'set', 'move', 'paybill', 'wish'].includes(x.action));
+    const writes = out.filter(x => CHAT_WRITE_ACTIONS.includes(x.action));
     if (!writes.length) throw new Error('Nothing to apply in that batch.');
     return writes.length === 1 ? writes[0] : writes;
   }
@@ -13048,6 +13447,29 @@ function chatValidateOne(o) {
     const nm = String(o.name || '').trim().slice(0, 60);
     if (!nm) throw new Error('No item name.');
     return { action: 'wish', name: nm, amount: amtOK(o.amount) ? o.amount : 0, viaAI: true };
+  }
+  // New rows on the Expenses / Plan tabs. Names are trimmed and capped, amounts
+  // re-checked, billing day clamped to a real day-of-month.
+  const nameOK = v => { const s = String(v || '').trim().slice(0, 40); return s || null; };
+  const dayOK  = v => (Number.isInteger(v) && v >= 1 && v <= 31) ? v : null;
+  if (a === 'addnec' || a === 'addsub') {
+    const nm = nameOK(o.name);
+    if (!nm) throw new Error('No name for that row.');
+    if (o.amount != null && !amtOK(o.amount)) throw new Error('Bad amount.');
+    return { action: a, name: nm, amount: amtOK(o.amount) ? o.amount : 0, day: dayOK(o.day), viaAI: true };
+  }
+  if (a === 'addinst') {
+    const nm = nameOK(o.name);
+    if (!nm) throw new Error('No name for that installment.');
+    if (!amtOK(o.monthly) || o.monthly <= 0) throw new Error('Bad monthly amount.');
+    if (!Number.isInteger(o.months) || o.months < 1 || o.months > 120) throw new Error('Months must be 1-120.');
+    return { action: 'addinst', name: nm, monthly: o.monthly, months: o.months, viaAI: true };
+  }
+  if (a === 'addgoal') {
+    const nm = nameOK(o.name);
+    if (!nm) throw new Error('No name for that goal.');
+    if (!amtOK(o.target) || o.target <= 0) throw new Error('Bad target amount.');
+    return { action: 'addgoal', name: nm, target: o.target, saved: amtOK(o.saved) ? o.saved : 0, viaAI: true };
   }
   throw new Error('Unknown action.');
 }
@@ -13199,6 +13621,25 @@ function chatPreviewOne(intent) {
   if (a === 'wish') {
     return { line: `Add <b>${escH(intent.name)}</b> to your Wishlist`, sub: intent.amount ? fPHP(intent.amount) : 'no price set' };
   }
+  if (a === 'addnec' || a === 'addsub') {
+    const where = a === 'addnec' ? 'Necessities & Expenses' : 'Subscriptions';
+    const bits = [];
+    bits.push(intent.amount ? fPHP(intent.amount) + (a === 'addsub' ? '/mo' : '') : 'no amount yet');
+    if (intent.day) bits.push('due on the ' + intent.day + ordSuffix(intent.day));
+    return { line: `Add <b>${escH(intent.name)}</b> to ${where}`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: bits.join(' · ') };
+  }
+  if (a === 'addinst') {
+    return { line: `Add the installment <b>${escH(intent.name)}</b>`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: `${fPHP(intent.monthly)}/mo × ${intent.months} months  ·  ${fPHP(intent.monthly * intent.months)} total` };
+  }
+  if (a === 'addgoal') {
+    return { line: `Add the savings goal <b>${escH(intent.name)}</b>`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: `target ${fPHP(intent.target)}` + (intent.saved ? ` · ${fPHP(intent.saved)} already saved` : '') };
+  }
   return { line: 'Apply this change?', sub: '' };
 }
 
@@ -13309,6 +13750,10 @@ async function chatSubmit() {
   let forceAI = false;
   if (/^ai:\s*/i.test(text)) { forceAI = true; text = text.replace(/^ai:\s*/i, '').trim(); }
 
+  // `web:` — live search. Its own path: prose answer + sources, never a write.
+  const webM = text.match(/^(web|search|news|google)\s*:\s*(.*)$/is);
+  if (webM) { await chatHandleWeb((webM[2] || '').trim()); return; }
+
   // `sms:` / `receipt:` — parse a pasted bank/GCash message into rows.
   const smsM = text.match(/^(sms|receipt|txn|transaction)\s*:\s*(.+)$/is);
   if (smsM) { await chatIngestText(smsM[2].trim()); return; }
@@ -13327,7 +13772,7 @@ async function chatSubmit() {
   // A confident write goes to a confirm card. A WEAK match (typo-level, and
   // only when a provider is available) is escalated to the AI for a second
   // opinion instead of acting on a shaky guess.
-  const isWrite = intent && !intent.error && ['add', 'deduct', 'set', 'move', 'wish', 'paybill'].includes(intent.action);
+  const isWrite = intent && !intent.error && CHAT_WRITE_ACTIONS.includes(intent.action);
   const weak = isWrite && typeof intent._score === 'number' && intent._score < 66;
   if (!forceAI && isWrite && !(weak && aiReady())) {
     chatPostConfirm(intent);
@@ -13370,11 +13815,11 @@ async function chatSubmit() {
 
 // ─── RECEIPT PHOTO + SMS TEXT INGESTION ───────────────────────
 // Both go through the model with a strict JSON contract, then a review
-// table. Photo reading needs a multimodal provider (Gemini free tier).
+// table. Photo reading needs a multimodal provider (Gemini or Anthropic).
 async function chatIngestImage(imagePart) {
   const p = aiProvider(), key = aiKey(), cfg = aiCfg();
-  if (!aiReady())        { chatPush('app', 'Set a provider in Settings first (Gemini reads receipt photos on the free tier).', 'err'); return; }
-  if (!cfg.multimodal)   { chatPush('app', escH(cfg.label) + ' can\'t read images. Switch to Gemini in Settings for receipt photos.', 'err'); return; }
+  if (!aiReady())        { chatPush('app', 'Set a provider in Settings first — Gemini (free) and Anthropic both read receipt photos.', 'err'); return; }
+  if (!cfg.multimodal)   { chatPush('app', escH(cfg.label) + ' can\'t read images. Switch to Gemini or Anthropic in Settings for receipt photos.', 'err'); return; }
 
   const sys = [
     'You read a photo of a receipt for a bill-splitting app. Return raw JSON only:',
@@ -13453,7 +13898,7 @@ function chatParseItems(out, kind) {
 // File picker → base64 → chatIngestImage.
 function chatPickImage() {
   if (!aiReady() || !(aiCfg() && aiCfg().multimodal)) {
-    chatPush('app', 'Receipt photos need Gemini (free tier) set in Settings.', 'err');
+    chatPush('app', 'Receipt photos need Gemini (free tier) or Anthropic set in Settings.', 'err');
     return;
   }
   const f = document.getElementById('chatFile');
