@@ -1788,7 +1788,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25e</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -12224,7 +12224,9 @@ const CHAT_LOG_KEY   = 'va_chat_log';    // per-device transcript (not synced)
 // Per-device secrets/prefs — deliberately never synced, exported, or backed up.
 // Actual key/model storage keys live per provider in AI_PROVIDERS below.
 const AI_DEVICE_KEYS  = ['va_ai_provider', 'va_ai_key', 'va_ai_model', 'va_ai_key_g',
-                         'va_ai_model_g', 'va_ai_labels_only', 'va_ai_reqcount'];
+                         'va_ai_model_g', 'va_ai_labels_only', 'va_ai_reqcount',
+                         'va_ai_pool_gemini', 'va_ai_cool_gemini',
+                         'va_ai_pool_anthropic', 'va_ai_cool_anthropic'];
 const CHAT_MAX_MSGS  = 40;
 const CHAT_HIST_TURNS = 6;               // recent turns sent to the model for context
 
@@ -12987,7 +12989,17 @@ function aiBumpReqCount() {
 }
 function aiUpdateQuotaUI() {
   const el = document.getElementById('aiQuotaMsg');
-  if (el) el.textContent = aiReady() ? ('AI requests today: ' + aiReqCount()) : '';
+  if (!el) return;
+  if (!aiReady()) { el.textContent = ''; return; }
+  let s = 'AI requests today: ' + aiReqCount();
+  try {
+    const pool = aiPool(), cooled = aiCooled();
+    if (pool.length > 1) {
+      s += ' · rotation: ' + (pool.length - cooled.filter(m => pool.indexOf(m) !== -1).length)
+         + ' of ' + pool.length + ' models still have quota';
+    }
+  } catch (e) {}
+  el.textContent = s;
 }
 
 // ─── SYSTEM PROMPT ────────────────────────────────────────────
@@ -13228,11 +13240,16 @@ async function chatWebAnthropic(text, key, model, history) {
 async function chatAskWeb(text) {
   const p = aiProvider(), key = aiKey();
   if (p === 'off' || !key) throw new Error('Set a provider in Settings first.');
-  aiBumpReqCount();
   const hist = chatHistoryTurns();
-  return (p === 'gemini')
-    ? await chatWebGemini(text, key, aiModel(), hist)
-    : await chatWebAnthropic(text, key, aiModel(), hist);
+  const r = await aiTryModels(async (model) => {
+    aiBumpReqCount();
+    return (p === 'gemini')
+      ? await chatWebGemini(text, key, model, hist)
+      : await chatWebAnthropic(text, key, model, hist);
+  });
+  const out = r.result;
+  out.switched = r.switched;
+  return out;
 }
 
 // Prose + tappable sources. Everything from the model is escaped first; the
@@ -13259,12 +13276,124 @@ async function chatHandleWeb(q) {
   try {
     const r = await chatAskWeb(q);
     chatMsgs.pop();
-    chatPush('app', chatWebAnswerHTML(r.answer, r.sources));
+    let html = chatWebAnswerHTML(r.answer, r.sources);
+    if (r.switched) html += '<div style="font-size:10.5px;color:var(--text3);margin-top:6px;">'
+      + '↻ your usual model hit its daily cap — answered with ' + escH(r.switched) + '</div>';
+    chatPush('app', html);
   } catch (e) {
     chatMsgs.pop();
     chatPush('app', 'Search failed: ' + escH(e.message || 'unknown error')
       + '\nYour budget commands still work offline — type <b>help</b>.', 'err');
   } finally { _chatBusy = false; chatSetBusy(false); }
+}
+
+// ─── MODEL ROTATION ───────────────────────────────────────────
+// Gemini's free-tier daily cap is per MODEL per project, not per key — so
+// when one model is spent, a sibling model on the same key still has a full
+// bucket. On a quota 429 we mark that model cooled for the rest of the day
+// and retry on the next one, instead of handing the user an error. Cooling
+// is date-stamped, so everything comes back on its own after the reset.
+const AI_DEFAULT_POOL = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+let _aiSwitchedTo = null;   // model rotated to on the last call, or null
+
+function aiPoolKey() { return 'va_ai_pool_' + aiProvider(); }
+function aiCoolKey() { return 'va_ai_cool_' + aiProvider(); }
+
+// Chosen model first, then anything discovered by "List available models",
+// then the built-in fallbacks. Deduped, order preserved.
+function aiPool() {
+  const out = [];
+  const push = m => { m = String(m || '').trim(); if (m && out.indexOf(m) === -1) out.push(m); };
+  push(aiModel());
+  try { (JSON.parse(localStorage.getItem(aiPoolKey()) || '[]') || []).forEach(push); } catch (e) {}
+  if (aiProvider() === 'gemini') AI_DEFAULT_POOL.forEach(push);
+  // Bounded on purpose: every model in here is one more request the app may
+  // burn before it gives up, so a long list would waste quota rather than
+  // save it.
+  return out.slice(0, 6);
+}
+
+function aiSavePool(list) {
+  try { localStorage.setItem(aiPoolKey(), JSON.stringify((list || []).slice(0, 12))); } catch (e) {}
+}
+
+// Models known to be out of quota TODAY. A different date wipes the list.
+function aiCooled() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(aiCoolKey()) || '{}');
+    return (raw && raw.d === aiToday() && Array.isArray(raw.m)) ? raw.m : [];
+  } catch (e) { return []; }
+}
+
+// Explicitly choosing a model should override an earlier cooling — the user
+// may know something the app does not (tier upgrade, quota reset, a throttle
+// that has passed). Without this, a tapped model is silently skipped.
+function aiUncool(model) {
+  const list = aiCooled().filter(m => m !== model);
+  try { localStorage.setItem(aiCoolKey(), JSON.stringify({ d: aiToday(), m: list })); } catch (e) {}
+}
+
+function aiMarkCooled(model) {
+  const list = aiCooled();
+  if (list.indexOf(model) === -1) list.push(model);
+  try { localStorage.setItem(aiCoolKey(), JSON.stringify({ d: aiToday(), m: list })); } catch (e) {}
+}
+
+// A quota 429 vs. any other failure. Only the former is worth retrying on a
+// different model — a bad key or a blocked prompt fails everywhere.
+function aiIsQuotaErr(e) {
+  return /quota|rate.?limit|429|exceeded|resource[_ ]exhausted/i.test(String((e && e.message) || e || ''));
+}
+
+// ...but NOT every quota 429 is a daily cap. Gemini's free tier also throttles
+// per MINUTE (RPM), and that 429 carries the same "exceeded your current quota"
+// text. Benching a model until midnight over a 60-second throttle would burn
+// the rotation in a burst of receipts. So: rotate on any quota error, but only
+// PERSIST the cooling when the evidence says it is a daily/lifetime cap.
+function aiIsDailyCap(e) {
+  const s = String((e && e.message) || e || '');
+  if (/per.?minute|perminute|requestsperminute|retrydelay/i.test(s)) return false;
+  return /per.?day|perday|daily|free.?tier|resource[_ ]exhausted|billing/i.test(s);
+}
+
+// Models still worth trying, freshest first. If every one is cooled we still
+// return the first so the user gets the provider's real message, not silence.
+function aiCandidates() {
+  const cooled = aiCooled(), pool = aiPool();
+  const fresh = pool.filter(m => cooled.indexOf(m) === -1);
+  return fresh.length ? fresh : pool.slice(0, 1);
+}
+
+// Runs `run(model)` down the candidate list, rotating past quota errors only.
+// Resolves to { result, model, switched } — `switched` is set when the model
+// used was not the first one tried, so callers can mention it.
+async function aiTryModels(run) {
+  _aiSwitchedTo = null;
+  const cands = aiCandidates();
+  let lastErr = null;
+  for (let i = 0; i < cands.length; i++) {
+    try {
+      const result = await run(cands[i]);
+      if (i > 0) _aiSwitchedTo = cands[i];
+      return { result: result, model: cands[i], switched: _aiSwitchedTo };
+    } catch (e) {
+      lastErr = e;
+      if (!aiIsQuotaErr(e)) throw e;      // not a cap — rotating won't help
+      // A per-minute throttle still rotates (a sibling model has its own RPM
+      // bucket) but must not be remembered for the rest of the day.
+      if (aiIsDailyCap(e)) { aiMarkCooled(cands[i]); aiUpdateQuotaUI(); }
+    }
+  }
+  if (cands.length > 1 && !aiIsDailyCap(lastErr)) {
+    throw new Error('Every model is rate-limited right now — that is a per-minute throttle, not your daily cap. '
+      + 'Wait about a minute and try again.');
+  }
+  if (cands.length > 1) {
+    throw new Error('All ' + cands.length + ' models in your rotation have hit their daily cap. '
+      + 'They reset at midnight Pacific (about 3 PM Manila). Add more in Settings → "List available models", '
+      + 'or switch provider.');
+  }
+  throw lastErr || new Error('Request failed.');
 }
 
 // retries on a stripped-down body (model-not-found is NOT retried).
@@ -13346,6 +13475,10 @@ async function aiListModels() {
       .sort();
     if (!names.length) { box.innerHTML = '<span style="font-size:11.5px;color:var(--text3);">No text models returned.</span>'; return; }
     names.sort((a, b) => (/flash-lite/.test(b) - /flash-lite/.test(a)) || (/flash/.test(b) - /flash/.test(a)));
+    // Feed the rotation pool: cheap models first, so a fallback never
+    // silently jumps onto an expensive one.
+    aiSavePool(names.filter(n => /flash/i.test(n)).slice(0, 8));
+    aiUpdateQuotaUI();
     box.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">'
       + names.length + ' available — tap to use. Flash-Lite is the right pick here.</div>'
       + names.map(n => '<span class="chat-chip" style="margin:0 4px 4px 0;display:inline-block;"'
@@ -13362,6 +13495,8 @@ function aiPickModel(name) {
   const mi = document.getElementById('aiModelInput');
   if (mi) mi.value = name;
   saveAiKey();
+  aiUncool(name);
+  aiUpdateQuotaUI();
 }
 
 async function aiErrText(res) {
@@ -13369,6 +13504,16 @@ async function aiErrText(res) {
   try {
     const j = await res.json();
     detail = (j.error && (j.error.message || j.error.status)) || '';
+    // Google puts the useful part in error.details — quotaId tells us whether
+    // this was a per-DAY cap or a per-MINUTE burst, and retryDelay how long to
+    // wait. The plain message says "exceeded your current quota" for both, so
+    // without this the two are indistinguishable.
+    const extra = [];
+    ((j.error && j.error.details) || []).forEach(d => {
+      ((d && d.violations) || []).forEach(v => { if (v && v.quotaId) extra.push(v.quotaId); });
+      if (d && d.retryDelay) extra.push('retryDelay=' + d.retryDelay);
+    });
+    if (extra.length) detail += ' [' + extra.join(' ') + ']';
   } catch (e) {}
   if (res.status === 429) detail = detail || 'Rate limit or free-tier quota reached — try again shortly.';
   if (res.status === 401 || res.status === 403) detail = detail || 'Key rejected. Check it is correct and unrestricted for this API.';
@@ -13383,15 +13528,19 @@ async function chatAskAI(text, parserHint) {
 
   const labelsOnly = aiLabelsOnly();
   const cacheKey = chatContextSig(labelsOnly) + '|' + (parserHint || '') + '|' + text.toLowerCase().trim();
-  if (_chatAiCache[cacheKey]) return _chatAiCache[cacheKey];
+  // A cache hit makes no request, so it must not inherit the previous call's
+  // rotation marker — otherwise a repeated question wrongly reports a switch.
+  if (_chatAiCache[cacheKey]) { _aiSwitchedTo = null; return _chatAiCache[cacheKey]; }
 
-  const sys   = chatAISystemPrompt(parserHint);
-  const model = aiModel();
-  const hist  = chatHistoryTurns();
-  aiBumpReqCount();
-  const out = (p === 'gemini')
-    ? await chatAskGemini(text, key, model, sys, hist, null)
-    : await chatAskAnthropic(text, key, model, sys, hist, null);
+  const sys  = chatAISystemPrompt(parserHint);
+  const hist = chatHistoryTurns();
+  const r = await aiTryModels(async (m) => {
+    aiBumpReqCount();
+    return (p === 'gemini')
+      ? await chatAskGemini(text, key, m, sys, hist, null)
+      : await chatAskAnthropic(text, key, m, sys, hist, null);
+  });
+  const out = r.result;
   const intent = chatParseAIText(out);
   _chatAiCache[cacheKey] = intent;
   return intent;
@@ -13794,7 +13943,12 @@ async function chatSubmit() {
       const ai = await chatAskAI(text, hint);
       chatMsgs.pop();                                  // drop the "thinking" bubble
       if (!ai) { chatPush('app', intent && intent.error ? intent.error : 'I did not understand that.', 'err'); }
-      else if (ai.action === 'say')  { chatPush('app', chatFormatReply(ai.reply)); }
+      else if (ai.action === 'say')  {
+        let h = chatFormatReply(ai.reply);
+        if (_aiSwitchedTo) h += '<div style="font-size:10.5px;color:var(--text3);margin-top:6px;">'
+          + '↻ switched to ' + escH(_aiSwitchedTo) + ' — your usual model hit its daily cap</div>';
+        chatPush('app', h);
+      }
       else if (['help', 'query', 'total', 'net', 'bills'].includes(ai.action)) {
         const ans = chatAnswer(ai);
         chatPush('app', ans != null ? ans : 'I did not understand that.');
@@ -13830,14 +13984,22 @@ async function chatIngestImage(imagePart) {
   _chatBusy = true; chatSetBusy(true);
   chatPush('app', '<span style="color:var(--text3);">reading the receipt…</span>');
   try {
-    const out = (p === 'gemini')
-      ? await chatAskGemini('Extract the line items from this receipt.', key, aiModel(), sys, [], imagePart)
-      : await chatAskAnthropic('Extract the line items from this receipt.', key, aiModel(), sys, [], imagePart);
-    aiBumpReqCount();
+    // Same rotation as the chat and `web:` paths — a receipt is one request
+    // against the very same daily quota, so a spent model must fall through
+    // rather than fail. Every Gemini Flash model reads images, so a fallback
+    // is still multimodal.
+    const r = await aiTryModels(async (model) => {
+      aiBumpReqCount();
+      return (p === 'gemini')
+        ? await chatAskGemini('Extract the line items from this receipt.', key, model, sys, [], imagePart)
+        : await chatAskAnthropic('Extract the line items from this receipt.', key, model, sys, [], imagePart);
+    });
     chatMsgs.pop();
-    const rows = chatParseItems(out, 'hangout');
+    const rows = chatParseItems(r.result, 'hangout');
     if (!rows.length) { chatPush('app', 'I couldn\'t read any line items off that. Try a clearer, straight-on photo.', 'err'); return; }
     chatMsgs.push({ who: 'confirm', text: chatReviewCard('hangout', rows) });
+    if (r.switched) chatPush('app', '<span style="font-size:10.5px;color:var(--text3);">↻ read with '
+      + escH(r.switched) + ' — your usual model hit its daily cap</span>');
     chatSaveLog(); chatRender();
   } catch (e) {
     chatMsgs.pop();
@@ -13857,14 +14019,18 @@ async function chatIngestText(raw) {
   _chatBusy = true; chatSetBusy(true);
   chatPush('app', '<span style="color:var(--text3);">reading that…</span>');
   try {
-    const out = (p === 'gemini')
-      ? await chatAskGemini(raw, key, aiModel(), sys, [], null)
-      : await chatAskAnthropic(raw, key, aiModel(), sys, [], null);
-    aiBumpReqCount();
+    const r = await aiTryModels(async (model) => {
+      aiBumpReqCount();
+      return (p === 'gemini')
+        ? await chatAskGemini(raw, key, model, sys, [], null)
+        : await chatAskAnthropic(raw, key, model, sys, [], null);
+    });
     chatMsgs.pop();
-    const rows = chatParseItems(out, 'nec');
+    const rows = chatParseItems(r.result, 'nec');
     if (!rows.length) { chatPush('app', 'I didn\'t spot a charge in that text.', 'err'); return; }
     chatMsgs.push({ who: 'confirm', text: chatReviewCard('nec', rows) });
+    if (r.switched) chatPush('app', '<span style="font-size:10.5px;color:var(--text3);">↻ read with '
+      + escH(r.switched) + ' — your usual model hit its daily cap</span>');
     chatSaveLog(); chatRender();
   } catch (e) {
     chatMsgs.pop();
