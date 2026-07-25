@@ -1741,6 +1741,81 @@
   }
   .rv-table td { padding: 5px 8px; color: var(--text2); border-top: 1px solid var(--border); }
   .rv-table td:nth-child(2) { font-family: 'DM Mono', monospace; color: var(--text); text-align: right; }
+
+  /* ── SPENDING LEDGER + DUE-SOON NUDGE ─────────────────────── */
+  .ldg-add {
+    display: grid; grid-template-columns: 130px 1fr 1fr 1fr auto; gap: 8px;
+    align-items: center; margin-bottom: 14px;
+  }
+  .ldg-in {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--radius-sm); padding: 9px 10px; font-size: 13px;
+    font-family: 'Outfit', sans-serif; width: 100%; box-sizing: border-box; min-width: 0;
+  }
+  .ldg-in:focus { outline: none; border-color: var(--blue); }
+  .ldg-in[type="number"], .ldg-in[type="date"] { font-family: 'DM Mono', monospace; font-size: 12.5px; }
+  .ldg-nav {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text2);
+    border-radius: var(--radius-sm); width: 34px; height: 34px; cursor: pointer;
+    font-size: 16px; line-height: 1; flex: 0 0 auto;
+  }
+  .ldg-nav:hover { border-color: var(--blue); color: var(--blue-text); }
+  .ldg-btn {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text2);
+    border-radius: var(--radius-sm); font-size: 12px; padding: 7px 14px; cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+  }
+  .ldg-btn:hover { border-color: var(--blue); color: var(--blue-text); }
+  .ldg-btn.primary { background: var(--green-dim); border-color: var(--green); color: var(--green-text); }
+  .ldg-rows { display: flex; flex-direction: column; gap: 5px; }
+  .ldg-row {
+    display: flex; align-items: center; gap: 9px; padding: 8px 11px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 12.5px;
+  }
+  .ldg-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); flex: 0 0 auto; }
+  .ldg-cat  { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+  .ldg-note { display: block; font-size: 10.5px; color: var(--text3); }
+  .ldg-amt  { font-family: 'DM Mono', monospace; font-size: 12.5px; color: var(--red-text); flex: 0 0 auto; }
+  .ldg-src {
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px;
+    border-radius: 999px; border: 1px solid var(--border2); color: var(--text3); flex: 0 0 auto;
+  }
+  .ldg-src.receipt { border-color: var(--purple); color: var(--purple-text); }
+  .ldg-src.chat    { border-color: var(--blue);   color: var(--blue-text); }
+  .ldg-del {
+    background: none; border: none; color: var(--text3); cursor: pointer;
+    font-size: 12px; padding: 2px 4px; flex: 0 0 auto;
+  }
+  .ldg-del:hover { color: var(--red-text); }
+
+  .due-wrap {
+    max-width: 1100px; margin: 12px auto 0; padding: 12px 14px;
+    background: var(--amber-dim); border: 1px solid var(--amber);
+    border-radius: var(--radius-sm);
+  }
+  .due-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--amber-text); }
+  .due-x { background: none; border: none; color: var(--amber-text); cursor: pointer; font-size: 12px; padding: 2px 6px; }
+  .due-list { display: flex; flex-direction: column; gap: 5px; margin-top: 9px; }
+  .due-row {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 7px 11px; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 12.5px; color: var(--text);
+  }
+  .due-row:hover { border-color: var(--green); }
+  .due-check { color: var(--text3); font-size: 12px; }
+  .due-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .due-when  { font-size: 11px; font-family: 'DM Mono', monospace; flex: 0 0 auto; }
+  .due-amt   { font-family: 'DM Mono', monospace; font-size: 12.5px; color: var(--red-text); flex: 0 0 auto; }
+  .due-foot  { font-size: 10.5px; color: var(--amber-text); opacity: 0.85; margin-top: 8px; }
+
+  @media (max-width: 720px) {
+    .ldg-add { grid-template-columns: 1fr 1fr; }
+    .ldg-add .add-btn { grid-column: 1 / -1; }
+    .due-wrap { margin: 10px 12px 0; }
+    .due-when { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -1788,7 +1863,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25e</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25f</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -1939,6 +2014,29 @@
       </button>
     </div>
 
+    <!-- CSV + printable sheet -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📊 Spreadsheet &amp; paper</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        The backup file above is for restoring. These two are for <strong style="color:var(--text2);">using the data elsewhere</strong> —
+        a <code style="background:var(--surface3); padding:1px 5px; border-radius:3px; font-size:11px;">.csv</code> that opens in Sheets or Excel
+        (necessities, subscriptions, installments, spending ledger, closed months, tracker, salary history),
+        and a clean one-page sheet for the current ledger month you can print or save as PDF.
+      </div>
+      <button onclick="exportCSV()" style="
+        width:100%; padding:10px; margin-bottom:8px; background:var(--teal-dim); border:1px solid var(--teal);
+        color:var(--teal-text); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;">
+        Download CSV
+      </button>
+      <button onclick="printMonthSheet()" style="
+        width:100%; padding:10px; background:transparent; border:1px solid var(--border2);
+        color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:14px;">
+        🖨 Print this month’s sheet
+      </button>
+    </div>
+
     <!-- Import -->
     <div style="padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">📥 Import data</div>
@@ -1964,6 +2062,7 @@
         today's date and your next payday, and can read a <strong style="color:var(--text2);">receipt photo</strong>
         into the Hangout or CC Split tab and parse a pasted
         <strong style="color:var(--text2);">bank/GCash SMS</strong> into expenses (prefix <code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">sms:</code>).
+        It also sees your <strong style="color:var(--text2);">spending ledger</strong> — what you actually spent, not just what you planned — so it can say which categories are drifting, and can log a spend for you (<code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">spent 450 on groceries</code>).
         For anything current — news, rates, scores — prefix <code style="background:var(--surface3); padding:1px 5px; border-radius:3px;">web:</code> to run a
         <strong style="color:var(--text2);">live search</strong> (Google Search on Gemini, web search on Anthropic). Answers come with sources and can never change your data.
         Both cost an extra request; Anthropic bills per search.
@@ -2141,6 +2240,9 @@
   <span style="font-size:14px;">📵</span>
   <span>You're offline — showing last cached exchange rate. Data entry still works normally.</span>
 </div>
+
+<!-- DUE-SOON NUDGE — bills landing in the next few days (dismissible for the day) -->
+<div id="dueSoonBanner" style="display:none;"></div>
 
 <div class="main" id="pageExpenses">
 
@@ -2853,6 +2955,44 @@
         <span style="font-size:13px; color:var(--text2);">Total necessities</span>
         <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="necTotal">₱0.00</span>
       </div>
+    </div>
+  </div>
+
+  <!-- SPENDING LEDGER — the one backward-looking view: what actually happened -->
+  <div>
+    <div class="section-title">🧾 Spending Ledger</div>
+    <div class="card">
+      <div style="font-size:11px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Everything else here is a <strong>plan</strong>. This is the <strong>record</strong> — money that actually left.
+        Log it by hand, send a receipt photo to the 💬 chat, or type <code style="background:var(--surface2); padding:1px 5px; border-radius:3px;">log 250 groceries</code>.
+        Close a month to freeze it into history.
+      </div>
+
+      <!-- month nav -->
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <button class="ldg-nav" onclick="ledgerShiftMonth(-1)" title="Previous month">‹</button>
+        <div style="flex:1; text-align:center; cursor:pointer;" onclick="ledgerGoToday()" title="Jump to this month">
+          <div id="ledgerMonthLabel" style="font-size:14px; font-weight:600; color:var(--text);">—</div>
+          <div id="ledgerMonthSub" style="font-size:11px; color:var(--text3);"></div>
+        </div>
+        <button class="ldg-nav" onclick="ledgerShiftMonth(1)" title="Next month">›</button>
+      </div>
+
+      <!-- quick add. Deliberately static markup: renderLedger() only ever
+           rewrites #ledgerBody, so typing here is never interrupted. -->
+      <div class="ldg-add">
+        <input type="date" id="ldgDate" class="ldg-in" title="Date of the spend">
+        <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01" min="0"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <input type="text" id="ldgCat" class="ldg-in" list="ldgCatList" placeholder="Category" maxlength="60"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <input type="text" id="ldgNote" class="ldg-in" placeholder="Note (optional)" maxlength="120"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
+      </div>
+      <datalist id="ldgCatList"></datalist>
+
+      <div id="ledgerBody"></div>
     </div>
   </div>
 
@@ -5116,6 +5256,9 @@ function recalcAll() {
     : 0;
   renderCashFlow();
   updateWishlistEtas(); // payday ETAs depend on the CF income cache above
+  // Budget lines come from necessities / subs / installments, so the ledger's
+  // budget-vs-actual bars have to follow any change to them.
+  try { renderLedger(); renderDueSoon(); } catch (e) {}
 }
 
 // ─── UNDO SYSTEM ──────────────────────────────────────────────
@@ -8059,6 +8202,7 @@ function reseedIdSeqs() {
   try { ccPersonSeq = Math.max(ccPersonSeq, maxIdIn(ccPeople) + 1); } catch (e) {}
   try { hsPersonSeq = Math.max(hsPersonSeq, maxIdIn(hsPeople) + 1); } catch (e) {}
   try { trkrSeq     = Math.max(trkrSeq,     maxIdIn(trkrEntries) + 1); } catch (e) {}
+  try { ledgerSeq   = Math.max(ledgerSeq,   maxIdIn(ledger) + 1); } catch (e) {}
 }
 
 // ─── SAVINGS GOALS ────────────────────────────────────────────
@@ -9069,6 +9213,544 @@ function updateStreakBadge() {
     badge.style.display = 'none';
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// SPENDING LEDGER + MONTH-END CLOSE
+//
+// Every other module in this app looks FORWARD — forecast, what-if,
+// payoff planner, cash-flow calendar. This one looks back: it records
+// what actually happened (date, amount, category, and where the row came
+// from — typed, read off a receipt, or logged through chat), then closes
+// each month into a frozen snapshot so "budgeted ₱12,400 → spent ₱14,050"
+// becomes a real number instead of a feeling.
+//
+// Two localStorage keys, both of which sat in BACKUP_KEYS as placeholders
+// since the first build and were never read or written:
+//   va_expense_log — the ledger        { entries:[…], seq:n }
+//   va_spend_log   — month-end history { 'YYYY-MM': {…} }
+// Because they are already in BACKUP_KEYS they export, cloud-sync and
+// scope per-profile with no extra wiring.
+// ═══════════════════════════════════════════════════════════════
+const LEDGER_KEY      = 'va_expense_log';
+const MONTHS_KEY      = 'va_spend_log';
+const LEDGER_MAX      = 2000;   // hard cap so the key can never balloon
+const LEDGER_HIST_MAX = 36;     // months of snapshots kept
+const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat' };
+const PL_LEDGER_LABEL  = { shopee: 'SPayLater (Shopee)', tiktok: 'TikTok PayLater', maya: 'Maya Black CC' };
+
+let ledger       = [];   // [{id, date:'YYYY-MM-DD', amt, cat, src, note}]
+let ledgerSeq    = 1;
+let ledgerViewYM = '';   // 'YYYY-MM' currently on screen
+
+// ── month-key helpers ─────────────────────────────────────────
+function ymNow() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function ymOf(dateStr) { return String(dateStr || '').slice(0, 7); }
+function ymShift(ym, delta) {
+  const p = String(ym || ymNow()).split('-');
+  const d = new Date(parseInt(p[0], 10) || 1970, (parseInt(p[1], 10) || 1) - 1 + delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function ymLabel(ym) {
+  const p = String(ym || '').split('-');
+  const mi = (parseInt(p[1], 10) || 1) - 1;
+  return (MONTHS[mi] || '?') + ' ' + (p[0] || '');
+}
+function ymMonthIndex(ym) { return (parseInt(String(ym).split('-')[1], 10) || 1) - 1; }
+// Whole months from the current month to `ym` (0 = this month, 1 = next).
+function ymOffsetFromNow(ym) {
+  const n = ymNow().split('-'), t = String(ym).split('-');
+  return ((parseInt(t[0], 10) || 0) * 12 + (parseInt(t[1], 10) || 0))
+       - ((parseInt(n[0], 10) || 0) * 12 + (parseInt(n[1], 10) || 0));
+}
+
+// "Electric Bill", "electric bill" and "ELECTRIC-BILL" are one budget line.
+function ledgerCatKey(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'uncategorised';
+}
+
+// ── storage ───────────────────────────────────────────────────
+function loadLedger() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(LEDGER_KEY) || 'null'); } catch (e) { raw = null; }
+  let rows = [], seq = 1;
+  if (raw && Array.isArray(raw.entries)) { rows = raw.entries; seq = parseInt(raw.seq) || 1; }
+  else if (Array.isArray(raw))           { rows = raw; }
+  ledger = rows.filter(e => e && typeof e === 'object').map(e => ({
+    id:   (typeof e.id === 'number' && isFinite(e.id)) ? e.id : 0,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayLocalStr(),
+    amt:  Math.round((parseFloat(e.amt) || 0) * 100) / 100,
+    cat:  String(e.cat || '').slice(0, 60) || 'Uncategorised',
+    src:  LEDGER_SRC_LABEL[e.src] ? e.src : 'manual',
+    note: String(e.note || '').slice(0, 120),
+  }));
+  ledgerSeq = seq;
+  // Same drift guard as the other id counters: a partial write or an older
+  // backup can leave rows with ids above a counter that restarted at 1, and
+  // then a new row silently reuses an id (so deleting hits the wrong entry).
+  ledger.forEach(e => { if (!e.id) e.id = ledgerSeq++; });
+  ledgerSeq = Math.max(ledgerSeq, maxIdIn(ledger) + 1);
+  if (!ledgerViewYM) ledgerViewYM = ymNow();
+}
+
+function saveLedger() {
+  try { localStorage.setItem(LEDGER_KEY, JSON.stringify({ entries: ledger, seq: ledgerSeq })); }
+  catch (e) { console.warn('Ledger save failed', e); }
+}
+
+function loadMonthHistory() {
+  try { return JSON.parse(localStorage.getItem(MONTHS_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveMonthHistory(h) {
+  try { localStorage.setItem(MONTHS_KEY, JSON.stringify(h)); } catch (e) {}
+}
+
+// ── entry operations ──────────────────────────────────────────
+function ledgerAdd(e, defer) {
+  const entry = {
+    id:   ledgerSeq++,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(e && e.date) ? e.date : todayLocalStr(),
+    amt:  Math.round((parseFloat(e && e.amt) || 0) * 100) / 100,
+    cat:  String((e && e.cat) || '').trim().slice(0, 60) || 'Uncategorised',
+    src:  LEDGER_SRC_LABEL[e && e.src] ? e.src : 'manual',
+    note: String((e && e.note) || '').trim().slice(0, 120),
+  };
+  ledger.push(entry);
+  if (ledger.length > LEDGER_MAX) ledger = ledger.slice(-LEDGER_MAX);
+  if (!defer) ledgerCommit();
+  return entry;
+}
+
+function ledgerCommit() { saveLedger(); renderLedger(); }
+
+function ledgerDelete(id) {
+  const before = ledger.length;
+  ledger = ledger.filter(e => e.id !== id);
+  if (ledger.length === before) return;
+  ledgerCommit();
+  showToast('🗑 Ledger entry removed');
+}
+
+function ledgerAddFromForm() {
+  const dEl = document.getElementById('ldgDate');
+  const aEl = document.getElementById('ldgAmt');
+  const cEl = document.getElementById('ldgCat');
+  const nEl = document.getElementById('ldgNote');
+  if (!aEl) return;
+  const amt = parseFloat(aEl.value);
+  if (!(amt > 0)) { showToast('Enter an amount first', true); aEl.focus(); return; }
+  const entry = ledgerAdd({
+    date: dEl && dEl.value ? dEl.value : todayLocalStr(),
+    amt: amt,
+    cat: cEl ? cEl.value : '',
+    src: 'manual',
+    note: nEl ? nEl.value : '',
+  });
+  aEl.value = ''; if (nEl) nEl.value = '';
+  // Jump the view to the month the entry landed in, so it is visible.
+  ledgerViewYM = ymOf(entry.date);
+  renderLedger();
+  aEl.focus();
+  showToast('🧾 Logged ' + fPHP(entry.amt) + ' — ' + entry.cat);
+}
+
+// ── reading ───────────────────────────────────────────────────
+function ledgerMonth(ym) { return ledger.filter(e => ymOf(e.date) === ym); }
+function ledgerMonthTotal(ym) { return ledgerMonth(ym).reduce((s, e) => s + e.amt, 0); }
+
+function ledgerCatTotals(ym) {
+  const map = {};
+  ledgerMonth(ym).forEach(e => {
+    const k = ledgerCatKey(e.cat);
+    if (!map[k]) map[k] = { key: k, label: e.cat || 'Uncategorised', amt: 0, n: 0 };
+    map[k].amt += e.amt;
+    map[k].n++;
+  });
+  return map;
+}
+
+// The PLAN for a month, rebuilt from the live config: necessities (respecting
+// installment windows), subscriptions, Plan-tab installments still running,
+// and this month's PayLater bills. Rows sharing a name merge into one line.
+function ledgerBudgetLines(ym) {
+  const mi  = ymMonthIndex(ym);
+  const off = ymOffsetFromNow(ym);
+  const raw = [];
+
+  (necData || []).forEach(row => {
+    if (!isInc(row)) return;
+    const name = (row.cat || '').trim();
+    const base = necRowBase(row);
+    if (!name || !(base > 0)) return;
+    if (row.inst && !monthInInstRange(mi, row.instFrom, row.instTo)) return;
+    raw.push({ label: name, budget: base, src: 'nec' });
+  });
+
+  (subscriptions || []).forEach(sub => {
+    if (!isInc(sub)) return;
+    const name = (sub.name || '').trim();
+    const amt  = parseFloat(sub.amt) || 0;
+    if (name && amt > 0) raw.push({ label: name, budget: amt, src: 'sub' });
+  });
+
+  (installments || []).forEach(x => {
+    if (!isInc(x)) return;
+    const name = (x.name || '').trim();
+    const amt  = parseFloat(x.monthlyAmt) || 0;
+    const rem  = parseInt(x.remaining) || 0;
+    // "remaining" counts the current month as payment #1. Past months are
+    // assumed to have been billing, so only future months get the cut-off.
+    if (name && amt > 0 && (off < 0 || rem > off)) raw.push({ label: name, budget: amt, src: 'inst' });
+  });
+
+  ['shopee', 'tiktok', 'maya'].forEach(k => {
+    const amt = (plData[k] || []).reduce((s, r) =>
+      s + ((isInc(r) && r.month === mi) ? (parseFloat(r.amt) || 0) : 0), 0);
+    if (amt > 0) raw.push({ label: PL_LEDGER_LABEL[k], budget: amt, src: 'pay' });
+  });
+
+  const merged = {};
+  raw.forEach(l => {
+    const k = ledgerCatKey(l.label);
+    if (!merged[k]) merged[k] = { key: k, label: l.label, budget: 0, srcs: [] };
+    merged[k].budget += l.budget;
+    if (merged[k].srcs.indexOf(l.src) === -1) merged[k].srcs.push(l.src);
+  });
+  return Object.keys(merged).map(k => ({
+    key: k, label: merged[k].label,
+    budget: Math.round(merged[k].budget * 100) / 100,
+    src: merged[k].srcs.join('+'),
+  }));
+}
+
+// Budget vs actual for a month. A CLOSED month keeps the budget it was closed
+// against — otherwise editing a bill today would silently rewrite last
+// quarter's history.
+function ledgerBudgetVsActual(ym) {
+  const snap    = loadMonthHistory()[ym];
+  const actuals = ledgerCatTotals(ym);
+  const base    = (snap && Array.isArray(snap.lines) && snap.lines.length)
+    ? snap.lines.map(l => ({ key: l.key, label: l.label, budget: parseFloat(l.budget) || 0, src: l.src }))
+    : ledgerBudgetLines(ym);
+
+  const lines = base.map(l => {
+    const a = actuals[l.key];
+    return { key: l.key, label: l.label, budget: l.budget, src: l.src,
+             actual: a ? a.amt : 0, n: a ? a.n : 0, budgeted: true };
+  });
+  Object.keys(actuals).forEach(k => {
+    if (lines.some(l => l.key === k)) return;
+    const a = actuals[k];
+    lines.push({ key: k, label: a.label, budget: 0, src: '', actual: a.amt, n: a.n, budgeted: false });
+  });
+  lines.forEach(l => { l.trendPct = ledgerCatTrend(l.key, ym, 3); });
+  lines.sort((a, b) => (b.actual - a.actual) || (b.budget - a.budget));
+
+  return {
+    ym: ym, lines: lines, closed: !!snap,
+    plannedTotal: lines.reduce((s, l) => s + l.budget, 0),
+    actualTotal:  lines.reduce((s, l) => s + l.actual, 0),
+  };
+}
+
+// How far this month's spend on a category sits above/below the average of
+// the previous n months that have any entries at all. null = nothing to
+// compare against yet (so a first month never shows a fake "+100%").
+function ledgerCatTrend(key, ym, n) {
+  let sum = 0, months = 0;
+  for (let k = 1; k <= n; k++) {
+    const rows = ledgerMonth(ymShift(ym, -k));
+    if (!rows.length) continue;
+    months++;
+    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) sum += e.amt; });
+  }
+  if (!months) return null;
+  const avg = sum / months;
+  if (avg <= 0.005) return null;
+  const cur = ledgerMonth(ym).reduce((s, e) => s + (ledgerCatKey(e.cat) === key ? e.amt : 0), 0);
+  return Math.round(((cur - avg) / avg) * 100);
+}
+
+// Income currently on screen (payroll + corporate + bonus). The savings
+// BALANCE is deliberately excluded — it is not income for the month.
+function ledgerIncomeNow() {
+  function num(id) {
+    const el = document.getElementById(id);
+    return el ? (parseFloat(String(el.textContent).replace(/[^0-9.\-]/g, '')) || 0) : 0;
+  }
+  function shown(rowId) {
+    const el = document.getElementById(rowId);
+    return !!(el && el.style.display !== 'none');
+  }
+  return num('nb2')
+       + (shown('nb-corp-row')  ? num('nb-corp')  : 0)
+       + (shown('nb-bonus-row') ? num('nb-bonus') : 0);
+}
+
+// ── month-end close ───────────────────────────────────────────
+function ledgerCloseMonth(ym) {
+  ym = ym || ledgerViewYM || ymNow();
+  const hist = loadMonthHistory();
+  if (hist[ym] && !confirm(ymLabel(ym) + ' is already closed.\n\nRe-snapshot it with the current numbers?')) return;
+
+  const lines   = ledgerBudgetLines(ym);
+  const planned = lines.reduce((s, l) => s + l.budget, 0);
+  const actual  = ledgerMonthTotal(ym);
+  const income  = ledgerIncomeNow();
+  const rows    = ledgerMonth(ym);
+
+  hist[ym] = {
+    ym: ym,
+    closedAt: new Date().toISOString(),
+    planned: Math.round(planned * 100) / 100,
+    actual:  Math.round(actual  * 100) / 100,
+    income:  Math.round(income  * 100) / 100,
+    // A REAL savings rate: what was left of the month's income after the
+    // money that actually went out, not a projection of what should have.
+    savingsRate: income > 0 ? Math.round(((income - actual) / income) * 1000) / 10 : null,
+    entries: rows.length,
+    lines: lines.map(l => ({ key: l.key, label: l.label, budget: l.budget, src: l.src })),
+    byCat: Object.keys(ledgerCatTotals(ym)).map(k => {
+      const c = ledgerCatTotals(ym)[k];
+      return { key: c.key, label: c.label, amt: Math.round(c.amt * 100) / 100, n: c.n };
+    }),
+  };
+
+  const keys = Object.keys(hist).sort();
+  while (keys.length > LEDGER_HIST_MAX) delete hist[keys.shift()];
+  saveMonthHistory(hist);
+  renderLedger();
+  showToast('📘 ' + ymLabel(ym) + ' closed — ' + fPHP(actual) + ' spent vs ' + fPHP(planned) + ' budgeted');
+}
+
+function ledgerReopenMonth(ym) {
+  const hist = loadMonthHistory();
+  if (!hist[ym]) return;
+  if (!confirm('Reopen ' + ymLabel(ym) + '?\n\nThe snapshot is deleted and the month goes back to tracking your live bills.')) return;
+  delete hist[ym];
+  saveMonthHistory(hist);
+  renderLedger();
+  showToast('↺ ' + ymLabel(ym) + ' reopened');
+}
+
+// ── rendering ─────────────────────────────────────────────────
+function ledgerShiftMonth(delta) {
+  ledgerViewYM = ymShift(ledgerViewYM || ymNow(), delta);
+  renderLedger();
+}
+function ledgerGoToday() { ledgerViewYM = ymNow(); renderLedger(); }
+
+function ledgerBarColor(actual, budget) {
+  if (budget <= 0) return 'var(--blue)';
+  const p = actual / budget;
+  return p > 1 ? 'var(--red)' : p >= 0.9 ? 'var(--amber)' : 'var(--green)';
+}
+
+function renderLedger() {
+  const body = document.getElementById('ledgerBody');
+  if (!body) return;
+  if (!ledgerViewYM) ledgerViewYM = ymNow();
+  const ym  = ledgerViewYM;
+  const bva = ledgerBudgetVsActual(ym);
+  const rows = ledgerMonth(ym).slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+
+  // header
+  const lbl = document.getElementById('ledgerMonthLabel');
+  const sub = document.getElementById('ledgerMonthSub');
+  if (lbl) lbl.textContent = ymLabel(ym);
+  if (sub) {
+    const off = ymOffsetFromNow(ym);
+    sub.innerHTML = (off === 0 ? 'this month' : off === -1 ? 'last month' : off > 0 ? 'future' : Math.abs(off) + ' months ago')
+      + ' · ' + rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies')
+      + (bva.closed ? ' · <span style="color:var(--green-text);">closed</span>' : '');
+  }
+
+  // category datalist — your own bills first, then anything you have typed
+  const dl = document.getElementById('ldgCatList');
+  if (dl) {
+    const names = [];
+    ledgerBudgetLines(ymNow()).forEach(l => { if (names.indexOf(l.label) === -1) names.push(l.label); });
+    ledger.forEach(e => { if (e.cat && names.indexOf(e.cat) === -1) names.push(e.cat); });
+    dl.innerHTML = names.slice(0, 60).map(n => `<option value="${escH(n)}"></option>`).join('');
+  }
+
+  const diff    = bva.actualTotal - bva.plannedTotal;
+  const pct     = bva.plannedTotal > 0 ? (bva.actualTotal / bva.plannedTotal) * 100 : 0;
+  const overCol = diff > 0.005 ? 'var(--red-text)' : 'var(--green-text)';
+
+  let h = '';
+
+  // ── summary strip: budgeted → spent ──
+  h += `<div style="padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:12px;">
+    <div class="nb-row"><span class="nb-label">Budgeted (plan)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);">${fPHP(bva.plannedTotal)}</span></div>
+    <div class="nb-row"><span class="nb-label">Spent (actual)</span><span style="font-family:'DM Mono',monospace; color:${overCol}; font-weight:500;">${fPHP(bva.actualTotal)}</span></div>
+    <div class="divider"></div>
+    <div class="nb-row"><span class="nb-label" style="color:var(--text);">${diff > 0.005 ? '= Over by' : '= Under by'}</span><span style="font-family:'DM Mono',monospace; color:${overCol}; font-weight:500;">${fPHP(Math.abs(diff))}</span></div>
+    <div style="height:8px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden; margin-top:10px;">
+      <div style="height:100%; width:${Math.min(100, pct).toFixed(1)}%; background:${ledgerBarColor(bva.actualTotal, bva.plannedTotal)}; border-radius:999px; transition:width .35s ease;"></div>
+    </div>
+    <div style="font-size:10.5px; color:var(--text3); margin-top:6px;">${bva.plannedTotal > 0 ? pct.toFixed(0) + '% of the month\u2019s budget used' : 'No budget lines for this month yet — add bills under Necessities, Subscriptions or Installments.'}</div>
+  </div>`;
+
+  // ── unclosed previous month nudge ──
+  const prevYM = ymShift(ymNow(), -1);
+  if (!loadMonthHistory()[prevYM] && ledgerMonth(prevYM).length > 0) {
+    h += `<div style="padding:10px 12px; background:var(--amber-dim); border:1px solid var(--amber); border-radius:var(--radius-sm); margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <span style="font-size:12px; color:var(--amber-text); flex:1; min-width:160px;">📘 ${escH(ymLabel(prevYM))} still isn\u2019t closed — snapshot it so it stops moving.</span>
+      <button onclick="ledgerCloseMonth('${escJS(prevYM)}')" style="background:var(--surface2); border:1px solid var(--amber); color:var(--amber-text); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 12px; cursor:pointer;">Close ${escH(ymLabel(prevYM))}</button>
+    </div>`;
+  }
+
+  // ── budget vs actual bars ──
+  if (bva.lines.length) {
+    h += `<div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:14px 0 10px;">📊 Budget vs actual</div>`;
+    h += bva.lines.map(l => {
+      const p    = l.budget > 0 ? (l.actual / l.budget) * 100 : (l.actual > 0 ? 100 : 0);
+      const col  = ledgerBarColor(l.actual, l.budget);
+      const over = l.budget > 0 ? l.actual - l.budget : 0;
+      let trend = '';
+      if (l.trendPct !== null && Math.abs(l.trendPct) >= 5) {
+        const up = l.trendPct > 0;
+        trend = `<span style="font-size:10px; font-family:'DM Mono',monospace; color:${up ? 'var(--amber-text)' : 'var(--green-text)'};" title="versus the average of the last 3 months with entries">${up ? '↑' : '↓'}${Math.abs(l.trendPct)}% vs 3-mo avg</span>`;
+      }
+      return `<div style="margin-bottom:10px;">
+        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:12.5px; color:var(--text); flex:1; min-width:100px;">${escH(l.label)}${l.budgeted ? '' : ' <span style="font-size:10px; color:var(--text3);">(unbudgeted)</span>'}</span>
+          ${trend}
+          <span style="font-family:'DM Mono',monospace; font-size:12px; color:${col};">${fPHP(l.actual)}</span>
+          <span style="font-size:10.5px; color:var(--text3); font-family:'DM Mono',monospace;">${l.budget > 0 ? '/ ' + fPHP(l.budget) : '/ —'}</span>
+        </div>
+        <div style="height:6px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden;">
+          <div style="height:100%; width:${Math.min(100, p).toFixed(1)}%; background:${col}; border-radius:999px;"></div>
+        </div>
+        ${over > 0.005 ? `<div style="font-size:10px; color:var(--red-text); margin-top:3px; font-family:'DM Mono',monospace;">over by ${fPHP(over)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // ── entries ──
+  h += `<div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:16px 0 8px;">🧾 Entries — ${escH(ymLabel(ym))}</div>`;
+  if (!rows.length) {
+    h += `<div style="font-size:12px; color:var(--text3); padding:6px 0;">Nothing logged for this month yet. Add a row above, send a receipt photo to the 💬 chat, or type <b>log 250 groceries</b>.</div>`;
+  } else {
+    h += `<div class="ldg-rows">` + rows.map(e => `
+      <div class="ldg-row">
+        <span class="ldg-date">${escH(e.date.slice(5))}</span>
+        <span class="ldg-cat">${escH(e.cat)}${e.note ? `<span class="ldg-note">${escH(e.note)}</span>` : ''}</span>
+        <span class="ldg-src ${escH(e.src)}">${escH(LEDGER_SRC_LABEL[e.src] || e.src)}</span>
+        <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this entry">✕</button>
+      </div>`).join('') + `</div>`;
+  }
+
+  // ── close / print controls ──
+  h += `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
+    ${bva.closed
+      ? `<button onclick="ledgerReopenMonth('${escJS(ym)}')" class="ldg-btn">↺ Reopen ${escH(ymLabel(ym))}</button>`
+      : `<button onclick="ledgerCloseMonth('${escJS(ym)}')" class="ldg-btn primary">📘 Close ${escH(ymLabel(ym))}</button>`}
+    <button onclick="printMonthSheet('${escJS(ym)}')" class="ldg-btn">🖨 Print sheet</button>
+  </div>
+  <div style="font-size:10.5px; color:var(--text3); margin-top:8px; line-height:1.5;">Closing freezes the month against the budget it had at the time, so later edits to your bills can\u2019t rewrite history.</div>`;
+
+  // ── month-end history ──
+  const hist = loadMonthHistory();
+  const hks  = Object.keys(hist).sort().reverse();
+  if (hks.length) {
+    h += `<div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:18px 0 8px;">📚 Closed months</div>`;
+    h += `<div class="ldg-rows">` + hks.slice(0, 12).map(k => {
+      const s  = hist[k];
+      const d  = (parseFloat(s.actual) || 0) - (parseFloat(s.planned) || 0);
+      const c  = d > 0.005 ? 'var(--red-text)' : 'var(--green-text)';
+      const sr = (s.savingsRate === null || s.savingsRate === undefined) ? null : s.savingsRate;
+      return `<div class="ldg-row" style="cursor:pointer;" onclick="ledgerViewYM='${escJS(k)}'; renderLedger();" title="Open ${escH(ymLabel(k))}">
+        <span class="ldg-cat" style="flex:1;">${escH(ymLabel(k))}
+          <span class="ldg-note">${fPHP(parseFloat(s.planned) || 0)} budgeted${sr !== null ? ' · saved ' + sr + '%' : ''}</span></span>
+        <span class="ldg-amt" style="color:${c};">${fPHP(parseFloat(s.actual) || 0)}</span>
+        <span style="font-size:10.5px; font-family:'DM Mono',monospace; color:${c}; min-width:64px; text-align:right;">${d > 0.005 ? '+' : ''}${fPHP(d)}</span>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  body.innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DUE-SOON NUDGE
+// The app already knows every pay day: necessities carry one, subscriptions
+// carry a billing day, and PayLater bills on PL_BILLING_DAY. Nothing ever
+// surfaced it, so this reads the SAME rows the bill checklist ticks
+// (bclBuildItems) and shows what lands in the next few days. Tapping a row
+// ticks it, exactly as it would on the Plan tab.
+// ═══════════════════════════════════════════════════════════════
+const DUE_SOON_DAYS   = 5;
+const DUE_DISMISS_KEY = 'va_due_dismiss';   // device-local, one date string
+
+function ledgerNextDueDate(day, today) {
+  const clampTo = (y, m) => Math.min(day, new Date(y, m + 1, 0).getDate());
+  let d = new Date(today.getFullYear(), today.getMonth(), clampTo(today.getFullYear(), today.getMonth()));
+  if (d < today) {
+    const nm = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    d = new Date(nm.getFullYear(), nm.getMonth(), clampTo(nm.getFullYear(), nm.getMonth()));
+  }
+  return d;
+}
+
+function dueSoonItems(days) {
+  days = (days === undefined) ? DUE_SOON_DAYS : days;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let items = [];
+  try { items = bclBuildItems(); } catch (e) { return []; }
+  const out = [];
+  items.forEach(it => {
+    const day = parseInt(it.day) || 0;
+    if (day < 1 || day > 31) return;             // no pay day set — nothing to warn about
+    if (billChecks.checks[it.key]) return;       // already ticked this month
+    const due  = ledgerNextDueDate(day, today);
+    const left = Math.round((due - today) / 86400000);
+    if (left <= days) out.push({ key: it.key, label: it.label, amt: it.amt, src: it.src, due: due, daysLeft: left });
+  });
+  return out.sort((a, b) => a.due - b.due);
+}
+
+function renderDueSoon() {
+  const el = document.getElementById('dueSoonBanner');
+  if (!el) return;
+  let dismissed = '';
+  try { dismissed = localStorage.getItem(DUE_DISMISS_KEY) || ''; } catch (e) {}
+  const items = dueSoonItems(DUE_SOON_DAYS);
+  if (!items.length || dismissed === todayLocalStr()) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+  const sum = items.reduce((s, i) => s + i.amt, 0);
+  const rows = items.map(i => {
+    const when = i.daysLeft === 0 ? 'today' : i.daysLeft === 1 ? 'tomorrow' : 'in ' + i.daysLeft + ' days';
+    const col  = i.daysLeft <= 1 ? 'var(--red-text)' : 'var(--amber-text)';
+    return `<button class="due-row" onclick="toggleBillCheck('${escJS(i.key)}')" title="Tick as paid">
+      <span class="due-check">○</span>
+      <span class="due-label">${escH(i.label)}</span>
+      <span class="due-when" style="color:${col};">${MONTH_NAMES[i.due.getMonth()]} ${i.due.getDate()} · ${when}</span>
+      <span class="due-amt">${fPHP(i.amt)}</span>
+    </button>`;
+  }).join('');
+
+  el.innerHTML = `<div class="due-wrap">
+    <div class="due-head">
+      <span style="font-size:13px;">⏰</span>
+      <span style="flex:1;"><b>${items.length} bill${items.length === 1 ? '' : 's'}</b> due in the next ${DUE_SOON_DAYS} days — ${fPHP(sum)}</span>
+      <button class="due-x" onclick="dismissDueSoon()" title="Hide until tomorrow">✕</button>
+    </div>
+    <div class="due-list">${rows}</div>
+    <div class="due-foot">Tap one to tick it off the bill checklist.</div>
+  </div>`;
+  el.style.display = 'block';
+}
+
+function dismissDueSoon() {
+  try { localStorage.setItem(DUE_DISMISS_KEY, todayLocalStr()); } catch (e) {}
+  renderDueSoon();
+}
+
 
 // ─── 3-MONTH EXPENSE FORECAST ─────────────────────────────────
 // Two modes:
@@ -10146,6 +10828,7 @@ function switchPage(page) {
     renderSplitArchive('hsArchiveList', 'hs');
   }
   if (page === 'expenses') {
+    renderLedger();
     runDailyAccrual(true);   // catch up daily-interest growth on tab open
     setTimeout(drawChart, 60);
   }
@@ -10168,6 +10851,7 @@ let trkrYears    = [];
 let trkrViewYear = new Date().getFullYear();
 
 loadData();
+loadLedger();   // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
 // Default the Expenses date-range "From" to today when it's empty, so the
 // range always starts from the current date without manual entry.
 (function () {
@@ -10175,6 +10859,7 @@ loadData();
   if (ds && !ds.value) { ds.value = todayLocalStr(); saveData(); }
 })();
 renderNec();
+renderLedger();
 renderPL('shopee');
 renderPL('tiktok');
 renderPL('maya');
@@ -10259,6 +10944,7 @@ function toggleBillCheck(key) {
   billChecks.checks[key] = !billChecks.checks[key];
   saveBillChecks();
   renderBillChecklist();
+  renderDueSoon();   // a ticked bill drops straight out of the due-soon nudge
 }
 
 // Builds the current month's checklist rows. Extracted from
@@ -10271,7 +10957,7 @@ function bclBuildItems() {
     if (!isInc(row)) return;                 // unmarked — hidden from checklist
     if (row.inst && !monthInInstRange(bclMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if (necRowBase(row) > 0 && (row.cat || '').trim())
-      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec' });
+      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec', day: parseInt(row.day) || 0 });
   });
   // Two necessities with the same name AND pay day used to share one key, so
   // ticking one ticked both. Suffix the repeats (_2, _3…) — the first keeps
@@ -10286,15 +10972,15 @@ function bclBuildItems() {
   subscriptions.forEach(sub => {
     if (!isInc(sub)) return;                 // unmarked — hidden from checklist
     if ((parseFloat(sub.amt) || 0) > 0 && (sub.name || '').trim())
-      items.push({ key: `sub_${sub.id}`, label: sub.name.trim(), amt: parseFloat(sub.amt)||0, src: 'sub' });
+      items.push({ key: `sub_${sub.id}`, label: sub.name.trim(), amt: parseFloat(sub.amt)||0, src: 'sub', day: parseInt(sub.billingDay) || 0 });
   });
   const curMonth = new Date().getMonth();
   const shopeeAmt = plData.shopee.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
-  if (shopeeAmt > 0) items.push({ key: 'pl_shopee', label: 'SPayLater (Shopee)', amt: shopeeAmt, src: 'pay' });
+  if (shopeeAmt > 0) items.push({ key: 'pl_shopee', label: 'SPayLater (Shopee)', amt: shopeeAmt, src: 'pay', day: PL_BILLING_DAY.shopee });
   const tiktokAmt = plData.tiktok.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
-  if (tiktokAmt > 0) items.push({ key: 'pl_tiktok', label: 'TikTok PayLater', amt: tiktokAmt, src: 'pay' });
+  if (tiktokAmt > 0) items.push({ key: 'pl_tiktok', label: 'TikTok PayLater', amt: tiktokAmt, src: 'pay', day: PL_BILLING_DAY.tiktok });
   const mayaAmt = plData.maya.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
-  if (mayaAmt > 0) items.push({ key: 'pl_maya', label: 'Maya Black CC', amt: mayaAmt, src: 'pay' });
+  if (mayaAmt > 0) items.push({ key: 'pl_maya', label: 'Maya Black CC', amt: mayaAmt, src: 'pay', day: PL_BILLING_DAY.maya });
 
   return items;
 }
@@ -11993,8 +12679,8 @@ const STORAGE_KEY_LABELS = {
   va_tracker:            'Monthly tracker',
   va_split_archive:      'Split history',
   va_bill_checklist:     'Bill checklist',
-  va_expense_log:        'Expense log',
-  va_spend_log:          'Spend log',
+  va_expense_log:        'Spending ledger',
+  va_spend_log:          'Month-end history',
   va_fx_rate:            'FX rate cache',
   va_salary_history:     'Salary history',
   va_squads:             'Squads',
@@ -12008,6 +12694,7 @@ const STORAGE_KEY_LABELS = {
   va_calc_tape:          'Calculator history',
   va_unit_sel:           'Unit converter choice',
   va_last_tab:           'Last open tab',
+  va_due_dismiss:        'Due-soon nudge dismissal',
 };
 
 function fmtBytes(b) {
@@ -12072,6 +12759,200 @@ function closeSettings() {
 document.getElementById('settingsModal').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
 });
+
+// ─── CSV EXPORT ───────────────────────────────────────────────
+// The JSON backup above is for RESTORING — it is one blob of app state and
+// nothing else can read it. This is for USING the data elsewhere: one file,
+// several labelled sections, opens straight in Sheets or Excel.
+function csvCell(v) {
+  const t = String(v === null || v === undefined ? '' : v);
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function csvRow(arr) { return arr.map(csvCell).join(',') + '\n'; }
+function csvSection(title, header) { return '\n' + csvRow(['# ' + title]) + csvRow(header); }
+
+function buildCSV() {
+  let out = csvRow(['GibsXpenses export', new Date().toISOString().slice(0, 19).replace('T', ' ')]);
+  try {
+    const pm = getProfilesMeta();
+    if (pm && pm.current) out += csvRow(['Profile', pm.current]);
+  } catch (e) {}
+  out += csvRow(['Currency', 'PHP']);
+
+  // Necessities
+  out += csvSection('NECESSITIES & EXPENSES', ['Category', 'Monthly amount', 'Pay day', 'Installment', 'Counted']);
+  (necData || []).forEach(r => out += csvRow([
+    r.cat || '', (necRowBase(r) || 0).toFixed(2), r.day || '',
+    r.inst ? 'yes' : 'no', isInc(r) ? 'yes' : 'no',
+  ]));
+
+  // Subscriptions
+  out += csvSection('SUBSCRIPTIONS', ['Name', 'Monthly amount', 'Billing day', 'Counted']);
+  (subscriptions || []).forEach(x => out += csvRow([
+    x.name || '', (parseFloat(x.amt) || 0).toFixed(2), x.billingDay || '', isInc(x) ? 'yes' : 'no',
+  ]));
+
+  // Installments
+  out += csvSection('INSTALLMENTS', ['Name', 'Monthly amount', 'Months remaining', 'Remaining total', 'Counted']);
+  (installments || []).forEach(x => {
+    const mo = parseFloat(x.monthlyAmt) || 0, rem = parseInt(x.remaining) || 0;
+    out += csvRow([x.name || '', mo.toFixed(2), rem, (mo * rem).toFixed(2), isInc(x) ? 'yes' : 'no']);
+  });
+
+  // Spending ledger — the actual record
+  out += csvSection('SPENDING LEDGER', ['Date', 'Month', 'Category', 'Amount', 'Source', 'Note']);
+  ledger.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
+    .forEach(e => out += csvRow([e.date, ymOf(e.date), e.cat, e.amt.toFixed(2), e.src, e.note || '']));
+
+  // Month-end history
+  out += csvSection('CLOSED MONTHS', ['Month', 'Budgeted', 'Actual', 'Difference', 'Income', 'Savings rate %', 'Entries', 'Closed at']);
+  const hist = loadMonthHistory();
+  Object.keys(hist).sort().forEach(k => {
+    const m = hist[k], pl = parseFloat(m.planned) || 0, ac = parseFloat(m.actual) || 0;
+    out += csvRow([k, pl.toFixed(2), ac.toFixed(2), (ac - pl).toFixed(2),
+      (parseFloat(m.income) || 0).toFixed(2),
+      (m.savingsRate === null || m.savingsRate === undefined) ? '' : m.savingsRate,
+      m.entries || 0, (m.closedAt || '').slice(0, 10)]);
+  });
+
+  // Payment tracker
+  out += csvSection('PAYMENT TRACKER', ['Year', 'Month', 'Person', 'Amount']);
+  (trkrEntries || []).slice()
+    .sort((a, b) => (a.year - b.year) || (a.month - b.month) || String(a.person).localeCompare(String(b.person)))
+    .forEach(e => out += csvRow([e.year, TRKR_MONTHS[e.month] || (e.month + 1), e.person, (e.amount || 0).toFixed(2)]));
+
+  // Salary history
+  out += csvSection('SALARY HISTORY', ['Logged', 'Mode', 'Period', 'Gross USD', 'Net USD', 'Net PHP', 'Bonus USD', 'FX rate']);
+  loadSalaryHistory().slice().reverse().forEach(e => out += csvRow([
+    (e.loggedAt || '').slice(0, 10), e.mode || '', e.rangeLabel || '',
+    (e.grossUSD || 0).toFixed(2), (e.netUSD || 0).toFixed(2), (e.netPHP || 0).toFixed(2),
+    (e.bonusUSD || 0).toFixed(2), e.fxRate || '',
+  ]));
+
+  return out;
+}
+
+function exportCSV() {
+  let csv;
+  try { csv = buildCSV(); }
+  catch (e) {
+    const msg = document.getElementById('settingsMsg');
+    if (msg) msg.textContent = 'Could not build the CSV: ' + e.message;
+    return;
+  }
+  // BOM so Excel opens ₱ and any accented category name correctly.
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'gibsxpenses-' + todayLocalStr() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const msg = document.getElementById('settingsMsg');
+  if (msg) msg.textContent = '✓ CSV downloaded — 7 sections.';
+}
+
+// ─── PRINTABLE MONTH SHEET ────────────────────────────────────
+// One page: income, budget vs actual by line, every ledger entry, and the
+// bills still unticked. Rendered into a hidden iframe rather than a popup —
+// popups get blocked in installed PWAs, iframes do not.
+function printMonthSheet(ym) {
+  ym = ym || ledgerViewYM || ymNow();
+  const bva  = ledgerBudgetVsActual(ym);
+  const snap = loadMonthHistory()[ym];
+  const rows = ledgerMonth(ym).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+  const income = snap ? (parseFloat(snap.income) || 0) : ledgerIncomeNow();
+  const diff   = bva.actualTotal - bva.plannedTotal;
+  const rate   = income > 0 ? ((income - bva.actualTotal) / income) * 100 : null;
+
+  let bills = [];
+  if (ymOffsetFromNow(ym) === 0) {
+    try { bills = bclBuildItems().filter(b => !billChecks.checks[b.key]); } catch (e) {}
+  }
+
+  const money = n => '\u20b1' + (n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const lineRows = bva.lines.map(l => {
+    const over = l.budget > 0 ? l.actual - l.budget : 0;
+    return '<tr><td>' + escH(l.label) + (l.budgeted ? '' : ' <em>(unbudgeted)</em>') + '</td>'
+      + '<td class="n">' + (l.budget > 0 ? money(l.budget) : '\u2014') + '</td>'
+      + '<td class="n">' + money(l.actual) + '</td>'
+      + '<td class="n' + (over > 0.005 ? ' over' : '') + '">' + (l.budget > 0 ? (over > 0 ? '+' : '') + money(over) : '\u2014') + '</td></tr>';
+  }).join('');
+
+  const entryRows = rows.length
+    ? rows.map(e => '<tr><td>' + escH(e.date) + '</td><td>' + escH(e.cat) + '</td>'
+        + '<td>' + escH(e.note || '') + '</td><td>' + escH(LEDGER_SRC_LABEL[e.src] || e.src) + '</td>'
+        + '<td class="n">' + money(e.amt) + '</td></tr>').join('')
+    : '<tr><td colspan="5"><em>No entries logged for this month.</em></td></tr>';
+
+  const billRows = bills.length
+    ? '<h2>Still unticked</h2><table><tbody>' + bills.map(b =>
+        '<tr><td>\u25a1 ' + escH(b.label) + '</td><td class="n">' + money(b.amt) + '</td></tr>').join('')
+      + '</tbody></table>'
+    : '';
+
+  const html = '<!doctype html><html><head><meta charset="utf-8">'
+    + '<title>GibsXpenses \u2014 ' + escH(ymLabel(ym)) + '</title><style>'
+    + '*{box-sizing:border-box}'
+    + 'body{font:12px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;margin:24px;}'
+    + 'h1{font-size:19px;margin:0 0 2px;} h2{font-size:13px;margin:20px 0 6px;border-bottom:1px solid #999;padding-bottom:3px;}'
+    + '.sub{color:#666;font-size:11px;margin-bottom:14px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:6px;}'
+    + 'th,td{padding:4px 6px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top;}'
+    + 'th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:1px solid #999;}'
+    + 'td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}'
+    + '.over{color:#b00;} tfoot td{font-weight:700;border-top:2px solid #333;border-bottom:none;}'
+    + '.kpis{display:flex;gap:10px;margin-bottom:4px;flex-wrap:wrap;}'
+    + '.kpi{flex:1;min-width:110px;border:1px solid #bbb;border-radius:5px;padding:8px 10px;}'
+    + '.kpi b{display:block;font-size:16px;font-variant-numeric:tabular-nums;}'
+    + '.kpi span{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#555;}'
+    + '.foot{margin-top:22px;font-size:10px;color:#777;border-top:1px solid #ddd;padding-top:6px;}'
+    + '@media print{body{margin:12mm;} .kpi{border-color:#666;}}'
+    + '</style></head><body>'
+    + '<h1>' + escH(ymLabel(ym)) + ' \u2014 monthly sheet</h1>'
+    + '<div class="sub">GibsXpenses \u00b7 generated ' + escH(todayLocalStr())
+    + (snap ? ' \u00b7 month closed ' + escH((snap.closedAt || '').slice(0, 10)) : ' \u00b7 month still open') + '</div>'
+    + '<div class="kpis">'
+    + '<div class="kpi"><span>Income</span><b>' + money(income) + '</b></div>'
+    + '<div class="kpi"><span>Budgeted</span><b>' + money(bva.plannedTotal) + '</b></div>'
+    + '<div class="kpi"><span>Spent</span><b>' + money(bva.actualTotal) + '</b></div>'
+    + '<div class="kpi"><span>' + (diff > 0.005 ? 'Over budget' : 'Under budget') + '</span><b'
+    + (diff > 0.005 ? ' class="over"' : '') + '>' + money(Math.abs(diff)) + '</b></div>'
+    + (rate === null ? '' : '<div class="kpi"><span>Saved</span><b>' + rate.toFixed(1) + '%</b></div>')
+    + '</div>'
+    + '<h2>Budget vs actual</h2>'
+    + '<table><thead><tr><th>Line</th><th class="n">Budget</th><th class="n">Actual</th><th class="n">Diff</th></tr></thead>'
+    + '<tbody>' + (lineRows || '<tr><td colspan="4"><em>Nothing budgeted or spent.</em></td></tr>') + '</tbody>'
+    + '<tfoot><tr><td>Total</td><td class="n">' + money(bva.plannedTotal) + '</td><td class="n">' + money(bva.actualTotal)
+    + '</td><td class="n' + (diff > 0.005 ? ' over' : '') + '">' + (diff > 0 ? '+' : '') + money(diff) + '</td></tr></tfoot></table>'
+    + '<h2>Ledger entries (' + rows.length + ')</h2>'
+    + '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Source</th><th class="n">Amount</th></tr></thead>'
+    + '<tbody>' + entryRows + '</tbody></table>'
+    + billRows
+    + '<div class="foot">Budgeted = necessities, subscriptions, running installments and PayLater bills for this month. '
+    + 'A closed month keeps the budget it was closed against.</div>'
+    + '</body></html>';
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; opacity:0;';
+  document.body.appendChild(frame);
+  try {
+    const doc = frame.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    setTimeout(function () {
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+      catch (e) { showToast('Could not open the print dialog on this device', true); }
+      setTimeout(function () { if (frame.parentNode) frame.parentNode.removeChild(frame); }, 60000);
+    }, 300);
+  } catch (e) {
+    if (frame.parentNode) frame.parentNode.removeChild(frame);
+    showToast('Could not build the print sheet: ' + e.message, true);
+  }
+}
 
 function exportData() {
   const backup = {
@@ -12240,10 +13121,29 @@ let _chatReviews  = {};   // id -> {kind, rows} awaiting a review-table apply
 const CHAT_SESSION = Math.random().toString(36).slice(2, 8);
 let _chatIntentSeq = 1;
 let _chatBusy     = false;
-const _chatAiCache = {};  // contextSig|text -> validated intent (session cache)
+// contextSig|text -> validated intent. A Map, not an object, because
+// insertion order gives us the eviction order for free. The 40-message
+// transcript cap bounded this in practice, but a long single-device session
+// kept growing it for as long as the tab stayed open.
+const CHAT_AI_CACHE_MAX = 20;
+const _chatAiCache = new Map();
+
+function chatCacheGet(k) {
+  if (!_chatAiCache.has(k)) return null;
+  const v = _chatAiCache.get(k);
+  _chatAiCache.delete(k); _chatAiCache.set(k, v);   // touch → now the newest
+  return v;
+}
+function chatCacheSet(k, v) {
+  if (_chatAiCache.has(k)) _chatAiCache.delete(k);
+  _chatAiCache.set(k, v);
+  while (_chatAiCache.size > CHAT_AI_CACHE_MAX) {
+    _chatAiCache.delete(_chatAiCache.keys().next().value);   // drop the oldest
+  }
+}
 // Every action that changes data — these are the ones that need a confirm card.
 const CHAT_WRITE_ACTIONS = ['add', 'deduct', 'set', 'move', 'paybill', 'wish',
-                            'addnec', 'addsub', 'addinst', 'addgoal'];
+                            'addnec', 'addsub', 'addinst', 'addgoal', 'log'];
 // 1st / 2nd / 3rd / 4th — for "due on the 21st" in confirm cards.
 function ordSuffix(n) {
   n = parseInt(n) || 0;
@@ -12298,7 +13198,7 @@ function chatAmt(tok) {
 
 const CHAT_FILLER = new Set([
   'on', 'to', 'in', 'into', 'at', 'my', 'the', 'a', 'of', 'for', 'is', 'it',
-  'sa', 'ko', 'po', 'na', 'ang', 'yung', 'ung', 'yong', 'nasa', 'ni',
+  'from', 'sa', 'ko', 'po', 'na', 'ang', 'yung', 'ung', 'yong', 'nasa', 'ni',
   'account', 'acct', 'wallet', 'savings', 'saving', 'balance', 'bal',
   'please', 'pls', 'bank', 'pesos', 'peso', 'php',
 ]);
@@ -12313,6 +13213,10 @@ const CHAT_VERBS = {
   query:  ['howmuch', 'magkano', 'check', 'show', 'whats', 'what'],
   paybill:['pay', 'paid', 'bayad', 'binayaran', 'bayaran', 'tick'],
   wish:   ['wish', 'want', 'wishlist'],
+  // Ledger — money that has ALREADY gone out. Kept separate from `deduct`
+  // (which moves a savings allocation) on purpose: recording a spend and
+  // taking money out of a bucket are different events.
+  log:    ['log', 'logged', 'record', 'recorded'],
 };
 const CHAT_VERB_OF = (() => {
   const m = {};
@@ -12381,6 +13285,7 @@ function chatParse(raw) {
   if (/^(total|totals|total savings|all savings)$/.test(t))       return { action: 'total' };
   if (/^(net|net summary|freetospend|left|remaining)$/.test(t))   return { action: 'net' };
   if (/^(bills?|due|checklist)$/.test(t))                          return { action: 'bills' };
+  if (/^(spending|ledger|actual|actuals|budget|spent this month)$/.test(t)) return { action: 'ledger' };
 
   // ── move / transfer: needs two targets ──
   let mv = t.match(/\b(?:move|transfer|lipat|ilipat|shift)\b\s*(.*)$/);
@@ -12424,6 +13329,13 @@ function chatParse(raw) {
     return { action: 'wish', name: targetTxt, amount: amt ? amt.n : 0 };
   }
 
+  // ── ledger: record money that actually went out ──
+  if (verb === 'log') {
+    if (amt == null) return { error: 'Try: `log 250 groceries`' };
+    return { action: 'log', amount: amt.n, category: targetTxt || 'Uncategorised',
+             date: todayLocalStr(), note: '' };
+  }
+
   // ── pay a bill (no amount → tick the checklist) ──
   if (verb === 'paybill') {
     const bill = targetTxt ? chatFindBill(targetTxt) : null;
@@ -12457,6 +13369,16 @@ function chatParse(raw) {
   if (!targetTxt)  return { error: 'Which allocation? Try `add 250 gcash`.' };
 
   const sav = chatFindSav(targetTxt);
+  // Wording that is about money going OUT rather than a bucket moving.
+  const spendWording = /\b(spent|spend|gastos|ginastos|nagastos|used|bumili|binili)\b/.test(t);
+  // "spent 450 on gas" with nothing called “gas” in the allocations is
+  // actual spending, so log it instead of dead-ending on an error. A WEAK
+  // match counts as no match here: fuzzily landing on “GCash” at 55 is a
+  // worse guess than recording exactly what was typed. A solid match
+  // (“spent 500 on gcash”, or a one-letter typo) still deducts as before.
+  if (verb === 'deduct' && spendWording && targetTxt && (!sav || sav.score < 66)) {
+    return { action: 'log', amount: amt.n, category: targetTxt, date: todayLocalStr(), note: '' };
+  }
   if (!sav) return { error: `No allocation matching “${targetTxt}”. Open Savings Allocation to see the names.` };
 
   const assumed = (verb == null);
@@ -12569,6 +13491,17 @@ function chatApplyOne(intent) {
     return `✓ Added the goal <b>${escH(intent.name)}</b> — target ${fPHP(intent.target)}.`;
   }
 
+  if (a === 'log') {
+    const entry = ledgerAdd({ date: intent.date, amt: intent.amount, cat: intent.category,
+                              src: 'chat', note: intent.note });
+    const ym  = ymOf(entry.date);
+    const bva = ledgerBudgetVsActual(ym);
+    const over = bva.actualTotal - bva.plannedTotal;
+    return `✓ Logged <b>${fPHP(entry.amt)}</b> on <b>${escH(entry.cat)}</b> — ${escH(entry.date)}.\n`
+         + `${escH(ymLabel(ym))}: ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted`
+         + (over > 0.005 ? `  ⚠️ over by ${fPHP(over)}` : '') + '.';
+  }
+
   if (a === 'wish') {
     wishlistItems.push({
       id: planId(), name: intent.name, price: intent.amount ? String(intent.amount) : '',
@@ -12595,13 +13528,14 @@ function chatAnswer(intent) {
       + '<b>set gcash 3000</b> · <b>move 500 from gcash to bdo</b>\n'
       + '<b>gcash</b> — show a balance · <b>total</b> · <b>net</b> · <b>bills</b>\n'
       + '<b>pay electricity</b> — tick a bill · <b>wish airpods 12000</b> · <b>undo</b>\n'
+      + '<b>log 250 groceries</b> — record actual spending · <b>spent 450 on gas</b> · <b>ledger</b> — this month, budget vs actual\n'
       + 'Tagalog works — dagdag, bawas, lipat, bayad.\n\n'
       + '<b>② Ask me anything</b> (needs a provider in Settings):\n'
       + 'Questions about your money — “how much on subscriptions?”, “can I afford the ₱12k lens before payday?” — or anything else at all. '
       + 'It knows today’s date and your next payday, so “before payday” and “this month” mean the right thing.\n'
       + 'It can also <b>create rows</b>: “add Meralco 1450 due on the 10th”, “new subscription Spotify 194”, '
       + '“installment: 12k phone over 6 months”, “goal: emergency fund 50k”. Everything still shows a confirm card first.\n'
-      + '📎 send a receipt photo to fill the Hangout or CC Split tab, or prefix <b>sms:</b> a bank/GCash text to log it.\n\n'
+      + '📎 send a receipt photo to fill the Hangout tab, CC Split, or the spending Ledger, or prefix <b>sms:</b> a bank/GCash text to log it.\n\n'
       + '<b>③ Live web search</b> — prefix <b>web:</b>\n'
       + '<b>web: usd to php today</b> · <b>web: what team is lebron on</b>\n'
       + 'Without it I answer from training data that stops months ago, so anything current will be stale. '
@@ -12643,6 +13577,27 @@ function chatAnswer(intent) {
     const sum = open.reduce((s, it) => s + it.amt, 0);
     return open.map(it => `· ${escH(it.label)} — ${fPHP(it.amt)}`).join('\n')
       + `\n\n<b>${open.length} unpaid — ${fPHP(sum)}</b>`;
+  }
+
+  if (a === 'ledger') {
+    const ym  = ymNow();
+    const bva = ledgerBudgetVsActual(ym);
+    if (!ledgerMonth(ym).length) {
+      return `Nothing logged for ${escH(ymLabel(ym))} yet.\n`
+        + `Budgeted this month: <b>${fPHP(bva.plannedTotal)}</b>.\n`
+        + 'Record actual spending with <b>log 250 groceries</b>, or send a receipt photo.';
+    }
+    const over = bva.actualTotal - bva.plannedTotal;
+    const top = bva.lines.filter(l => l.actual > 0).slice(0, 6).map(l => {
+      let line = `· ${escH(l.label)} — ${fPHP(l.actual)}`
+               + (l.budget > 0 ? ` of ${fPHP(l.budget)}` : ' (unbudgeted)');
+      if (l.trendPct !== null && Math.abs(l.trendPct) >= 5)
+        line += `  ${l.trendPct > 0 ? '↑' : '↓'}${Math.abs(l.trendPct)}% vs 3-mo avg`;
+      return line;
+    });
+    return `<b>${escH(ymLabel(ym))} — ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted</b>\n`
+         + (over > 0.005 ? `⚠️ over by ${fPHP(over)}` : `${fPHP(Math.abs(over))} still unspent`)
+         + (top.length ? '\n\n' + top.join('\n') : '');
   }
 
   if (a === 'undo') {
@@ -12690,6 +13645,46 @@ function chatNextPayday() {
 function chatElVal(id) {
   const el = document.getElementById(id);
   return el && el.value ? el.value : null;
+}
+
+// The one part of this payload that is a RECORD rather than a plan. Without
+// it the model can answer "how much are subscriptions" but never "you have
+// been drifting 18% over on food since May".
+function ledgerAIContext(money) {
+  try {
+    const ym  = ymNow();
+    const bva = ledgerBudgetVsActual(ym);
+    const hist = loadMonthHistory();
+    return {
+      note: 'ACTUAL recorded spending. Everything else in this payload is the PLAN — compare the two when it is useful.',
+      this_month: {
+        month: ym,
+        budgeted: money(Math.round(bva.plannedTotal * 100) / 100),
+        spent:    money(Math.round(bva.actualTotal * 100) / 100),
+        difference: money(Math.round((bva.actualTotal - bva.plannedTotal) * 100) / 100),
+        entries: ledgerMonth(ym).length,
+        closed: bva.closed,
+        by_category: bva.lines.slice(0, 25).map(l => ({
+          category: l.label,
+          budget: money(l.budget),
+          spent:  money(Math.round(l.actual * 100) / 100),
+          pct_of_budget: l.budget > 0 ? Math.round((l.actual / l.budget) * 100) : null,
+          vs_3mo_avg_pct: l.trendPct,
+          budgeted: l.budgeted,
+        })),
+      },
+      recent_entries: ledger.slice(-15).reverse().map(e => ({
+        date: e.date, category: e.cat, amt: money(e.amt), source: e.src, note: e.note || null,
+      })),
+      closed_months: Object.keys(hist).sort().reverse().slice(0, 12).map(k => ({
+        month: k,
+        budgeted: money(parseFloat(hist[k].planned) || 0),
+        spent:    money(parseFloat(hist[k].actual)  || 0),
+        income:   money(parseFloat(hist[k].income)  || 0),
+        savings_rate_pct: (hist[k].savingsRate === undefined) ? null : hist[k].savingsRate,
+      })),
+    };
+  } catch (e) { return null; }
 }
 
 function chatFinanceContext(labelsOnly) {
@@ -12860,6 +13855,7 @@ function chatFinanceContext(labelsOnly) {
     open_splits: splits,
     payment_tracker: tracker,
     bills_this_month: bills,
+    spending_ledger:  ledgerAIContext(money),
   };
 }
 
@@ -13024,9 +14020,10 @@ function chatAISystemPrompt(parserHint) {
     '   {"action":"addsub","name":"<text>","amount":<monthly number>,"day":<1-31, optional billing day>}   — a new subscription',
     '   {"action":"addinst","name":"<text>","monthly":<number>,"months":<whole number of months left>}   — a new installment plan',
     '   {"action":"addgoal","name":"<text>","target":<number>,"saved":<number, optional>}   — a new savings goal',
+    '   {"action":"log","amount":<number>,"category":"<text>","date":"YYYY-MM-DD, optional (defaults to today)","note":"<text, optional>"}   — record money that was ACTUALLY spent, into the spending ledger',
     '   Batch example — "add 250 gcash and 100 maya": {"intents":[{"action":"add","target":0,"amount":250},{"action":"add","target":3,"amount":100}]}',
     '',
-    'B) A read-only budget lookup that maps exactly to a screen → {"action":"query","target":<index>} | {"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"help"}',
+    'B) A read-only budget lookup that maps exactly to a screen → {"action":"query","target":<index>} | {"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"ledger"} | {"action":"help"}',
     '',
     'C) ANYTHING ELSE — a question about their finances you can answer from the data below (e.g. "how much on subscriptions?", "can I afford the ₱12k lens before payday?"), OR a general question/request with nothing to do with this app (math, advice, explanations, chit-chat) → answer the user directly and helpfully:',
     '   {"action":"say","reply":"<your full answer, plain text, ₱ for pesos>"}',
@@ -13034,7 +14031,9 @@ function chatAISystemPrompt(parserHint) {
     '',
     'Rules: never invent an allocation/bill index or key that is not listed. Amounts are pesos. '
     + 'Use add/deduct/set/move only for EXISTING savings allocations; use addnec/addsub/addinst/addgoal to CREATE a new row when the thing they name is not already in the data below. '
-    + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months.',
+    + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months. '
+    + 'Use "log" when they are telling you what they SPENT ("spent 450 on groceries", "gumastos ako 200 sa jeep") — that records history and never changes a balance; use deduct only when they mean take it out of a named savings allocation.',
+    'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
     + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
     + 'So for news, sports, prices, elections, product releases, or anyone\'s current job or team, do not answer from memory as though it were current — say plainly that you cannot check and tell them to prefix their question with "web:" for a live search. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
@@ -13530,7 +14529,8 @@ async function chatAskAI(text, parserHint) {
   const cacheKey = chatContextSig(labelsOnly) + '|' + (parserHint || '') + '|' + text.toLowerCase().trim();
   // A cache hit makes no request, so it must not inherit the previous call's
   // rotation marker — otherwise a repeated question wrongly reports a switch.
-  if (_chatAiCache[cacheKey]) { _aiSwitchedTo = null; return _chatAiCache[cacheKey]; }
+  const hit = chatCacheGet(cacheKey);
+  if (hit) { _aiSwitchedTo = null; return hit; }
 
   const sys  = chatAISystemPrompt(parserHint);
   const hist = chatHistoryTurns();
@@ -13542,7 +14542,7 @@ async function chatAskAI(text, parserHint) {
   });
   const out = r.result;
   const intent = chatParseAIText(out);
-  _chatAiCache[cacheKey] = intent;
+  chatCacheSet(cacheKey, intent);
   return intent;
 }
 
@@ -13572,7 +14572,7 @@ function chatValidateOne(o) {
 
   if (a === 'say')   return { action: 'say',  reply: String(o.reply || '').slice(0, 4000) };
   if (a === 'none')  return { action: 'say',  reply: String(o.reply || 'I am not sure how to do that.').slice(0, 4000) };
-  if (['help', 'total', 'net', 'bills'].includes(a)) return { action: a };
+  if (['help', 'total', 'net', 'bills', 'ledger'].includes(a)) return { action: a };
   if (a === 'query') { if (!idxOK(o.target)) throw new Error('Unknown allocation.'); return { action: 'query', target: o.target }; }
   if (['add', 'deduct', 'set'].includes(a)) {
     if (!idxOK(o.target)) throw new Error('Unknown allocation.');
@@ -13591,6 +14591,16 @@ function chatValidateOne(o) {
     const hit = items.find(it => it.key === o.key);
     if (!hit) throw new Error('Unknown bill.');
     return { action: 'paybill', key: hit.key, label: hit.label, amount: hit.amt, viaAI: true };
+  }
+  if (a === 'log') {
+    if (!amtOK(o.amount) || o.amount <= 0) throw new Error('Bad amount.');
+    const cat = String(o.category || o.name || '').trim().slice(0, 60) || 'Uncategorised';
+    // Only ever accept a real date; anything else falls back to today rather
+    // than writing a row into a month the user never touched.
+    const dt = /^\d{4}-\d{2}-\d{2}$/.test(o.date) && !isNaN(new Date(o.date + 'T00:00:00'))
+      ? o.date : todayLocalStr();
+    return { action: 'log', amount: o.amount, category: cat, date: dt,
+             note: String(o.note || '').trim().slice(0, 120), viaAI: true };
   }
   if (a === 'wish') {
     const nm = String(o.name || '').trim().slice(0, 60);
@@ -13767,6 +14777,13 @@ function chatPreviewOne(intent) {
   if (a === 'paybill') {
     return { line: `Tick <b>${escH(intent.label)}</b> as paid`, sub: fPHP(intent.amount) + ' · bill checklist, this month' };
   }
+  if (a === 'log') {
+    const bits = [intent.date, 'spending ledger'];
+    if (intent.note) bits.push(intent.note);
+    return { line: `Log <b>${fPHP(intent.amount)}</b> spent on <b>${escH(intent.category)}</b>`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: bits.map(escH).join(' · ') };
+  }
   if (a === 'wish') {
     return { line: `Add <b>${escH(intent.name)}</b> to your Wishlist`, sub: intent.amount ? fPHP(intent.amount) : 'no price set' };
   }
@@ -13806,7 +14823,7 @@ function chatPostConfirm(intent) {
 function chatReviewCard(kind, rows) {
   const id = CHAT_SESSION + '-r' + (_chatIntentSeq++);
   _chatReviews[id] = { kind: kind, rows: rows };
-  const title = kind === 'hangout' ? '🧾 Receipt items — send to…' : '🧾 → Necessities';
+  const title = '🧾 Receipt items — send to…';
   const head = kind === 'hangout'
     ? '<tr><th>Item</th><th>Amt</th><th>Cur</th></tr>'
     : '<tr><th>Item</th><th>₱ Amt</th></tr>';
@@ -13817,12 +14834,14 @@ function chatReviewCard(kind, rows) {
   return `<div class="chat-review" id="chatCC-${id}">
       <div class="cc-line">${title} — ${rows.length} item${rows.length === 1 ? '' : 's'}</div>
       <div class="rv-scroll"><table class="rv-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>
-      <div class="cc-sub">${kind === 'hangout' ? 'Check the numbers, then pick where to send them — you can edit there after.' : 'Check the numbers, then add them. You can edit on the Expenses tab after.'}</div>
+      <div class="cc-sub">Check the numbers, then pick where they go. <b>Ledger</b> records them as money already spent; the others treat them as a bill or a split.</div>
       <div class="cc-btns">
         ${kind === 'hangout'
           ? `<button class="cc-ok" onclick="chatReviewApply('${id}','hangout')">→ Hangout</button>
-        <button class="cc-ok" onclick="chatReviewApply('${id}','cc')">→ CC Split</button>`
-          : `<button class="cc-ok" onclick="chatReviewApply('${id}','nec')">Add all</button>`}
+        <button class="cc-ok" onclick="chatReviewApply('${id}','cc')">→ CC Split</button>
+        <button class="cc-ok" onclick="chatReviewApply('${id}','ledger')">→ Ledger</button>`
+          : `<button class="cc-ok" onclick="chatReviewApply('${id}','nec')">→ Necessities</button>
+        <button class="cc-ok" onclick="chatReviewApply('${id}','ledger')">→ Ledger</button>`}
         <button class="cc-no" onclick="chatReviewCancel('${id}')">Cancel</button>
       </div>
     </div>`;
@@ -13862,6 +14881,24 @@ function chatReviewApply(id, dest) {
       });
       renderCCStores(); updateCCSummary(); saveCC();
       res = `✓ Added ${added} store${added === 1 ? '' : 's'} to CC Split — tap each to tick who shared it.`
+          + (skipped ? `  (${skipped} skipped — no live ₱ rate yet; resend once rates load.)` : '');
+    } else if (to === 'ledger') {
+      // Straight into the spending record — a receipt IS actual spend, so
+      // this is its most natural home. Foreign amounts convert to ₱ first.
+      let added = 0, skipped = 0;
+      rev.rows.forEach(r => {
+        const cur = CURRENCY_META[r.cur] ? r.cur : 'PHP';
+        const php = curToPhp(parseFloat(r.amt) || 0, cur);
+        if (php === null) { skipped++; return; }
+        ledgerAdd({ date: todayLocalStr(), amt: php, cat: String(r.name || '').slice(0, 60),
+                    src: 'receipt', note: '' }, true);
+        added++;
+      });
+      ledgerCommit();
+      const ymNowKey = ymNow();
+      const bva = ledgerBudgetVsActual(ymNowKey);
+      res = `✓ Logged ${added} item${added === 1 ? '' : 's'} to the spending ledger — `
+          + `${ymLabel(ymNowKey)} is now ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted.`
           + (skipped ? `  (${skipped} skipped — no live ₱ rate yet; resend once rates load.)` : '');
     } else {
       rev.rows.forEach(r => {
@@ -13913,7 +14950,7 @@ async function chatSubmit() {
   }
 
   // Read-only answers go straight out.
-  if (!forceAI && intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'undo'].includes(intent.action)) {
+  if (!forceAI && intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'ledger', 'undo'].includes(intent.action)) {
     const ans = chatAnswer(intent);
     if (ans != null) { chatPush('app', ans); return; }
   }
@@ -13949,7 +14986,7 @@ async function chatSubmit() {
           + '↻ switched to ' + escH(_aiSwitchedTo) + ' — your usual model hit its daily cap</div>';
         chatPush('app', h);
       }
-      else if (['help', 'query', 'total', 'net', 'bills'].includes(ai.action)) {
+      else if (['help', 'query', 'total', 'net', 'bills', 'ledger'].includes(ai.action)) {
         const ans = chatAnswer(ai);
         chatPush('app', ans != null ? ans : 'I did not understand that.');
       } else {
