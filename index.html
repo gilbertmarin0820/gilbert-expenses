@@ -1778,7 +1778,7 @@
   .ldg-note { display: block; font-size: 10.5px; color: var(--text3); }
   .ldg-amt  { font-family: 'DM Mono', monospace; font-size: 12.5px; color: var(--red-text); flex: 0 0 auto; }
   .ldg-src {
-    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px;
+    font-size: 11px; line-height: 1; padding: 3px 7px;
     border-radius: 999px; border: 1px solid var(--border2); color: var(--text3); flex: 0 0 auto;
   }
   .ldg-src.receipt { border-color: var(--purple); color: var(--purple-text); }
@@ -1788,6 +1788,40 @@
     font-size: 12px; padding: 2px 4px; flex: 0 0 auto;
   }
   .ldg-del:hover { color: var(--red-text); }
+  .ldg-ed { font-size: 8px; margin-left: 1px; opacity: 0.8; }
+  .ldg-edit-btn {
+    background: none; border: none; color: var(--text3); cursor: pointer;
+    font-size: 12px; padding: 2px 4px; flex: 0 0 auto;
+  }
+  .ldg-edit-btn:hover { color: var(--blue-text); }
+  .ldg-row.editing { border-color: var(--blue); background: var(--surface3); flex-wrap: wrap; }
+  .ldg-row.editing .ldg-in { font-size: 12px; padding: 6px 8px; }
+  .ldg-cover { font-size: 10.5px; color: var(--text3); margin: -3px 0 9px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .ldg-sug { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 2px 0 10px; }
+  .ldg-sug-lbl { font-size: 10.5px; color: var(--text3); }
+  .ldg-sug-chip {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+    border-radius: 999px; font-size: 11px; padding: 3px 10px; cursor: pointer; font-family: 'Outfit', sans-serif;
+  }
+  .ldg-sug-chip:hover { border-color: var(--blue); color: var(--blue-text); }
+  .ldg-sug-chip.on { border-color: var(--green); color: var(--green-text); background: var(--green-dim); }
+
+  .ins-card {
+    padding: 12px 14px; background: var(--surface2); border: 1px solid var(--purple);
+    border-radius: var(--radius-sm); margin-bottom: 12px;
+  }
+  .ins-card.muted { border-color: var(--border2); }
+  .ins-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--purple-text); margin-bottom: 6px; }
+  .ins-head { font-size: 13px; color: var(--text); font-weight: 600; line-height: 1.45; }
+  .ins-b { font-size: 12px; color: var(--text2); line-height: 1.55; margin-top: 6px; padding-left: 15px; position: relative; }
+  .ins-b:before { content: '\2022'; position: absolute; left: 3px; color: var(--purple-text); }
+  .ins-watch { font-size: 11.5px; color: var(--amber-text); margin-top: 9px; line-height: 1.5; }
+  .ins-foot { font-size: 10px; color: var(--text3); margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ins-btn {
+    background: var(--surface3); border: 1px solid var(--border2); color: var(--text2);
+    border-radius: var(--radius-sm); font-size: 11px; padding: 4px 10px; cursor: pointer; font-family: 'Outfit', sans-serif;
+  }
+  .ins-btn:hover { border-color: var(--purple); color: var(--purple-text); }
 
   .due-wrap {
     max-width: 1100px; margin: 12px auto 0; padding: 12px 14px;
@@ -1863,7 +1897,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-25f</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-26a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2965,7 +2999,7 @@
       <div style="font-size:11px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
         Everything else here is a <strong>plan</strong>. This is the <strong>record</strong> — money that actually left.
         Log it by hand, send a receipt photo to the 💬 chat, or type <code style="background:var(--surface2); padding:1px 5px; border-radius:3px;">log 250 groceries</code>.
-        Close a month to freeze it into history.
+        Categories are guessed from what you have logged before. Close a month to freeze it into history — and, if an AI provider is set up, to have it written up once.
       </div>
 
       <!-- month nav -->
@@ -2985,11 +3019,15 @@
         <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01" min="0"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
         <input type="text" id="ldgCat" class="ldg-in" list="ldgCatList" placeholder="Category" maxlength="60"
+          oninput="onLdgCatInput()"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
-        <input type="text" id="ldgNote" class="ldg-in" placeholder="Note (optional)" maxlength="120"
+        <input type="text" id="ldgNote" class="ldg-in" placeholder="Note / merchant (optional)" maxlength="120"
+          oninput="onLdgNoteInput()"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
         <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
       </div>
+      <!-- category memory: learned from your own past entries, no AI call -->
+      <div class="ldg-sug" id="ldgSuggest"></div>
       <datalist id="ldgCatList"></datalist>
 
       <div id="ledgerBody"></div>
@@ -9236,11 +9274,18 @@ const MONTHS_KEY      = 'va_spend_log';
 const LEDGER_MAX      = 2000;   // hard cap so the key can never balloon
 const LEDGER_HIST_MAX = 36;     // months of snapshots kept
 const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat' };
+const LEDGER_SRC_ICON  = { manual: '\u2328', receipt: '\uD83E\uDDFE', chat: '\uD83D\uDCAC' };
+const INSIGHT_KEY      = 'va_insights';  // { 'YYYY-MM': { headline, bullets[], watch, sig, model, at } }
+const INSIGHT_MAX      = 12;             // months of insight cards kept
 const PL_LEDGER_LABEL  = { shopee: 'SPayLater (Shopee)', tiktok: 'TikTok PayLater', maya: 'Maya Black CC' };
 
 let ledger       = [];   // [{id, date:'YYYY-MM-DD', amt, cat, src, note}]
 let ledgerSeq    = 1;
 let ledgerViewYM = '';   // 'YYYY-MM' currently on screen
+let ledgerEditId = 0;    // entry id currently open for inline editing (0 = none)
+let _catmem      = null; // memoised merchant->category index, rebuilt on any write
+let _insightBusy = '';   // ym whose insight is mid-flight
+let _insightErr  = null; // { ym, msg } of the last failure, shown on the card
 
 // ── month-key helpers ─────────────────────────────────────────
 function ymNow() {
@@ -9285,7 +9330,9 @@ function loadLedger() {
     cat:  String(e.cat || '').slice(0, 60) || 'Uncategorised',
     src:  LEDGER_SRC_LABEL[e.src] ? e.src : 'manual',
     note: String(e.note || '').slice(0, 120),
+    edited: !!e.edited,
   }));
+  catmemInvalidate();
   ledgerSeq = seq;
   // Same drift guard as the other id counters: a partial write or an older
   // backup can leave rows with ids above a counter that restarted at 1, and
@@ -9316,6 +9363,7 @@ function ledgerAdd(e, defer) {
     cat:  String((e && e.cat) || '').trim().slice(0, 60) || 'Uncategorised',
     src:  LEDGER_SRC_LABEL[e && e.src] ? e.src : 'manual',
     note: String((e && e.note) || '').trim().slice(0, 120),
+    edited: false,
   };
   ledger.push(entry);
   if (ledger.length > LEDGER_MAX) ledger = ledger.slice(-LEDGER_MAX);
@@ -9323,7 +9371,9 @@ function ledgerAdd(e, defer) {
   return entry;
 }
 
-function ledgerCommit() { saveLedger(); renderLedger(); }
+// Every write invalidates the category memory: it is derived from `ledger`,
+// so a stale index would keep suggesting a category you just renamed away.
+function ledgerCommit() { catmemInvalidate(); saveLedger(); renderLedger(); }
 
 function ledgerDelete(id) {
   const before = ledger.length;
@@ -9349,6 +9399,10 @@ function ledgerAddFromForm() {
     note: nEl ? nEl.value : '',
   });
   aEl.value = ''; if (nEl) nEl.value = '';
+  // A guessed category belonged to the note that just cleared, so it goes
+  // too; one you typed yourself stays put for the next row.
+  if (_ldgCatAuto && cEl) cEl.value = '';
+  _ldgCatAuto = false;
   // Jump the view to the month the entry landed in, so it is visible.
   ledgerViewYM = ymOf(entry.date);
   renderLedger();
@@ -9523,6 +9577,12 @@ function ledgerCloseMonth(ym) {
   saveMonthHistory(hist);
   renderLedger();
   showToast('📘 ' + ymLabel(ym) + ' closed — ' + fPHP(actual) + ' spent vs ' + fPHP(planned) + ' budgeted');
+  // The one moment the month is worth an AI request: it just stopped moving.
+  // Nothing is spent when there is no record to review, no provider set up,
+  // or an unchanged insight already exists.
+  if (rows.length && insightReady()) {
+    try { insightGenerate(ym, { quiet: true }); } catch (e) {}
+  }
 }
 
 function ledgerReopenMonth(ym) {
@@ -9533,6 +9593,407 @@ function ledgerReopenMonth(ym) {
   saveMonthHistory(hist);
   renderLedger();
   showToast('↺ ' + ymLabel(ym) + ' reopened');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INLINE EDIT
+// Entries could only be deleted and retyped, which quietly punished you for
+// fixing a typo: the retyped row lost its date order and its provenance. An
+// edit keeps both and only marks the row as edited.
+// ══════════════════════════════════════════════════════════════
+function ledgerEditStart(id) {
+  ledgerEditId = id;
+  renderLedger();
+  const el = document.getElementById('ldgE-amt');
+  if (el) { el.focus(); el.select(); }
+}
+
+function ledgerEditCancel() { ledgerEditId = 0; renderLedger(); }
+
+function ledgerEditSave(id) {
+  const e = ledger.find(x => x.id === id);
+  if (!e) { ledgerEditId = 0; renderLedger(); return; }
+  const g = i => document.getElementById(i);
+  const amtEl = g('ldgE-amt');
+  const amt = parseFloat(amtEl ? amtEl.value : '');
+  if (!(amt > 0)) { showToast('Enter an amount first', true); if (amtEl) amtEl.focus(); return; }
+
+  const dRaw = g('ldgE-date') ? g('ldgE-date').value : '';
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dRaw) ? dRaw : e.date;
+  const cat  = String(g('ldgE-cat')  ? g('ldgE-cat').value  : '').trim().slice(0, 60) || 'Uncategorised';
+  const note = String(g('ldgE-note') ? g('ldgE-note').value : '').trim().slice(0, 120);
+  const amtR = Math.round(amt * 100) / 100;
+
+  const changed = date !== e.date || amtR !== e.amt || cat !== e.cat || note !== e.note;
+  const wasYM   = ymOf(e.date);
+  e.date = date; e.amt = amtR; e.cat = cat; e.note = note;
+  if (changed) e.edited = true;
+  ledgerEditId = 0;
+  ledgerViewYM = ymOf(e.date);           // follow the row if it moved months
+  ledgerCommit();
+  if (!changed) return;
+  showToast('\u270E Updated \u2014 ' + fPHP(e.amt) + ' ' + e.cat);
+  // A closed month keeps the total it was closed with, so an edit inside one
+  // is only half applied until it is re-closed. Say so rather than let the
+  // two numbers disagree in silence.
+  const hist = loadMonthHistory();
+  [wasYM, ymOf(e.date)].forEach((k, i, a) => {
+    if (i && a[0] === k) return;
+    if (hist[k]) showToast('\u26A0 ' + ymLabel(k) + ' is closed \u2014 re-close it to refresh its snapshot', true);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// MERCHANT → CATEGORY MEMORY
+// Every entry you have ever logged is training data, so the app can answer
+// "what category is this?" itself instead of spending an AI request on it.
+// The index is DERIVED from `ledger` rather than stored: no new key, no
+// migration, and it inherits sync, export and profile scoping for free.
+// ══════════════════════════════════════════════════════════════
+const CATMEM_STOP = ['the','and','for','from','with','php','pcs','pack','item','items','total',
+  'payment','paid','purchase','store','shop','inc','ltd','corp','branch','receipt','order','ref','qty'];
+const CATMEM_MIN_SCORE = 0.5;   // below this the match is a coincidence
+const CATMEM_MIN_CONF  = 0.5;   // at or below this two categories are tied
+
+function catmemTokens(s) {
+  const out = [];
+  String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').forEach(t => {
+    if (t.length < 3 || /^\d+$/.test(t)) return;
+    if (CATMEM_STOP.indexOf(t) !== -1) return;
+    if (out.indexOf(t) === -1) out.push(t);
+  });
+  return out.slice(0, 10);
+}
+
+function catmemInvalidate() { _catmem = null; }
+
+function catmemIndex() {
+  if (_catmem) return _catmem;
+  const tok = {};    // token -> { total, cats: { key: { n, label, last } } }
+  const cats = {};   // key   -> { key, label, n, last }
+  function bump(token, key, label, weight, date) {
+    const t = tok[token] || (tok[token] = { total: 0, cats: {} });
+    const c = t.cats[key] || (t.cats[key] = { n: 0, label: label, last: '' });
+    c.n += weight; t.total += weight;
+    if (date > c.last) { c.last = date; c.label = label; }
+  }
+  ledger.forEach(e => {
+    const key = ledgerCatKey(e.cat);
+    const label = String(e.cat || '').trim() || 'Uncategorised';
+    const cc = cats[key] || (cats[key] = { key: key, label: label, n: 0, last: '' });
+    cc.n++;
+    if (e.date > cc.last) { cc.last = e.date; cc.label = label; }
+    // The note is the merchant text you actually type, so it carries the
+    // signal. The category's own words are a weaker second source, so that
+    // a receipt line reading "SM Supermarket" still finds the category of
+    // that name even when no note ever mentioned it.
+    catmemTokens(e.note).forEach(t => bump(t, key, label, 1,   e.date));
+    catmemTokens(e.cat ).forEach(t => bump(t, key, label, 0.4, e.date));
+  });
+  _catmem = { tok: tok, cats: cats, entries: ledger.length };
+  return _catmem;
+}
+
+// Score the remembered categories against a piece of text. A token that
+// shows up under many categories ("load", "bill") splits its weight and so
+// decides nothing; one that only ever appeared under a single category
+// carries its full vote.
+function catSuggest(text, limit) {
+  const idx = catmemIndex(), toks = catmemTokens(text);
+  if (!toks.length) return [];
+  const acc = {};
+  toks.forEach(t => {
+    const e = idx.tok[t];
+    if (!e || e.total <= 0) return;
+    Object.keys(e.cats).forEach(k => {
+      const c = e.cats[k];
+      const r = acc[k] || (acc[k] = { key: k, label: c.label, score: 0, n: 0, last: '' });
+      r.score += c.n / e.total;
+      r.n     += c.n;
+      if (c.last > r.last) { r.last = c.last; r.label = c.label; }
+    });
+  });
+  const list = Object.keys(acc).map(k => acc[k]);
+  const sum  = list.reduce((s, r) => s + r.score, 0);
+  list.forEach(r => { r.confidence = sum > 0 ? r.score / sum : 0; r.score = Math.round(r.score * 1000) / 1000; });
+  list.sort((a, b) => (b.score - a.score) || (a.last < b.last ? 1 : -1));
+  return list.slice(0, limit || 3);
+}
+
+// One answer, and only when the memory is actually sure of it.
+function catSuggestBest(text) {
+  const l = catSuggest(text, 3);
+  if (!l.length) return null;
+  const best = l[0];
+  if (best.score < CATMEM_MIN_SCORE || best.confidence <= CATMEM_MIN_CONF) return null;
+  return best;
+}
+
+// Fallback chips when there is nothing to match against yet: what you have
+// been logging lately, most recent first.
+function catTopCats(limit) {
+  const idx = catmemIndex();
+  return Object.keys(idx.cats).map(k => idx.cats[k])
+    .sort((a, b) => (a.last < b.last ? 1 : a.last > b.last ? -1 : b.n - a.n))
+    .slice(0, limit || 4);
+}
+
+let _ldgCatAuto = false;   // the category box currently holds a guess, not a choice
+
+function renderCatSuggest() {
+  const box = document.getElementById('ldgSuggest');
+  if (!box) return;
+  const cEl  = document.getElementById('ldgCat');
+  const nEl  = document.getElementById('ldgNote');
+  const text = nEl ? nEl.value : '';
+  let head = '', chips = [];
+
+  if (text.trim()) {
+    const list = catSuggest(text, 3).filter(r => r.score >= 0.2);
+    if (list.length) {
+      head  = '\uD83E\uDDE0 looks like';
+      chips = list.map(r => ({ label: r.label, title: 'matched your past entries (' + Math.round(r.confidence * 100) + '% sure)' }));
+      const best = catSuggestBest(text);
+      if (best && cEl && (!cEl.value.trim() || _ldgCatAuto)) { cEl.value = best.label; _ldgCatAuto = true; }
+    }
+  }
+  if (!chips.length) {
+    const top = catTopCats(4);
+    if (!top.length) { box.innerHTML = ''; return; }
+    head  = '\u21BA recent';
+    chips = top.map(c => ({ label: c.label, title: 'logged ' + c.n + '\u00D7' }));
+  }
+
+  box.innerHTML = '<span class="ldg-sug-lbl">' + head + '</span>' + chips.map(c =>
+    `<button class="ldg-sug-chip${cEl && cEl.value === c.label ? ' on' : ''}" title="${escH(c.title)}" onclick="ldgPickCat('${escJS(c.label)}')">${escH(c.label)}</button>`
+  ).join('');
+}
+
+function ldgPickCat(label) {
+  const cEl = document.getElementById('ldgCat');
+  if (!cEl) return;
+  cEl.value = label;
+  _ldgCatAuto = false;          // an explicit tap is a choice, not a guess
+  renderCatSuggest();
+  const aEl = document.getElementById('ldgAmt');
+  if (aEl && !aEl.value) aEl.focus();
+}
+
+function onLdgNoteInput() { renderCatSuggest(); }
+function onLdgCatInput()  { _ldgCatAuto = false; renderCatSuggest(); }
+
+// ══════════════════════════════════════════════════════════════
+// MONTHLY INSIGHT CARD
+// The AI could always answer "how much on subscriptions" but never "food has
+// been drifting since May", because it only ever saw one snapshot. A closed
+// month plus its predecessors is exactly the payload that answers the second
+// question — and it is written ONCE, against the frozen snapshot, so the
+// card costs one request per month rather than one per glance. Read-only:
+// this path never validates an intent and can never write to your data.
+// ══════════════════════════════════════════════════════════════
+const INSIGHT_SYS =
+  'You are writing a short month-end review of one person\'s own spending record. The input is JSON: '
++ 'one CLOSED month (its frozen budget against what actually left) plus up to five earlier closed months. '
++ 'Reply with ONLY a JSON object and no markdown fences: '
++ '{"headline":"...","bullets":["..."],"watch":"..."}. '
++ 'headline: one sentence under 90 characters naming the single most important thing that happened. '
++ 'bullets: 2 to 4 strings, each under 140 characters, each naming a specific category and a real figure '
++ 'from the JSON. Prefer a trend across months over a fact about one month, and name the month a trend '
++ 'started when the data shows it. watch: one sentence naming the one category worth watching next month. '
++ 'Never state a number that is not in or derivable from the JSON, never guess at causes, never give '
++ 'investment advice, and do not moralise — this is an adult reviewing their own record. '
++ 'Amounts are Philippine pesos; write them as ₱1,234.';
+
+function loadInsights() {
+  try { return JSON.parse(localStorage.getItem(INSIGHT_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveInsights(o) {
+  const keys = Object.keys(o).sort();
+  while (keys.length > INSIGHT_MAX) delete o[keys.shift()];
+  try { localStorage.setItem(INSIGHT_KEY, JSON.stringify(o)); } catch (e) {}
+}
+
+function insightHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+// The card is pinned to the numbers it was written about \u2014 the frozen
+// budget plus the actuals as they stood. Edit or delete an entry inside a
+// closed month and the signature moves, so the card is marked stale instead
+// of quietly describing figures that no longer exist.
+function insightSig(ym) {
+  const snap = loadMonthHistory()[ym];
+  if (!snap) return '';
+  const r2 = v => Math.round((parseFloat(v) || 0) * 100) / 100;
+  const bva = ledgerBudgetVsActual(ym);
+  const cats = bva.lines.slice()
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+    .map(l => l.key + ':' + r2(l.budget) + ':' + r2(l.actual)).join(',');
+  return 'v1-' + insightHash([ym, r2(bva.plannedTotal), r2(bva.actualTotal),
+    r2(snap.income), ledgerMonth(ym).length, cats].join('|'));
+}
+
+// Per-category history comes from the ledger itself rather than the old
+// snapshots, so a category that only started last month still gets a series.
+function insightCatSeries(key, ym, months) {
+  const out = [];
+  for (let k = months; k >= 1; k--) {
+    const m = ymShift(ym, -k);
+    const rows = ledgerMonth(m);
+    if (!rows.length) continue;
+    let sum = 0;
+    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) sum += e.amt; });
+    out.push({ month: m, spent: Math.round(sum * 100) / 100 });
+  }
+  return out;
+}
+
+function insightPayload(ym) {
+  const hist = loadMonthHistory(), snap = hist[ym];
+  if (!snap) return null;
+  const r2  = v => Math.round((parseFloat(v) || 0) * 100) / 100;
+  const bva = ledgerBudgetVsActual(ym);
+  const prior = Object.keys(hist).filter(k => k < ym).sort().reverse().slice(0, 5).reverse();
+
+  return {
+    currency: 'PHP',
+    month: ym,
+    month_label: ymLabel(ym),
+    income: r2(snap.income),
+    budgeted: r2(bva.plannedTotal),
+    spent: r2(bva.actualTotal),
+    difference: r2(bva.actualTotal - bva.plannedTotal),
+    savings_rate_pct: (snap.savingsRate === undefined) ? null : snap.savingsRate,
+    entries: ledgerMonth(ym).length,
+    categories: bva.lines.filter(l => l.actual > 0 || l.budget > 0).slice(0, 12).map(l => ({
+      category: l.label,
+      budget: r2(l.budget),
+      spent: r2(l.actual),
+      entries: l.n,
+      budgeted_line: l.budgeted,
+      vs_3mo_avg_pct: l.trendPct,
+      previous_months: insightCatSeries(l.key, ym, 5),
+    })),
+    previous_months: prior.map(k => ({
+      month: k,
+      budgeted: r2(hist[k].planned),
+      spent: r2(hist[k].actual),
+      income: r2(hist[k].income),
+      savings_rate_pct: (hist[k].savingsRate === undefined) ? null : hist[k].savingsRate,
+    })),
+  };
+}
+
+function insightParse(out) {
+  const clean = String(out || '').replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  let o;
+  try { o = JSON.parse(clean); } catch (e) { throw new Error('The AI did not return usable JSON.'); }
+  if (Array.isArray(o)) o = o[0] || {};
+  if (!o || typeof o !== 'object') throw new Error('The AI did not return usable JSON.');
+  const bullets = (Array.isArray(o.bullets) ? o.bullets : [])
+    .map(b => String(b === null || b === undefined ? '' : b).trim().slice(0, 220))
+    .filter(Boolean).slice(0, 4);
+  const headline = String(o.headline || '').trim().slice(0, 180);
+  if (!headline && !bullets.length) throw new Error('The AI returned an empty insight.');
+  return { headline: headline, bullets: bullets, watch: String(o.watch || '').trim().slice(0, 220) };
+}
+
+function insightReady() {
+  return aiProvider() !== 'off' && !!aiKey() && !aiLabelsOnly();
+}
+
+async function insightGenerate(ym, opts) {
+  const force = !!(opts && opts.force), quiet = !!(opts && opts.quiet);
+  if (_insightBusy) return null;
+  const snap = loadMonthHistory()[ym];
+  if (!snap) { if (!quiet) showToast('Close the month first', true); return null; }
+  if (aiProvider() === 'off' || !aiKey()) { if (!quiet) showToast('Pick an AI provider in Settings first', true); return null; }
+  if (aiLabelsOnly()) { if (!quiet) showToast('\u201CLabels only\u201D hides the amounts an insight is made of', true); return null; }
+
+  const all = loadInsights(), sig = insightSig(ym);
+  if (!force && all[ym] && all[ym].sig === sig) return all[ym];   // already paid for
+
+  _insightErr = null;
+  _insightBusy = ym;
+  try { renderLedger(); } catch (e) {}
+  try {
+    const provider = aiProvider(), key = aiKey();
+    const payload = JSON.stringify(insightPayload(ym));
+    const r = await aiTryModels(async (m) => {
+      aiBumpReqCount();
+      return (provider === 'gemini')
+        ? await chatAskGemini(payload, key, m, INSIGHT_SYS, [], null)
+        : await chatAskAnthropic(payload, key, m, INSIGHT_SYS, [], null);
+    });
+    const card = insightParse(r.result);
+    card.ym = ym; card.sig = sig; card.model = r.model; card.at = new Date().toISOString();
+    all[ym] = card;
+    saveInsights(all);
+    if (!quiet) showToast('\u2728 Insight written for ' + ymLabel(ym));
+    return card;
+  } catch (e) {
+    _insightErr = { ym: ym, msg: (e && e.message) || String(e) };
+    if (!quiet) showToast('Insight failed \u2014 ' + _insightErr.msg, true);
+    return null;
+  } finally {
+    _insightBusy = '';
+    try { aiUpdateQuotaUI(); } catch (e) {}
+    try { renderLedger(); } catch (e) {}
+  }
+}
+
+function insightRegenerate(ym) { insightGenerate(ym, { force: true }); }
+
+function insightDiscard(ym) {
+  const all = loadInsights();
+  if (!all[ym]) return;
+  if (!confirm('Delete the insight for ' + ymLabel(ym) + '?\n\nWriting a new one costs another AI request.')) return;
+  delete all[ym];
+  saveInsights(all);
+  renderLedger();
+}
+
+function insightCardHTML(ym) {
+  const closed = !!loadMonthHistory()[ym];
+  const card   = loadInsights()[ym];
+  const busy   = _insightBusy === ym;
+  const err    = (_insightErr && _insightErr.ym === ym) ? _insightErr.msg : '';
+  if (!closed && !card) return '';                      // nothing frozen to review yet
+
+  if (busy) {
+    return `<div class="ins-card muted"><div class="ins-kicker">\u2728 Month-end insight</div>
+      <div style="font-size:12px; color:var(--text3);">Reading ${escH(ymLabel(ym))}\u2026</div></div>`;
+  }
+
+  if (!card) {
+    const hint = insightReady()
+      ? `<button class="ins-btn" onclick="insightGenerate('${escJS(ym)}')">\u2728 Write the insight</button>
+         <span>one AI request, written against the closed snapshot</span>`
+      : `<span>${aiLabelsOnly()
+            ? 'Turn off \u201Clabels only\u201D in Settings \u2014 an insight is made of the amounts it hides.'
+            : 'Set up an AI provider in Settings to get a written review of this month.'}</span>`;
+    return `<div class="ins-card muted"><div class="ins-kicker">\u2728 Month-end insight</div>
+      <div class="ins-foot" style="margin-top:0;">${hint}</div>
+      ${err ? `<div style="font-size:11px; color:var(--red-text); margin-top:8px;">${escH(err)}</div>` : ''}</div>`;
+  }
+
+  const stale = card.sig && card.sig !== insightSig(ym);
+  const when  = card.at ? String(card.at).slice(0, 10) : '';
+  return `<div class="ins-card">
+    <div class="ins-kicker">\u2728 Month-end insight \u2014 ${escH(ymLabel(ym))}</div>
+    <div class="ins-head">${escH(card.headline)}</div>
+    ${card.bullets.map(b => `<div class="ins-b">${escH(b)}</div>`).join('')}
+    ${card.watch ? `<div class="ins-watch">\uD83D\uDC40 ${escH(card.watch)}</div>` : ''}
+    ${stale ? `<div style="font-size:11px; color:var(--amber-text); margin-top:9px;">\u26A0 This month\u2019s numbers changed after the insight was written \u2014 it describes the older figures.</div>` : ''}
+    ${err ? `<div style="font-size:11px; color:var(--red-text); margin-top:8px;">${escH(err)}</div>` : ''}
+    <div class="ins-foot">
+      <span>written ${escH(when)}${card.model ? ' \u00B7 ' + escH(card.model) : ''}</span>
+      <button class="ins-btn" onclick="insightRegenerate('${escJS(ym)}')" title="Costs one more AI request">\u21BB Rewrite</button>
+      <button class="ins-btn" onclick="insightDiscard('${escJS(ym)}')">\u2715 Discard</button>
+    </div>
+  </div>`;
 }
 
 // ── rendering ─────────────────────────────────────────────────
@@ -9594,6 +10055,9 @@ function renderLedger() {
     <div style="font-size:10.5px; color:var(--text3); margin-top:6px;">${bva.plannedTotal > 0 ? pct.toFixed(0) + '% of the month\u2019s budget used' : 'No budget lines for this month yet — add bills under Necessities, Subscriptions or Installments.'}</div>
   </div>`;
 
+  // ── month-end insight (only ever for a closed month) ──
+  h += insightCardHTML(ym);
+
   // ── unclosed previous month nudge ──
   const prevYM = ymShift(ymNow(), -1);
   if (!loadMonthHistory()[prevYM] && ledgerMonth(prevYM).length > 0) {
@@ -9635,14 +10099,43 @@ function renderLedger() {
   if (!rows.length) {
     h += `<div style="font-size:12px; color:var(--text3); padding:6px 0;">Nothing logged for this month yet. Add a row above, send a receipt photo to the 💬 chat, or type <b>log 250 groceries</b>.</div>`;
   } else {
-    h += `<div class="ldg-rows">` + rows.map(e => `
-      <div class="ldg-row">
+    // Where the month's record actually came from. A month that is mostly
+    // typed from memory is a weaker record than one backed by receipts, and
+    // until now nothing said which kind you were looking at.
+    const srcN = { manual: 0, receipt: 0, chat: 0 };
+    rows.forEach(e => { srcN[e.src] = (srcN[e.src] || 0) + 1; });
+    const editedN = rows.filter(e => e.edited).length;
+    const backed  = Math.round((srcN.receipt / rows.length) * 100);
+    h += `<div class="ldg-cover">
+      ${['receipt', 'chat', 'manual'].filter(k => srcN[k]).map(k =>
+        `<span title="${escH(LEDGER_SRC_LABEL[k])}">${LEDGER_SRC_ICON[k]} ${srcN[k]} ${escH(LEDGER_SRC_LABEL[k])}</span>`).join('')}
+      <span style="color:${backed >= 50 ? 'var(--green-text)' : 'var(--text3)'};">${backed}% receipt-backed</span>
+      ${editedN ? `<span title="edited after they were logged">✎ ${editedN} edited</span>` : ''}
+    </div>`;
+
+    h += `<div class="ldg-rows">` + rows.map(e => {
+      if (e.id === ledgerEditId) {
+        return `<div class="ldg-row editing">
+          <input type="date" id="ldgE-date" class="ldg-in" style="flex:0 0 auto;" value="${escH(e.date)}">
+          <input type="number" id="ldgE-amt" class="ldg-in" style="flex:0 0 110px;" inputmode="decimal" step="0.01" min="0" value="${escH(String(e.amt))}"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
+          <input type="text" id="ldgE-cat" class="ldg-in" list="ldgCatList" maxlength="60" style="flex:1 1 120px;" value="${escH(e.cat)}"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
+          <input type="text" id="ldgE-note" class="ldg-in" maxlength="120" placeholder="Note" style="flex:1 1 120px;" value="${escH(e.note || '')}"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
+          <button class="ldg-edit-btn" style="color:var(--green-text);" onclick="ledgerEditSave(${e.id})" title="Save">✓</button>
+          <button class="ldg-edit-btn" onclick="ledgerEditCancel()" title="Cancel">✕</button>
+        </div>`;
+      }
+      return `<div class="ldg-row">
         <span class="ldg-date">${escH(e.date.slice(5))}</span>
         <span class="ldg-cat">${escH(e.cat)}${e.note ? `<span class="ldg-note">${escH(e.note)}</span>` : ''}</span>
-        <span class="ldg-src ${escH(e.src)}">${escH(LEDGER_SRC_LABEL[e.src] || e.src)}</span>
+        <span class="ldg-src ${escH(e.src)}" title="${escH(LEDGER_SRC_LABEL[e.src] || e.src)}${e.edited ? ' · edited since' : ''}">${LEDGER_SRC_ICON[e.src] || '•'}${e.edited ? '<sup class="ldg-ed">✎</sup>' : ''}</span>
         <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this entry">✎</button>
         <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this entry">✕</button>
-      </div>`).join('') + `</div>`;
+      </div>`;
+    }).join('') + `</div>`;
   }
 
   // ── close / print controls ──
@@ -9674,6 +10167,9 @@ function renderLedger() {
   }
 
   body.innerHTML = h;
+  // The quick-add form lives outside #ledgerBody so typing is never
+  // interrupted; its chips still have to follow the data.
+  try { renderCatSuggest(); } catch (e) {}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -11645,6 +12141,7 @@ const BACKUP_KEYS = [
   'va_wallet_qrs',
   'va_sr_history',   // savings-rate streak snapshots (🔥 badge) — must sync + be per-profile
   'va_conv_pins',    // pinned currencies in the converter — nice to carry across devices
+  'va_insights',     // month-end insight cards — synced so a second device never re-pays for one
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -12695,6 +13192,7 @@ const STORAGE_KEY_LABELS = {
   va_unit_sel:           'Unit converter choice',
   va_last_tab:           'Last open tab',
   va_due_dismiss:        'Due-soon nudge dismissal',
+  va_insights:           'Month-end insights',
 };
 
 function fmtBytes(b) {
@@ -14885,13 +15383,20 @@ function chatReviewApply(id, dest) {
     } else if (to === 'ledger') {
       // Straight into the spending record — a receipt IS actual spend, so
       // this is its most natural home. Foreign amounts convert to ₱ first.
-      let added = 0, skipped = 0;
+      let added = 0, skipped = 0, learned = 0;
       rev.rows.forEach(r => {
         const cur = CURRENCY_META[r.cur] ? r.cur : 'PHP';
         const php = curToPhp(parseFloat(r.amt) || 0, cur);
         if (php === null) { skipped++; return; }
-        ledgerAdd({ date: todayLocalStr(), amt: php, cat: String(r.name || '').slice(0, 60),
-                    src: 'receipt', note: '' }, true);
+        // A receipt line is a merchant string, not a category. If your own
+        // past entries already answer what it is, file it there and keep the
+        // raw line as the note; otherwise it stays its own category.
+        const raw   = String(r.name || '').slice(0, 60);
+        const guess = catSuggestBest(raw);
+        if (guess) learned++;
+        ledgerAdd({ date: todayLocalStr(), amt: php,
+                    cat: guess ? guess.label : raw,
+                    src: 'receipt', note: guess ? raw : '' }, true);
         added++;
       });
       ledgerCommit();
@@ -14899,6 +15404,7 @@ function chatReviewApply(id, dest) {
       const bva = ledgerBudgetVsActual(ymNowKey);
       res = `✓ Logged ${added} item${added === 1 ? '' : 's'} to the spending ledger — `
           + `${ymLabel(ymNowKey)} is now ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted.`
+          + (learned ? `  (${learned} categorised from your past entries — check them.)` : '')
           + (skipped ? `  (${skipped} skipped — no live ₱ rate yet; resend once rates load.)` : '');
     } else {
       rev.rows.forEach(r => {
