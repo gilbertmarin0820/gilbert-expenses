@@ -973,6 +973,7 @@
     .paylater-grid     { grid-template-columns: 1fr !important; }
     .savings-pl-grid   { grid-template-columns: 1fr !important; }
     .sav3-grid         { grid-template-columns: 1fr !important; }
+    .sav3-right        { grid-template-columns: 1fr !important; }
 
     /* ── Header ───────────────────────────────────────────── */
     header         { padding: 11px 14px; }
@@ -1783,6 +1784,7 @@
   }
   .ldg-src.receipt { border-color: var(--purple); color: var(--purple-text); }
   .ldg-src.chat    { border-color: var(--blue);   color: var(--blue-text); }
+  .ldg-src.bill    { border-color: var(--teal);   color: var(--teal-text); }
   .ldg-del {
     background: none; border: none; color: var(--text3); cursor: pointer;
     font-size: 12px; padding: 2px 4px; flex: 0 0 auto;
@@ -1805,6 +1807,41 @@
   }
   .ldg-sug-chip:hover { border-color: var(--blue); color: var(--blue-text); }
   .ldg-sug-chip.on { border-color: var(--green); color: var(--green-text); background: var(--green-dim); }
+
+  /* ── CATEGORY CAPS ── the only budget lines not derived from a bill ── */
+  .cap-wrap {
+    margin: 2px 0 14px; padding: 11px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .cap-hd {
+    font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px;
+    margin-bottom: 9px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  }
+  .cap-hd .cap-hd-sub { text-transform: none; letter-spacing: 0; font-size: 10.5px; }
+  .cap-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
+  .cap-row .cap-name { flex: 1 1 130px; min-width: 0; }
+  .cap-row .cap-amt  { flex: 0 0 128px; }
+  .cap-note { font-size: 10.5px; color: var(--text3); line-height: 1.5; margin-top: 6px; }
+  .cap-allow { font-size: 10.5px; font-family: 'DM Mono', monospace; color: var(--green-text); margin-top: 3px; }
+  .cap-allow.over { color: var(--red-text); }
+  .cap-strip {
+    padding: 10px 12px; background: var(--green-dim); border: 1px solid var(--green);
+    border-radius: var(--radius-sm); margin-bottom: 12px;
+  }
+  .cap-strip.over { background: var(--red-dim, rgba(239,68,68,0.10)); border-color: var(--red); }
+  .drift-row {
+    display: flex; align-items: center; gap: 9px; padding: 8px 11px; margin-bottom: 5px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 12.5px; flex-wrap: wrap;
+  }
+  .drift-row .drift-lbl { flex: 1 1 130px; min-width: 0; color: var(--text); }
+  .drift-row .drift-num { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .drift-fix {
+    background: var(--surface3); border: 1px solid var(--border2); color: var(--text2);
+    border-radius: var(--radius-sm); font-size: 11px; padding: 4px 10px; cursor: pointer;
+    font-family: 'Outfit', sans-serif; flex: 0 0 auto;
+  }
+  .drift-fix:hover { border-color: var(--green); color: var(--green-text); }
 
   .ins-card {
     padding: 12px 14px; background: var(--surface2); border: 1px solid var(--purple);
@@ -1847,6 +1884,8 @@
   @media (max-width: 720px) {
     .ldg-add { grid-template-columns: 1fr 1fr; }
     .ldg-add .add-btn { grid-column: 1 / -1; }
+    .cap-row { flex-wrap: wrap; }
+    .cap-row .cap-amt { flex: 1 1 100px; }
     .due-wrap { margin: 10px 12px 0; }
     .due-when { display: none; }
   }
@@ -1897,7 +1936,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-26a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-26c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -2709,8 +2748,9 @@
     </div>
   </div>
 
-  <!-- SAVINGS ALLOCATION + SAVINGS + BONUS — single 3-column row -->
-  <div class="sav3-grid" style="display:grid; grid-template-columns:minmax(280px, 1fr) minmax(0, 2fr); gap:20px; align-items:start;">
+  <!-- SAVINGS ALLOCATION on its own full-width line, then Savings + Bonus +
+       Personal Debts as a single 3-column row underneath it (desktop). -->
+  <div class="sav3-grid" style="display:grid; grid-template-columns:minmax(0, 1fr); gap:20px; align-items:start;">
 
   <!-- Savings Allocation -->
   <div>
@@ -2753,8 +2793,9 @@
     </div>
   </div>
 
-  <!-- Right side: Savings + Bonus on top, Personal Debts filling the space below -->
-  <div class="sav3-right" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:20px; align-items:start;">
+  <!-- Savings · Bonus · Personal Debts — one line, three equal columns.
+       auto-fit collapses to 2 then 1 column as the window narrows. -->
+  <div class="sav3-right" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px; align-items:start;">
 
   <!-- Savings -->
   <div>
@@ -2808,8 +2849,8 @@
         </div>
       </div>
 
-  <!-- PERSONAL DEBTS — who owes me / who I owe (fills the space under Savings + Bonus) -->
-  <div style="grid-column: 1 / -1;">
+  <!-- PERSONAL DEBTS — who owes me / who I owe (third column of the row) -->
+  <div>
     <div class="section-title">Personal Debts</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
@@ -2956,6 +2997,18 @@
               <div class="stat-tile-sub" id="statObligationsSub">No obligations logged</div>
             </div>
           </div>
+          <!-- RUNWAY — the Emergency Fund tile above divides savings by the
+               PLAN. This divides it by what actually left, which is the number
+               that matters and is usually the shorter one. -->
+          <div id="runwayWrap" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+            <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px;">🛟 Runway</span>
+              <span id="runwayValue" style="font-family:'DM Mono',monospace; font-size:19px; font-weight:500;">—</span>
+              <span id="runwaySub" style="font-size:11px; color:var(--text3); font-family:'DM Mono',monospace;"></span>
+            </div>
+            <div id="runwayNote" style="font-size:10px; color:var(--text3); margin-top:6px; line-height:1.5;"></div>
+          </div>
+
           <!-- 3-MONTH EXPENSE FORECAST — fixed commitments projected forward -->
           <div id="forecastWrap" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
             <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:10px;">📆 Fixed expenses — next 3 months</div>
@@ -2989,48 +3042,6 @@
         <span style="font-size:13px; color:var(--text2);">Total necessities</span>
         <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="necTotal">₱0.00</span>
       </div>
-    </div>
-  </div>
-
-  <!-- SPENDING LEDGER — the one backward-looking view: what actually happened -->
-  <div>
-    <div class="section-title">🧾 Spending Ledger</div>
-    <div class="card">
-      <div style="font-size:11px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        Everything else here is a <strong>plan</strong>. This is the <strong>record</strong> — money that actually left.
-        Log it by hand, send a receipt photo to the 💬 chat, or type <code style="background:var(--surface2); padding:1px 5px; border-radius:3px;">log 250 groceries</code>.
-        Categories are guessed from what you have logged before. Close a month to freeze it into history — and, if an AI provider is set up, to have it written up once.
-      </div>
-
-      <!-- month nav -->
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-        <button class="ldg-nav" onclick="ledgerShiftMonth(-1)" title="Previous month">‹</button>
-        <div style="flex:1; text-align:center; cursor:pointer;" onclick="ledgerGoToday()" title="Jump to this month">
-          <div id="ledgerMonthLabel" style="font-size:14px; font-weight:600; color:var(--text);">—</div>
-          <div id="ledgerMonthSub" style="font-size:11px; color:var(--text3);"></div>
-        </div>
-        <button class="ldg-nav" onclick="ledgerShiftMonth(1)" title="Next month">›</button>
-      </div>
-
-      <!-- quick add. Deliberately static markup: renderLedger() only ever
-           rewrites #ledgerBody, so typing here is never interrupted. -->
-      <div class="ldg-add">
-        <input type="date" id="ldgDate" class="ldg-in" title="Date of the spend">
-        <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01" min="0"
-          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
-        <input type="text" id="ldgCat" class="ldg-in" list="ldgCatList" placeholder="Category" maxlength="60"
-          oninput="onLdgCatInput()"
-          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
-        <input type="text" id="ldgNote" class="ldg-in" placeholder="Note / merchant (optional)" maxlength="120"
-          oninput="onLdgNoteInput()"
-          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
-        <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
-      </div>
-      <!-- category memory: learned from your own past entries, no AI call -->
-      <div class="ldg-sug" id="ldgSuggest"></div>
-      <datalist id="ldgCatList"></datalist>
-
-      <div id="ledgerBody"></div>
     </div>
   </div>
 
@@ -3735,7 +3746,15 @@
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
         <div style="font-size:12px; color:var(--text3); line-height:1.5;">Pulled from your Necessities, Subscriptions &amp; PayLater · resets on the 1st of each month.</div>
-        <span style="font-size:12px; font-family:'DM Mono',monospace; color:var(--text3);" id="bclProgress">0 / 0 paid</span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <select id="bclAutolog" onchange="setBillAutolog(this.value)" title="Ticking a bill can record it in the Spending Ledger as money that actually left"
+            style="background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;">
+            <option value="ask">Ticking a bill → ask to log it</option>
+            <option value="always">Ticking a bill → always log it</option>
+            <option value="never">Ticking a bill → never log it</option>
+          </select>
+          <span style="font-size:12px; font-family:'DM Mono',monospace; color:var(--text3);" id="bclProgress">0 / 0 paid</span>
+        </div>
       </div>
       <div class="bcl-progress-bar"><div class="bcl-progress-fill" id="bclBar" style="width:0%"></div></div>
       <div id="bclContainer"></div>
@@ -3854,6 +3873,63 @@
         <div id="cfSummary" class="cf-summary" style="display:none;"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- SPENDING LEDGER — the one backward-looking view: what actually happened -->
+  <div>
+    <div class="section-title">🧾 Spending Ledger</div>
+    <div class="card">
+      <div style="font-size:11px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Everything else here is a <strong>plan</strong>. This is the <strong>record</strong> — money that actually left.
+        Log it by hand, send a receipt photo to the 💬 chat, or type <code style="background:var(--surface2); padding:1px 5px; border-radius:3px;">log 250 groceries</code>.
+        Categories are guessed from what you have logged before. Close a month to freeze it into history — and, if an AI provider is set up, to have it written up once.
+      </div>
+
+      <!-- month nav -->
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <button class="ldg-nav" onclick="ledgerShiftMonth(-1)" title="Previous month">‹</button>
+        <div style="flex:1; text-align:center; cursor:pointer;" onclick="ledgerGoToday()" title="Jump to this month">
+          <div id="ledgerMonthLabel" style="font-size:14px; font-weight:600; color:var(--text);">—</div>
+          <div id="ledgerMonthSub" style="font-size:11px; color:var(--text3);"></div>
+        </div>
+        <button class="ldg-nav" onclick="ledgerShiftMonth(1)" title="Next month">›</button>
+      </div>
+
+      <!-- quick add. Deliberately static markup: renderLedger() only ever
+           rewrites #ledgerBody, so typing here is never interrupted. -->
+      <div class="ldg-add">
+        <input type="date" id="ldgDate" class="ldg-in" title="Date of the spend">
+        <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01" min="0"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <input type="text" id="ldgCat" class="ldg-in" list="ldgCatList" placeholder="Category" maxlength="60"
+          oninput="onLdgCatInput()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <input type="text" id="ldgNote" class="ldg-in" placeholder="Note / merchant (optional)" maxlength="120"
+          oninput="onLdgNoteInput()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
+      </div>
+      <!-- category memory: learned from your own past entries, no AI call -->
+      <div class="ldg-sug" id="ldgSuggest"></div>
+      <datalist id="ldgCatList"></datalist>
+
+      <!-- MONTHLY CAPS. Every other budget line is DERIVED from a bill, which
+           is why food and transport only ever showed up as "unbudgeted". A cap
+           is a limit you set yourself; it joins the budget lines but never
+           becomes an obligation in the Net Summary. Static markup like the
+           quick-add form above — renderLedger() rewrites #ledgerBody only, so
+           typing a cap is never interrupted. -->
+      <div class="cap-wrap">
+        <div class="cap-hd">🎯 Monthly caps
+          <span class="cap-hd-sub">the discretionary spend your bills don’t cover</span>
+        </div>
+        <div id="ldgCapsBody"></div>
+        <button class="add-btn" style="margin-top:2px;" onclick="capAdd()">+ Add cap</button>
+        <div class="cap-note">A cap applies every month and gets its own bar below. It is a spending limit, not a bill — your Net Summary and obligations are untouched.</div>
+      </div>
+
+      <div id="ledgerBody"></div>
     </div>
   </div>
 
@@ -9115,11 +9191,15 @@ function updateHealthStats() {
     }
   }
 
+  // Planned burn: recurring bills only. Shared by the Emergency Fund tile
+  // and the runway line below, which measures the same savings against what
+  // actually left instead.
+  const monthlyBurn = nec + shopee + tiktok + subs + insts;
+
   // 2. Emergency Fund — how many months savings covers monthly burn
   const efEl  = document.getElementById('statEmergencyFund');
   const efSub = document.getElementById('statEmergencyFundSub');
   if (efEl) {
-    const monthlyBurn = nec + shopee + tiktok + subs + insts;
     if (savings > 0 && monthlyBurn > 0) {
       const months = savings / monthlyBurn;
       efEl.textContent = months.toFixed(1) + ' mo';
@@ -9192,6 +9272,36 @@ function updateHealthStats() {
       obEl.textContent = '—';
       obEl.style.color = 'var(--text2)';
       if (obSub) obSub.textContent = 'No obligations logged';
+    }
+  }
+
+  // 5. Runway — the same savings divided by REAL burn from the ledger.
+  // The Emergency Fund tile assumes you only ever spend your bills; this one
+  // knows better, and the gap between the two is the point.
+  const rwWrap = document.getElementById('runwayWrap');
+  if (rwWrap) {
+    let burn = { avg: 0, months: 0 };
+    try { burn = ledgerBurnAvg(6); } catch (e) {}
+    const rwVal  = document.getElementById('runwayValue');
+    const rwSub  = document.getElementById('runwaySub');
+    const rwNote = document.getElementById('runwayNote');
+    if (burn.months > 0 && burn.avg > 0.005 && savings > 0) {
+      const months = savings / burn.avg;
+      rwWrap.style.display = '';
+      if (rwVal) {
+        rwVal.textContent = months.toFixed(1) + ' months covered';
+        rwVal.style.color = months >= 6 ? 'var(--green-text)' : months >= 3 ? 'var(--amber-text)' : 'var(--red-text)';
+      }
+      if (rwSub) rwSub.textContent = fPHP(burn.avg) + '/mo actual · ' + burn.months + ' month' + (burn.months === 1 ? '' : 's') + ' of record';
+      if (rwNote) {
+        const planMo = monthlyBurn > 0 ? savings / monthlyBurn : 0;
+        rwNote.textContent = planMo > 0
+          ? 'Savings ÷ what actually left. Your bills alone would stretch to ' + planMo.toFixed(1)
+            + ' months — the difference is the spending your plan has no line for.'
+          : 'Savings ÷ what actually left, averaged over your recorded months.';
+      }
+    } else {
+      rwWrap.style.display = 'none';
     }
   }
 
@@ -9273,19 +9383,130 @@ const LEDGER_KEY      = 'va_expense_log';
 const MONTHS_KEY      = 'va_spend_log';
 const LEDGER_MAX      = 2000;   // hard cap so the key can never balloon
 const LEDGER_HIST_MAX = 36;     // months of snapshots kept
-const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat' };
-const LEDGER_SRC_ICON  = { manual: '\u2328', receipt: '\uD83E\uDDFE', chat: '\uD83D\uDCAC' };
+const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat', bill: 'bill ticked' };
+const LEDGER_SRC_ICON  = { manual: '\u2328', receipt: '\uD83E\uDDFE', chat: '\uD83D\uDCAC', bill: '\uD83D\uDCCB' };
 const INSIGHT_KEY      = 'va_insights';  // { 'YYYY-MM': { headline, bullets[], watch, sig, model, at } }
 const INSIGHT_MAX      = 12;             // months of insight cards kept
 const PL_LEDGER_LABEL  = { shopee: 'SPayLater (Shopee)', tiktok: 'TikTok PayLater', maya: 'Maya Black CC' };
 
-let ledger       = [];   // [{id, date:'YYYY-MM-DD', amt, cat, src, note}]
+// Category caps + the bill-tick preference share one key: both are small,
+// both belong to the ledger, and one key means one BACKUP_KEYS entry (which
+// is what buys sync, export and profile-scoping).
+const LEDGER_PREFS_KEY = 'va_ledger_prefs';
+const CAP_MAX          = 24;    // more than this and it stops being a budget
+const BILL_AUTOLOG     = ['ask', 'always', 'never'];
+
+let ledgerPrefs  = { caps: [], autolog: 'ask' };
+let ledger       = [];   // [{id, date:'YYYY-MM-DD', amt, cat, src, note, bill}]
 let ledgerSeq    = 1;
 let ledgerViewYM = '';   // 'YYYY-MM' currently on screen
 let ledgerEditId = 0;    // entry id currently open for inline editing (0 = none)
 let _catmem      = null; // memoised merchant->category index, rebuilt on any write
 let _insightBusy = '';   // ym whose insight is mid-flight
 let _insightErr  = null; // { ym, msg } of the last failure, shown on the card
+
+// ── caps + bill-tick preference ──────────────────────────
+// Caps are stored by POSITION, not id: no counter to drift out of step with
+// the rows (the bug class swept in 23h), and the list is short enough that an
+// index is a stable enough handle between two renders.
+function loadLedgerPrefs() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(LEDGER_PREFS_KEY) || 'null'); } catch (e) { raw = null; }
+  const caps = (raw && Array.isArray(raw.caps) ? raw.caps : [])
+    .filter(c => c && typeof c === 'object')
+    .map(c => ({ label: String(c.label || '').slice(0, 60), amt: Math.round((parseFloat(c.amt) || 0) * 100) / 100 }))
+    .slice(0, CAP_MAX);
+  const al = raw && BILL_AUTOLOG.indexOf(raw.autolog) !== -1 ? raw.autolog : 'ask';
+  ledgerPrefs = { caps: caps, autolog: al };
+}
+
+function saveLedgerPrefs() {
+  try { localStorage.setItem(LEDGER_PREFS_KEY, JSON.stringify(ledgerPrefs)); }
+  catch (e) { console.warn('Cap save failed', e); }
+}
+
+// Only caps with a name AND an amount are budget lines; a half-typed row is
+// still in the editor but must not silently become a ₱0 budget.
+function capsActive() {
+  return (ledgerPrefs.caps || []).filter(c => (c.label || '').trim() && (parseFloat(c.amt) || 0) > 0);
+}
+
+function capAdd() {
+  if ((ledgerPrefs.caps || []).length >= CAP_MAX) { showToast('That is enough caps for one budget', true); return; }
+  ledgerPrefs.caps.push({ label: '', amt: 0 });
+  saveLedgerPrefs();
+  renderCatCaps();
+  const rows = document.querySelectorAll('#ldgCapsBody .cap-name');
+  const last = rows[rows.length - 1];
+  if (last) last.focus();
+}
+
+function capRemove(i) {
+  if (!ledgerPrefs.caps[i]) return;
+  ledgerPrefs.caps.splice(i, 1);
+  saveLedgerPrefs();
+  renderCatCaps();
+  renderLedger();
+}
+
+// The row inputs deliberately do NOT re-render themselves — renderCatCaps
+// would replace the element being typed into. Only the bars are refreshed.
+function capSetLabel(i, v) {
+  if (!ledgerPrefs.caps[i]) return;
+  ledgerPrefs.caps[i].label = String(v || '').slice(0, 60);
+  saveLedgerPrefs();
+  renderLedger();
+}
+
+function capSetAmt(i, v) {
+  if (!ledgerPrefs.caps[i]) return;
+  ledgerPrefs.caps[i].amt = Math.round((parseFloat(v) || 0) * 100) / 100;
+  saveLedgerPrefs();
+  renderLedger();
+}
+
+// Used by the drift list: raise (or lower) a cap to what the category has
+// actually been costing, in one tap.
+function capSetTo(label, amt) {
+  const k = ledgerCatKey(label);
+  const i = (ledgerPrefs.caps || []).findIndex(c => ledgerCatKey(c.label) === k);
+  if (i === -1) return;
+  ledgerPrefs.caps[i].amt = Math.round((parseFloat(amt) || 0) * 100) / 100;
+  saveLedgerPrefs();
+  renderCatCaps();
+  renderLedger();
+  showToast('\uD83C\uDFAF ' + ledgerPrefs.caps[i].label + ' cap set to ' + fPHP(ledgerPrefs.caps[i].amt));
+}
+
+function setBillAutolog(v) {
+  ledgerPrefs.autolog = BILL_AUTOLOG.indexOf(v) !== -1 ? v : 'ask';
+  saveLedgerPrefs();
+}
+
+function renderCatCaps() {
+  const box = document.getElementById('ldgCapsBody');
+  if (!box) return;
+  const caps = ledgerPrefs.caps || [];
+  if (!caps.length) {
+    box.innerHTML = '<div style="font-size:11.5px; color:var(--text3); padding:2px 0 6px;">No caps yet. Add one for Food, Transport, or anything you decide rather than owe.</div>';
+    return;
+  }
+  box.innerHTML = caps.map((c, i) => `<div class="cap-row">
+    <input type="text" class="ldg-in cap-name" maxlength="60" placeholder="Category (e.g. Food)" value="${escH(c.label || '')}"
+      oninput="capSetLabel(${i}, this.value)">
+    <input type="number" class="ldg-in cap-amt" inputmode="decimal" step="0.01" min="0" placeholder="Cap \u20b1"
+      value="${(parseFloat(c.amt) || 0) > 0 ? escH(String(c.amt)) : ''}" oninput="capSetAmt(${i}, this.value)">
+    <button class="ldg-del" onclick="capRemove(${i})" title="Remove this cap">\u2715</button>
+  </div>`).join('');
+}
+
+// Days still to come this month, today included — the divisor behind the
+// allowance readout.
+function daysLeftInMonth(d) {
+  const n = d || new Date();
+  const last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
+  return Math.max(1, last - n.getDate() + 1);
+}
 
 // ── month-key helpers ─────────────────────────────────────────
 function ymNow() {
@@ -9330,6 +9551,8 @@ function loadLedger() {
     cat:  String(e.cat || '').slice(0, 60) || 'Uncategorised',
     src:  LEDGER_SRC_LABEL[e.src] ? e.src : 'manual',
     note: String(e.note || '').slice(0, 120),
+    // which checklist row logged this, so un-ticking can find it again
+    bill: String(e.bill || '').slice(0, 80),
     edited: !!e.edited,
   }));
   catmemInvalidate();
@@ -9363,6 +9586,7 @@ function ledgerAdd(e, defer) {
     cat:  String((e && e.cat) || '').trim().slice(0, 60) || 'Uncategorised',
     src:  LEDGER_SRC_LABEL[e && e.src] ? e.src : 'manual',
     note: String((e && e.note) || '').trim().slice(0, 120),
+    bill: String((e && e.bill) || '').slice(0, 80),
     edited: false,
   };
   ledger.push(entry);
@@ -9465,6 +9689,11 @@ function ledgerBudgetLines(ym) {
     if (amt > 0) raw.push({ label: PL_LEDGER_LABEL[k], budget: amt, src: 'pay' });
   });
 
+  // Caps — the same every month, because that is what a monthly cap is.
+  // They merge by name with anything above, so a cap named after a bill tops
+  // that bill's line up rather than opening a second one.
+  capsActive().forEach(c => raw.push({ label: c.label.trim(), budget: parseFloat(c.amt) || 0, src: 'cap' }));
+
   const merged = {};
   raw.forEach(l => {
     const k = ledgerCatKey(l.label);
@@ -9525,6 +9754,63 @@ function ledgerCatTrend(key, ym, n) {
   if (avg <= 0.005) return null;
   const cur = ledgerMonth(ym).reduce((s, e) => s + (ledgerCatKey(e.cat) === key ? e.amt : 0), 0);
   return Math.round(((cur - avg) / avg) * 100);
+}
+
+// ══ BILL DRIFT ════════════════════════════════════════
+// A budget figure is a guess that was right once. This compares each line's
+// budget against what the category has ACTUALLY averaged, so a bill that has
+// quietly grown says so instead of showing up as a small overspend every
+// month forever.
+const DRIFT_LOOKBACK   = 6;   // months to average over
+const DRIFT_MIN_MONTHS = 2;   // one month is an anecdote
+const DRIFT_MIN_PCT    = 15;  // below this it is noise, not drift
+const DRIFT_MAX_ROWS   = 5;
+
+// Average spend on one category across the months BEFORE ym, counting only
+// months that have entries at all (an empty month is missing data, not a
+// ₱0 month, and averaging it in would drag every figure down).
+function ledgerCatAvg(key, ym, n) {
+  let sum = 0, months = 0;
+  for (let k = 1; k <= n; k++) {
+    const rows = ledgerMonth(ymShift(ym, -k));
+    if (!rows.length) continue;
+    months++;
+    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) sum += e.amt; });
+  }
+  return { avg: months ? sum / months : 0, months: months };
+}
+
+function ledgerDrift(ym, lines) {
+  const base = lines || ledgerBudgetVsActual(ym).lines;
+  const out = [];
+  base.forEach(l => {
+    if (!l.budgeted || !(l.budget > 0)) return;
+    const a = ledgerCatAvg(l.key, ym, DRIFT_LOOKBACK);
+    if (a.months < DRIFT_MIN_MONTHS || a.avg <= 0.005) return;
+    const pct = Math.round(((a.avg - l.budget) / l.budget) * 100);
+    if (Math.abs(pct) < DRIFT_MIN_PCT) return;
+    out.push({
+      key: l.key, label: l.label, src: l.src || '', budget: l.budget,
+      avg: Math.round(a.avg * 100) / 100, months: a.months, pct: pct,
+    });
+  });
+  out.sort((x, y) => Math.abs(y.avg - y.budget) - Math.abs(x.avg - x.budget));
+  return out.slice(0, DRIFT_MAX_ROWS);
+}
+
+// Average TOTAL spend per completed month — the real burn behind the runway
+// line. The current month is excluded: it is still filling up, and counting
+// it would make the runway look longer on the 2nd than on the 28th.
+function ledgerBurnAvg(n) {
+  let sum = 0, months = 0;
+  const base = ymNow();
+  for (let k = 1; k <= (n || DRIFT_LOOKBACK); k++) {
+    const rows = ledgerMonth(ymShift(base, -k));
+    if (!rows.length) continue;
+    months++;
+    sum += rows.reduce((s, e) => s + e.amt, 0);
+  }
+  return { avg: months ? sum / months : 0, months: months };
 }
 
 // Income currently on screen (payroll + corporate + bonus). The savings
@@ -10055,6 +10341,31 @@ function renderLedger() {
     <div style="font-size:10.5px; color:var(--text3); margin-top:6px;">${bva.plannedTotal > 0 ? pct.toFixed(0) + '% of the month\u2019s budget used' : 'No budget lines for this month yet — add bills under Necessities, Subscriptions or Installments.'}</div>
   </div>`;
 
+  // ── daily allowance across the caps (this month only) ──
+  // The single most behaviour-changing number in a budget: not what you have
+  // spent, but what today is allowed to cost. Only meaningful for the live
+  // month — a past month has no days left to divide by.
+  const isCur    = (ym === ymNow());
+  const daysLeft = daysLeftInMonth();
+  const capLines = bva.lines.filter(l => (l.src || '').indexOf('cap') !== -1 && l.budget > 0);
+  if (capLines.length && isCur) {
+    const capBudget = capLines.reduce((s, l) => s + l.budget, 0);
+    const capSpent  = capLines.reduce((s, l) => s + l.actual, 0);
+    const left      = capBudget - capSpent;
+    const over      = left < -0.005;
+    h += `<div class="cap-strip${over ? ' over' : ''}">
+      <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px;">\uD83C\uDFAF Allowance</span>
+        <span style="font-family:'DM Mono',monospace; font-size:17px; font-weight:500; color:${over ? 'var(--red-text)' : 'var(--green-text)'};">${over ? '−' + fPHP(Math.abs(left)) : fPHP(left)}</span>
+        <span style="font-size:11px; color:var(--text3);">${over ? 'over your caps' : 'left across your caps'}</span>
+      </div>
+      <div style="font-size:11px; color:var(--text3); margin-top:4px; font-family:'DM Mono',monospace;">
+        ${daysLeft} day${daysLeft === 1 ? '' : 's'} left · ${over ? 'nothing left to spend' : fPHP(left / daysLeft) + '/day'}
+        · ${fPHP(capSpent)} of ${fPHP(capBudget)} used
+      </div>
+    </div>`;
+  }
+
   // ── month-end insight (only ever for a closed month) ──
   h += insightCardHTML(ym);
 
@@ -10079,6 +10390,15 @@ function renderLedger() {
         const up = l.trendPct > 0;
         trend = `<span style="font-size:10px; font-family:'DM Mono',monospace; color:${up ? 'var(--amber-text)' : 'var(--green-text)'};" title="versus the average of the last 3 months with entries">${up ? '↑' : '↓'}${Math.abs(l.trendPct)}% vs 3-mo avg</span>`;
       }
+      // A cap is the only line where "what is left" is spendable rather than
+      // merely unspent, so only caps get the per-day figure.
+      let allow = '';
+      if (isCur && (l.src || '').indexOf('cap') !== -1 && l.budget > 0) {
+        const rem = l.budget - l.actual;
+        allow = rem < -0.005
+          ? `<div class="cap-allow over">over by ${fPHP(Math.abs(rem))} · nothing left for the last ${daysLeft} day${daysLeft === 1 ? '' : 's'}</div>`
+          : `<div class="cap-allow">${fPHP(rem)} left · ${daysLeft} day${daysLeft === 1 ? '' : 's'} · ${fPHP(rem / daysLeft)}/day</div>`;
+      }
       return `<div style="margin-bottom:10px;">
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
           <span style="font-size:12.5px; color:var(--text); flex:1; min-width:100px;">${escH(l.label)}${l.budgeted ? '' : ' <span style="font-size:10px; color:var(--text3);">(unbudgeted)</span>'}</span>
@@ -10090,8 +10410,30 @@ function renderLedger() {
           <div style="height:100%; width:${Math.min(100, p).toFixed(1)}%; background:${col}; border-radius:999px;"></div>
         </div>
         ${over > 0.005 ? `<div style="font-size:10px; color:var(--red-text); margin-top:3px; font-family:'DM Mono',monospace;">over by ${fPHP(over)}</div>` : ''}
+        ${allow}
       </div>`;
     }).join('');
+  }
+
+  // ── bill drift ── what a line costs versus what you budget for it ──
+  const drift = ledgerDrift(ym, bva.lines);
+  if (drift.length) {
+    h += `<div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:16px 0 8px;">⚖️ Budget drift</div>`;
+    h += drift.map(d => {
+      const up  = d.pct > 0;
+      const col = up ? 'var(--amber-text)' : 'var(--green-text)';
+      const isCap = d.src.indexOf('cap') !== -1;
+      return `<div class="drift-row">
+        <span class="drift-lbl">${escH(d.label)}
+          <span style="display:block; font-size:10.5px; color:var(--text3);">averaged ${fPHP(d.avg)} over ${d.months} month${d.months === 1 ? '' : 's'} · you budget ${fPHP(d.budget)}</span>
+        </span>
+        <span class="drift-num" style="color:${col};">${up ? '+' : ''}${d.pct}%</span>
+        ${isCap
+          ? `<button class="drift-fix" onclick="capSetTo('${escJS(d.label)}', ${d.avg})" title="Set this cap to what it actually costs">Set cap to ${escH(fPHP(d.avg))}</button>`
+          : `<span style="font-size:10.5px; color:var(--text3);">${d.src.indexOf('sub') !== -1 ? 'edit under Subscriptions' : d.src.indexOf('inst') !== -1 ? 'edit under Installments' : d.src.indexOf('pay') !== -1 ? 'PayLater bill' : 'edit under Necessities'}</span>`}
+      </div>`;
+    }).join('');
+    h += `<div style="font-size:10px; color:var(--text3); margin-top:2px; line-height:1.5;">Compared against the last ${DRIFT_LOOKBACK} months that have entries, ignoring gaps under ${DRIFT_MIN_PCT}%. A line that drifts every month is a budget worth rewriting, not a bill worth scolding.</div>`;
   }
 
   // ── entries ──
@@ -10102,12 +10444,12 @@ function renderLedger() {
     // Where the month's record actually came from. A month that is mostly
     // typed from memory is a weaker record than one backed by receipts, and
     // until now nothing said which kind you were looking at.
-    const srcN = { manual: 0, receipt: 0, chat: 0 };
+    const srcN = { manual: 0, receipt: 0, chat: 0, bill: 0 };
     rows.forEach(e => { srcN[e.src] = (srcN[e.src] || 0) + 1; });
     const editedN = rows.filter(e => e.edited).length;
     const backed  = Math.round((srcN.receipt / rows.length) * 100);
     h += `<div class="ldg-cover">
-      ${['receipt', 'chat', 'manual'].filter(k => srcN[k]).map(k =>
+      ${['receipt', 'chat', 'bill', 'manual'].filter(k => srcN[k]).map(k =>
         `<span title="${escH(LEDGER_SRC_LABEL[k])}">${LEDGER_SRC_ICON[k]} ${srcN[k]} ${escH(LEDGER_SRC_LABEL[k])}</span>`).join('')}
       <span style="color:${backed >= 50 ? 'var(--green-text)' : 'var(--text3)'};">${backed}% receipt-backed</span>
       ${editedN ? `<span title="edited after they were logged">✎ ${editedN} edited</span>` : ''}
@@ -11302,6 +11644,7 @@ function switchPage(page) {
     }
   }
   if (page === 'plan') {
+    renderLedger();              // ledger lives at the bottom of this tab
     renderGoals();
     renderWishlist();
     renderSubs();
@@ -11324,7 +11667,6 @@ function switchPage(page) {
     renderSplitArchive('hsArchiveList', 'hs');
   }
   if (page === 'expenses') {
-    renderLedger();
     runDailyAccrual(true);   // catch up daily-interest growth on tab open
     setTimeout(drawChart, 60);
   }
@@ -11347,7 +11689,8 @@ let trkrYears    = [];
 let trkrViewYear = new Date().getFullYear();
 
 loadData();
-loadLedger();   // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
+loadLedger();       // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
+loadLedgerPrefs();  // category caps + the bill-tick logging choice (va_ledger_prefs)
 // Default the Expenses date-range "From" to today when it's empty, so the
 // range always starts from the current date without manual entry.
 (function () {
@@ -11355,6 +11698,11 @@ loadLedger();   // actual-spend ledger + month-end history (va_expense_log / va_
   if (ds && !ds.value) { ds.value = todayLocalStr(); saveData(); }
 })();
 renderNec();
+renderCatCaps();
+(function () {
+  const al = document.getElementById('bclAutolog');
+  if (al) al.value = ledgerPrefs.autolog;
+})();
 renderLedger();
 renderPL('shopee');
 renderPL('tiktok');
@@ -11436,11 +11784,60 @@ function saveBillChecks() {
   try { localStorage.setItem('va_bill_checklist', JSON.stringify(billChecks)); } catch(e) {}
 }
 
-function toggleBillCheck(key) {
-  billChecks.checks[key] = !billChecks.checks[key];
+// noPrompt: the chat's "pay <bill>" path already had its own confirm card,
+// so it must never raise a second browser dialog on top of it. It still
+// auto-logs when that is the standing choice.
+function toggleBillCheck(key, noPrompt) {
+  const nowChecked = !billChecks.checks[key];
+  billChecks.checks[key] = nowChecked;
   saveBillChecks();
   renderBillChecklist();
   renderDueSoon();   // a ticked bill drops straight out of the due-soon nudge
+  // Ticking a bill and logging what it cost were two separate acts of
+  // bookkeeping, so the ledger never knew about the money it knew best.
+  try { nowChecked ? billMaybeLog(key, noPrompt) : billMaybeUnlog(key, noPrompt); } catch (e) {}
+}
+
+// Entries this key wrote, in the month the checklist is currently tracking.
+function billEntriesFor(key) {
+  const ym = bclPeriod();
+  return ledger.filter(e => e.bill === key && ymOf(e.date) === ym);
+}
+
+function billMaybeLog(key, noPrompt) {
+  if (ledgerPrefs.autolog === 'never') return;
+  if (noPrompt && ledgerPrefs.autolog !== 'always') return;
+  const item = bclBuildItems().find(it => it.key === key);
+  if (!item || !(item.amt > 0)) return;
+  // Already logged this month — ticking twice must not spend twice.
+  if (billEntriesFor(key).length) return;
+  if (ledgerPrefs.autolog !== 'always') {
+    const okd = confirm('Log ' + fPHP(item.amt) + ' for ' + item.label + ' as money that actually left?\n\n'
+      + 'OK — add it to the Spending Ledger\n'
+      + 'Cancel — just tick it off\n\n'
+      + 'You can make this automatic (or stop being asked) above the checklist.');
+    if (!okd) return;
+  }
+  const entry = ledgerAdd({
+    date: todayLocalStr(), amt: item.amt, cat: item.label,
+    src: 'bill', bill: key, note: 'ticked off the bill checklist',
+  });
+  showToast('\uD83D\uDCCB Logged ' + fPHP(entry.amt) + ' — ' + entry.cat);
+}
+
+function billMaybeUnlog(key, noPrompt) {
+  if (noPrompt) return;   // never delete a record without being asked
+  const rows = billEntriesFor(key);
+  if (!rows.length) return;
+  const sum = rows.reduce((s, e) => s + e.amt, 0);
+  const okd = confirm('Also remove the ledger entr' + (rows.length === 1 ? 'y' : 'ies') + ' this bill wrote?\n\n'
+    + rows.length + ' × ' + fPHP(sum) + ' under “' + rows[0].cat + '”\n\n'
+    + 'Cancel keeps the record and only un-ticks the bill.');
+  if (!okd) return;
+  const ids = rows.map(e => e.id);
+  ledger = ledger.filter(e => ids.indexOf(e.id) === -1);
+  ledgerCommit();
+  showToast('\uD83D\uDDD1 Removed ' + fPHP(sum) + ' from the ledger');
 }
 
 // Builds the current month's checklist rows. Extracted from
@@ -12142,6 +12539,7 @@ const BACKUP_KEYS = [
   'va_sr_history',   // savings-rate streak snapshots (🔥 badge) — must sync + be per-profile
   'va_conv_pins',    // pinned currencies in the converter — nice to carry across devices
   'va_insights',     // month-end insight cards — synced so a second device never re-pays for one
+  'va_ledger_prefs', // category caps + the bill-tick logging choice
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -13193,6 +13591,7 @@ const STORAGE_KEY_LABELS = {
   va_last_tab:           'Last open tab',
   va_due_dismiss:        'Due-soon nudge dismissal',
   va_insights:           'Month-end insights',
+  va_ledger_prefs:       'Category caps',
 };
 
 function fmtBytes(b) {
@@ -13938,7 +14337,7 @@ function chatApplyOne(intent) {
 
   if (a === 'paybill') {
     if (billChecks.checks[intent.key]) return `<b>${escH(intent.label)}</b> was already ticked.`;
-    toggleBillCheck(intent.key);
+    toggleBillCheck(intent.key, true);
     let items = [];
     try { items = bclBuildItems(); } catch (e) {}
     const done = items.filter(it => billChecks.checks[it.key]).length;
@@ -14171,6 +14570,31 @@ function ledgerAIContext(money) {
           budgeted: l.budgeted,
         })),
       },
+      // Caps are the only budget lines the user sets by hand, and the only
+      // ones with a spendable remainder — worth naming separately so the
+      // model can answer "what can I spend today".
+      caps: capsActive().map(c => {
+        const line = bva.lines.find(l => l.key === ledgerCatKey(c.label));
+        const spent = line ? Math.round(line.actual * 100) / 100 : 0;
+        const amt = Math.round((parseFloat(c.amt) || 0) * 100) / 100;
+        return {
+          category: c.label, cap: money(amt), spent: money(spent),
+          left: money(Math.round((amt - spent) * 100) / 100),
+          days_left_in_month: daysLeftInMonth(),
+          per_day_left: money(Math.round(Math.max(0, amt - spent) / daysLeftInMonth() * 100) / 100),
+        };
+      }),
+      // Budget vs long-run reality, per line — the thing the plan alone can
+      // never tell you.
+      drift: ledgerDrift(ym, bva.lines).map(d => ({
+        category: d.label, budget: money(d.budget), avg_actual: money(d.avg),
+        months_compared: d.months, over_budget_pct: d.pct,
+      })),
+      runway: (function () {
+        const b = ledgerBurnAvg(6);
+        if (!b.months || !(b.avg > 0.005)) return null;
+        return { avg_monthly_actual: money(Math.round(b.avg * 100) / 100), months_of_record: b.months };
+      })(),
       recent_entries: ledger.slice(-15).reverse().map(e => ({
         date: e.date, category: e.cat, amt: money(e.amt), source: e.src, note: e.note || null,
       })),
@@ -14532,6 +14956,7 @@ function chatAISystemPrompt(parserHint) {
     + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months. '
     + 'Use "log" when they are telling you what they SPENT ("spent 450 on groceries", "gumastos ako 200 sa jeep") — that records history and never changes a balance; use deduct only when they mean take it out of a named savings allocation.',
     'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
+    'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
     + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
     + 'So for news, sports, prices, elections, product releases, or anyone\'s current job or team, do not answer from memory as though it were current — say plainly that you cannot check and tell them to prefix their question with "web:" for a live search. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
