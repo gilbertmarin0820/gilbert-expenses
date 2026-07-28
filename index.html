@@ -1936,7 +1936,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-26c</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-28b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -9465,17 +9465,35 @@ function capSetAmt(i, v) {
   renderLedger();
 }
 
-// Used by the drift list: raise (or lower) a cap to what the category has
+// Used by the drift list: bring a category's BUDGET LINE to what it has
 // actually been costing, in one tap.
-function capSetTo(label, amt) {
-  const k = ledgerCatKey(label);
-  const i = (ledgerPrefs.caps || []).findIndex(c => ledgerCatKey(c.label) === k);
+//
+// `target` is the whole line, not the cap. Caps merge by name with a bill of
+// the same name, so writing the average straight into the cap used to STACK
+// it on top of that bill: a ₱2,000 necessity + ₱5,000 cap averaging ₱9,000
+// offered "set cap to ₱9,000" and produced an ₱11,000 line. Back the bill
+// (and any sibling cap on the same name) out of the target first.
+function capSetTo(label, target) {
+  const k    = ledgerCatKey(label);
+  const caps = ledgerPrefs.caps || [];
+  // Prefer a live cap; fall back to a half-filled row with the same name.
+  let i = caps.findIndex(c => ledgerCatKey(c.label) === k
+    && (c.label || '').trim() && (parseFloat(c.amt) || 0) > 0);
+  if (i === -1) i = caps.findIndex(c => ledgerCatKey(c.label) === k);
   if (i === -1) return;
-  ledgerPrefs.caps[i].amt = Math.round((parseFloat(amt) || 0) * 100) / 100;
+
+  const cp     = capPortion(k);
+  const mine   = parseFloat(caps[i].amt) || 0;
+  const others = Math.max(0, cp.cap - mine);          // sibling caps, same name
+  const fixed  = cp.nonCap + others;                  // everything this tap cannot move
+  const want   = Math.round(Math.max(0, (parseFloat(target) || 0) - fixed) * 100) / 100;
+
+  caps[i].amt = want;
   saveLedgerPrefs();
   renderCatCaps();
   renderLedger();
-  showToast('\uD83C\uDFAF ' + ledgerPrefs.caps[i].label + ' cap set to ' + fPHP(ledgerPrefs.caps[i].amt));
+  showToast('\uD83C\uDFAF ' + caps[i].label + ' cap set to ' + fPHP(want)
+    + (fixed > 0.005 ? ' \u00b7 line now ' + fPHP(want + fixed) : ''));
 }
 
 function setBillAutolog(v) {
@@ -9738,22 +9756,15 @@ function ledgerBudgetVsActual(ym) {
   };
 }
 
-// How far this month's spend on a category sits above/below the average of
-// the previous n months that have any entries at all. null = nothing to
-// compare against yet (so a first month never shows a fake "+100%").
+// How far this month's spend on a category sits above/below its own average
+// over the previous n months. null = nothing to compare against yet (so a
+// first month never shows a fake "+100%"). Shares ledgerCatAvg's denominator
+// so the chip and the drift row can never disagree about the same category.
 function ledgerCatTrend(key, ym, n) {
-  let sum = 0, months = 0;
-  for (let k = 1; k <= n; k++) {
-    const rows = ledgerMonth(ymShift(ym, -k));
-    if (!rows.length) continue;
-    months++;
-    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) sum += e.amt; });
-  }
-  if (!months) return null;
-  const avg = sum / months;
-  if (avg <= 0.005) return null;
+  const a = ledgerCatAvg(key, ym, n);
+  if (!a.months || a.avg <= 0.005) return null;
   const cur = ledgerMonth(ym).reduce((s, e) => s + (ledgerCatKey(e.cat) === key ? e.amt : 0), 0);
-  return Math.round(((cur - avg) / avg) * 100);
+  return Math.round(((cur - a.avg) / a.avg) * 100);
 }
 
 // ══ BILL DRIFT ════════════════════════════════════════
@@ -9762,22 +9773,54 @@ function ledgerCatTrend(key, ym, n) {
 // quietly grown says so instead of showing up as a small overspend every
 // month forever.
 const DRIFT_LOOKBACK   = 6;   // months to average over
-const DRIFT_MIN_MONTHS = 2;   // one month is an anecdote
+const DRIFT_MIN_MONTHS = 2;   // months OF THAT CATEGORY — one is an anecdote
 const DRIFT_MIN_PCT    = 15;  // below this it is noise, not drift
 const DRIFT_MAX_ROWS   = 5;
 
 // Average spend on one category across the months BEFORE ym, counting only
-// months that have entries at all (an empty month is missing data, not a
-// ₱0 month, and averaging it in would drag every figure down).
+// the months THIS CATEGORY actually appears in.
+//
+// It used to divide by every month that had any entry at all, which quietly
+// invented data: a bill that only started two months ago was averaged over
+// six, so a correctly-set ₱3,000 line reported "₱1,000 over 6 months" and the
+// drift row offered to cut the budget to a third of what the bill costs. A
+// month with no entry for a category is missing data about that category, not
+// a month it cost nothing — so it is skipped, exactly as an entirely empty
+// month always was.
 function ledgerCatAvg(key, ym, n) {
   let sum = 0, months = 0;
   for (let k = 1; k <= n; k++) {
     const rows = ledgerMonth(ymShift(ym, -k));
     if (!rows.length) continue;
+    let mSum = 0, mN = 0;
+    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) { mSum += e.amt; mN++; } });
+    if (!mN) continue;
     months++;
-    rows.forEach(e => { if (ledgerCatKey(e.cat) === key) sum += e.amt; });
+    sum += mSum;
   }
   return { avg: months ? sum / months : 0, months: months };
+}
+
+// ── cap vs bill on a merged line ──────────────────────────────
+// A cap merges by name with a necessity/sub/installment/PayLater row, so one
+// budget line can be part money you OWE and part money you DECIDED. Several
+// readouts need that split, and all of them must read it LIVE rather than
+// from a frozen snapshot, because two of them write back to the cap.
+function capPortion(key) {
+  const cap  = capsActive().reduce((s, c) =>
+    s + (ledgerCatKey(c.label) === key ? (parseFloat(c.amt) || 0) : 0), 0);
+  const line = ledgerBudgetLines(ymNow()).find(l => l.key === key);
+  const budget = line ? line.budget : cap;
+  return { cap: Math.round(cap * 100) / 100,
+           nonCap: Math.max(0, Math.round((budget - cap) * 100) / 100) };
+}
+
+// What of a cap line is actually spendable, and what has actually gone
+// against it. The bill half has to be paid before anything on that line is a
+// choice, so only spending BEYOND the bill counts against the cap.
+function capSpendable(l) {
+  const cp = capPortion(l.key);
+  return { budget: cp.cap, nonCap: cp.nonCap, spent: Math.max(0, l.actual - cp.nonCap) };
 }
 
 function ledgerDrift(ym, lines) {
@@ -9789,9 +9832,14 @@ function ledgerDrift(ym, lines) {
     if (a.months < DRIFT_MIN_MONTHS || a.avg <= 0.005) return;
     const pct = Math.round(((a.avg - l.budget) / l.budget) * 100);
     if (Math.abs(pct) < DRIFT_MIN_PCT) return;
+    // nonCap = the part of this line that is a bill, not a cap. The one-tap
+    // fix can only move the cap, so the row needs to know how much of the
+    // line it cannot touch.
+    const cp = (l.src || '').indexOf('cap') !== -1 ? capPortion(l.key) : { cap: 0, nonCap: 0 };
     out.push({
       key: l.key, label: l.label, src: l.src || '', budget: l.budget,
       avg: Math.round(a.avg * 100) / 100, months: a.months, pct: pct,
+      capPart: cp.cap, nonCap: cp.nonCap,
     });
   });
   out.sort((x, y) => Math.abs(y.avg - y.budget) - Math.abs(x.avg - x.budget));
@@ -10347,10 +10395,17 @@ function renderLedger() {
   // month — a past month has no days left to divide by.
   const isCur    = (ym === ymNow());
   const daysLeft = daysLeftInMonth();
-  const capLines = bva.lines.filter(l => (l.src || '').indexOf('cap') !== -1 && l.budget > 0);
-  if (capLines.length && isCur) {
-    const capBudget = capLines.reduce((s, l) => s + l.budget, 0);
-    const capSpent  = capLines.reduce((s, l) => s + l.actual, 0);
+  // A cap that shares its name with a bill merges into one line, so the raw
+  // line budget is part money you owe. Only the cap half is an allowance, and
+  // only spend beyond the bill counts against it.
+  const capParts = bva.lines
+    .filter(l => (l.src || '').indexOf('cap') !== -1 && l.budget > 0)
+    .map(capSpendable)
+    .filter(p => p.budget > 0.005);
+  if (capParts.length && isCur) {
+    const capBudget = capParts.reduce((s, p) => s + p.budget, 0);
+    const capSpent  = capParts.reduce((s, p) => s + p.spent, 0);
+    const mixed     = capParts.some(p => p.nonCap > 0.005);
     const left      = capBudget - capSpent;
     const over      = left < -0.005;
     h += `<div class="cap-strip${over ? ' over' : ''}">
@@ -10363,6 +10418,7 @@ function renderLedger() {
         ${daysLeft} day${daysLeft === 1 ? '' : 's'} left · ${over ? 'nothing left to spend' : fPHP(left / daysLeft) + '/day'}
         · ${fPHP(capSpent)} of ${fPHP(capBudget)} used
       </div>
+      ${mixed ? `<div style="font-size:10px; color:var(--text3); margin-top:3px;">A cap sharing its name with a bill counts only the cap half here — the bill is owed, not allowed.</div>` : ''}
     </div>`;
   }
 
@@ -10394,10 +10450,14 @@ function renderLedger() {
       // merely unspent, so only caps get the per-day figure.
       let allow = '';
       if (isCur && (l.src || '').indexOf('cap') !== -1 && l.budget > 0) {
-        const rem = l.budget - l.actual;
-        allow = rem < -0.005
-          ? `<div class="cap-allow over">over by ${fPHP(Math.abs(rem))} · nothing left for the last ${daysLeft} day${daysLeft === 1 ? '' : 's'}</div>`
-          : `<div class="cap-allow">${fPHP(rem)} left · ${daysLeft} day${daysLeft === 1 ? '' : 's'} · ${fPHP(rem / daysLeft)}/day</div>`;
+        const p = capSpendable(l);
+        if (p.budget > 0.005) {
+          const rem  = p.budget - p.spent;
+          const note = p.nonCap > 0.005 ? ` · cap only, ${fPHP(p.nonCap)} of this line is a bill` : '';
+          allow = rem < -0.005
+            ? `<div class="cap-allow over">over by ${fPHP(Math.abs(rem))} · nothing left for the last ${daysLeft} day${daysLeft === 1 ? '' : 's'}${note}</div>`
+            : `<div class="cap-allow">${fPHP(rem)} left · ${daysLeft} day${daysLeft === 1 ? '' : 's'} · ${fPHP(rem / daysLeft)}/day${note}</div>`;
+        }
       }
       return `<div style="margin-bottom:10px;">
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
@@ -10428,9 +10488,9 @@ function renderLedger() {
           <span style="display:block; font-size:10.5px; color:var(--text3);">averaged ${fPHP(d.avg)} over ${d.months} month${d.months === 1 ? '' : 's'} · you budget ${fPHP(d.budget)}</span>
         </span>
         <span class="drift-num" style="color:${col};">${up ? '+' : ''}${d.pct}%</span>
-        ${isCap
-          ? `<button class="drift-fix" onclick="capSetTo('${escJS(d.label)}', ${d.avg})" title="Set this cap to what it actually costs">Set cap to ${escH(fPHP(d.avg))}</button>`
-          : `<span style="font-size:10.5px; color:var(--text3);">${d.src.indexOf('sub') !== -1 ? 'edit under Subscriptions' : d.src.indexOf('inst') !== -1 ? 'edit under Installments' : d.src.indexOf('pay') !== -1 ? 'PayLater bill' : 'edit under Necessities'}</span>`}
+        ${isCap && (d.avg - (d.nonCap || 0)) > 0.005
+          ? `<button class="drift-fix" onclick="capSetTo('${escJS(d.label)}', ${d.avg})" title="${(d.nonCap || 0) > 0.005 ? 'Bring the whole line — the bill plus your cap — to what it actually costs' : 'Set this cap to what it actually costs'}">${(d.nonCap || 0) > 0.005 ? 'Match ' : 'Set cap to '}${escH(fPHP(d.avg))}</button>`
+          : `<span style="font-size:10.5px; color:var(--text3);">${isCap ? 'the bill on this line already costs more' : d.src.indexOf('sub') !== -1 ? 'edit under Subscriptions' : d.src.indexOf('inst') !== -1 ? 'edit under Installments' : d.src.indexOf('pay') !== -1 ? 'PayLater bill' : 'edit under Necessities'}</span>`}
       </div>`;
     }).join('');
     h += `<div style="font-size:10px; color:var(--text3); margin-top:2px; line-height:1.5;">Compared against the last ${DRIFT_LOOKBACK} months that have entries, ignoring gaps under ${DRIFT_MIN_PCT}%. A line that drifts every month is a budget worth rewriting, not a bill worth scolding.</div>`;
@@ -14573,17 +14633,36 @@ function ledgerAIContext(money) {
       // Caps are the only budget lines the user sets by hand, and the only
       // ones with a spendable remainder — worth naming separately so the
       // model can answer "what can I spend today".
-      caps: capsActive().map(c => {
-        const line = bva.lines.find(l => l.key === ledgerCatKey(c.label));
-        const spent = line ? Math.round(line.actual * 100) / 100 : 0;
-        const amt = Math.round((parseFloat(c.amt) || 0) * 100) / 100;
-        return {
-          category: c.label, cap: money(amt), spent: money(spent),
-          left: money(Math.round((amt - spent) * 100) / 100),
-          days_left_in_month: daysLeftInMonth(),
-          per_day_left: money(Math.round(Math.max(0, amt - spent) / daysLeftInMonth() * 100) / 100),
-        };
-      }),
+      //
+      // This MUST go through capSpendable, the same split the Allowance strip
+      // uses: a cap sharing its name with a bill merges into one line, and
+      // only spend BEYOND the bill counts against the cap. Reading l.actual
+      // straight off the line (as this did until 28b) made the chat quote a
+      // different allowance than the screen — the worst kind of wrong, since
+      // both look authoritative.
+      caps: (function () {
+        const seen = {};
+        return capsActive().filter(c => {
+          const k = ledgerCatKey(c.label);
+          if (seen[k]) return false;   // two caps on one name are ONE line
+          seen[k] = 1;
+          return true;
+        }).map(c => {
+          const line  = bva.lines.find(l => l.key === ledgerCatKey(c.label));
+          const p     = line ? capSpendable(line) : { budget: 0, nonCap: 0, spent: 0 };
+          const cap   = Math.round(p.budget * 100) / 100;
+          const spent = Math.round(p.spent  * 100) / 100;
+          const left  = Math.round((cap - spent) * 100) / 100;
+          const days  = daysLeftInMonth();
+          return {
+            category: c.label, cap: money(cap), spent: money(spent), left: money(left),
+            // Named so the model can explain the number rather than just quote it.
+            bill_on_same_line: p.nonCap > 0.005 ? money(Math.round(p.nonCap * 100) / 100) : null,
+            days_left_in_month: days,
+            per_day_left: money(Math.round(Math.max(0, left) / days * 100) / 100),
+          };
+        });
+      })(),
       // Budget vs long-run reality, per line — the thing the plan alone can
       // never tell you.
       drift: ledgerDrift(ym, bva.lines).map(d => ({
@@ -14595,9 +14674,14 @@ function ledgerAIContext(money) {
         if (!b.months || !(b.avg > 0.005)) return null;
         return { avg_monthly_actual: money(Math.round(b.avg * 100) / 100), months_of_record: b.months };
       })(),
-      recent_entries: ledger.slice(-15).reverse().map(e => ({
-        date: e.date, category: e.cat, amt: money(e.amt), source: e.src, note: e.note || null,
-      })),
+      // Newest by DATE, not by insertion order. slice(-15) took the last 15
+      // rows added, so backdating an entry today pushed a genuinely recent
+      // one out of the model's view. Same comparator the entry list uses.
+      recent_entries: ledger.slice()
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id))
+        .slice(0, 15).map(e => ({
+          date: e.date, category: e.cat, amt: money(e.amt), source: e.src, note: e.note || null,
+        })),
       closed_months: Object.keys(hist).sort().reverse().slice(0, 12).map(k => ({
         month: k,
         budgeted: money(parseFloat(hist[k].planned) || 0),
@@ -14956,7 +15040,7 @@ function chatAISystemPrompt(parserHint) {
     + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months. '
     + 'Use "log" when they are telling you what they SPENT ("spent 450 on groceries", "gumastos ako 200 sa jeep") — that records history and never changes a balance; use deduct only when they mean take it out of a named savings allocation.',
     'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
-    'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
+    'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
     + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
     + 'So for news, sports, prices, elections, product releases, or anyone\'s current job or team, do not answer from memory as though it were current — say plainly that you cannot check and tell them to prefix their question with "web:" for a live search. The user often writes Taglish (dagdag=add, bawas=deduct, lipat=move, bayad=pay). Prefer a command intent when the message is clearly an instruction; use "say" whenever you are answering rather than changing data.',
