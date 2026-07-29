@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v16';
+const CACHE = 'gilbert-expenses-v18';
 
 const APP_SHELL = [
   './',

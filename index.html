@@ -22,6 +22,27 @@
 
 <!-- Apply saved theme BEFORE first paint so there's no dark→light flash -->
 <script>
+  // ═══════════════════════════════════════════════════════════
+  // COMMA-TOLERANT NUMBER PARSING
+  //
+  // Amount inputs render with thousands separators ("12,500.00"),
+  // so every parseFloat/parseInt in the app must ignore commas.
+  // Rather than touch 240+ call sites, both globals are wrapped
+  // once here — before any app code runs. Non-string arguments
+  // and every other behaviour pass straight through unchanged.
+  //
+  // This also fixes a long-standing footgun: native
+  // parseFloat("1,234.56") returns 1, silently.
+  // ═══════════════════════════════════════════════════════════
+  (function () {
+    var _pf = window.parseFloat, _pi = window.parseInt;
+    var strip = function (v) {
+      return (typeof v === 'string' && v.indexOf(',') !== -1) ? v.replace(/,/g, '') : v;
+    };
+    window.parseFloat = function (v) { return _pf(strip(v)); };
+    window.parseInt   = function (v, r) { return _pi(strip(v), r); };
+  })();
+
   try {
     var t = localStorage.getItem('va_theme');
     var m = document.querySelector('meta[name="theme-color"]');
@@ -1821,9 +1842,33 @@
   .cap-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
   .cap-row .cap-name { flex: 1 1 130px; min-width: 0; }
   .cap-row .cap-amt  { flex: 0 0 128px; }
+  .cap-row .cap-roll { flex: 0 0 150px; cursor: pointer; }
   .cap-note { font-size: 10.5px; color: var(--text3); line-height: 1.5; margin-top: 6px; }
   .cap-allow { font-size: 10.5px; font-family: 'DM Mono', monospace; color: var(--green-text); margin-top: 3px; }
   .cap-allow.over { color: var(--red-text); }
+  .cap-allow.carry { color: var(--text3); }
+  .recv-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 10px; margin-bottom: 8px; background: var(--surface2); }
+  .recv-row.done { opacity: 0.55; }
+  .recv-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .recv-label { font-size: 12.5px; color: var(--text); flex: 1; min-width: 90px; }
+  .recv-date { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .recv-out { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--amber-text); }
+  .recv-row.done .recv-out { color: var(--green-text); }
+  .recv-sub { font-size: 10.5px; color: var(--text3); margin: 3px 0 6px; font-family: 'DM Mono', monospace; }
+  .recv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .recv-chip { font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 9px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface3); color: var(--text2); cursor: pointer; }
+  .recv-chip.paid { border-color: var(--green); color: var(--green-text); text-decoration: line-through; opacity: 0.75; }
+  .recv-all { margin-top: 7px; font-size: 11px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--text3); }
+  .split-me { font-size: 10px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border);
+    background: transparent; color: var(--text3); cursor: pointer; margin-left: 4px; }
+  .split-me.on { border-color: var(--teal); color: var(--teal-text); background: var(--surface3); }
+  .logshare-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px;
+    padding-top: 12px; border-top: 1px solid var(--border); }
+  .logshare-bar .ldg-in { flex: 1 1 150px; min-width: 0; }
+  .logshare-note { flex: 1 1 100%; font-size: 10.5px; color: var(--text3); line-height: 1.5; }
+  .cap-allow.carry.over { color: var(--amber-text); }
   .cap-strip {
     padding: 10px 12px; background: var(--green-dim); border: 1px solid var(--green);
     border-radius: var(--radius-sm); margin-bottom: 12px;
@@ -1886,6 +1931,7 @@
     .ldg-add .add-btn { grid-column: 1 / -1; }
     .cap-row { flex-wrap: wrap; }
     .cap-row .cap-amt { flex: 1 1 100px; }
+    .cap-row .cap-roll { flex: 1 1 100%; }
     .due-wrap { margin: 10px 12px 0; }
     .due-when { display: none; }
   }
@@ -1936,7 +1982,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-28b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-29b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3336,6 +3382,11 @@
     <div class="section-title">Summary — Total per Person</div>
     <div class="card">
       <div id="ccSummaryList"></div>
+      <div class="logshare-bar" id="ccLogBar">
+        <input type="text" class="ldg-in" id="ccLedgerCat" maxlength="60" placeholder="Ledger category (e.g. Food)">
+        <button class="add-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12.5px;" onclick="ccLogMyShare()">🧾 Log my share</button>
+        <div class="logshare-note">Puts only YOUR share in the Spending Ledger. The rest becomes "owed to you" on the Plan tab.</div>
+      </div>
       <div class="divider" style="margin:12px 0;"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
         <span style="color:var(--text2); font-weight:500;">Grand total (all stores)</span>
@@ -3425,6 +3476,11 @@
     <div class="section-title">Summary — Total per Person</div>
     <div class="card">
       <div id="hsSummaryList"></div>
+      <div class="logshare-bar" id="hsLogBar">
+        <input type="text" class="ldg-in" id="hsLedgerCat" maxlength="60" placeholder="Ledger category (e.g. Food)">
+        <button class="add-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12.5px;" onclick="hsLogMyShare()">🧾 Log my share</button>
+        <div class="logshare-note">Puts only YOUR share in the Spending Ledger. The rest becomes "owed to you" on the Plan tab.</div>
+      </div>
       <div class="divider" style="margin:12px 0;"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
         <span style="color:var(--text2); font-weight:500;">Grand total</span>
@@ -3490,6 +3546,26 @@
       <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
         <div class="nb-row"><span class="nb-label">Total saved across goals</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="goalsTotalSaved">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Total target</span><span style="font-family:'DM Mono',monospace; color:var(--text2);" id="goalsTotalTarget">₱0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SINKING FUNDS — irregular / annual bills -->
+  <div>
+    <div class="section-title">🏺 Sinking Funds</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
+        For the bills that only land once a year — registration, insurance, Christmas, dental.
+        Each one divides what's left by the months left, and reserves that much every month, so the
+        due month is already paid for. The <strong style="color:var(--text2);">monthly reserve</strong>
+        appears as a budget line in your Spending Ledger; the bill itself doesn't, because it comes out of the pot.
+      </div>
+      <div id="sinkContainer"></div>
+      <button class="add-btn" onclick="addSinkingFund()">+ Add sinking fund</button>
+      <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="nb-row"><span class="nb-label">Reserving each month</span><span class="c-amber" style="font-family:'DM Mono',monospace;" id="sinkTotalMonthly">₱0.00</span></div>
+        <div class="nb-row"><span class="nb-label">Total in the pot</span><span class="c-green" style="font-family:'DM Mono',monospace;" id="sinkTotalPot">₱0.00</span></div>
       </div>
     </div>
   </div>
@@ -3877,6 +3953,21 @@
   </div>
 
   <!-- SPENDING LEDGER — the one backward-looking view: what actually happened -->
+  <div>
+    <div class="section-title">💵 Owed to You</div>
+    <div class="card">
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        Splits you fronted. Your share is already in the ledger below — this is everyone else's,
+        tracked until they pay you back. Tap a name when the money arrives.
+      </div>
+      <div class="nb-row" style="margin-bottom:10px;">
+        <span class="nb-label">Still owed to you</span>
+        <span class="c-amber" style="font-family:'DM Mono',monospace;" id="recvTotal">₱0.00</span>
+      </div>
+      <div id="recvBody"></div>
+    </div>
+  </div>
+
   <div>
     <div class="section-title">🧾 Spending Ledger</div>
     <div class="card">
@@ -7383,6 +7474,7 @@ function fallbackCopyText(text, successMsg) {
 // ════════════════════════════════════════════════════════════════
 
 let ccPeople     = [];   // [{ id, name }]
+let ccMeId       = null; // which person is YOU — only your share is real spending
 let _ccLastTotals = {};  // last computed { personId: amountOwed } — used by Copy message
 let _ccLastItems  = {};  // last computed { personId: [{label, amt, total, n}] } — used by Copy table
 let ccStores     = [];   // [{ name, amt, people:[personId,...] }]
@@ -7420,6 +7512,8 @@ function renderCCPeople() {
   c.innerHTML = ccPeople.map(p => `
     <div class="person-tag">
       ${escH(p.name)}
+      <button class="split-me${ccMeId === p.id ? ' on' : ''}" onclick="ccSetMe(${p.id})"
+        title="Mark which name is you — only your share becomes real spending">${ccMeId === p.id ? 'you' : 'me?'}</button>
       <button class="del-btn" style="padding:2px 6px; font-size:13px;" onclick="removePerson(${p.id})">✕</button>
     </div>
   `).join('');
@@ -7564,7 +7658,7 @@ function renderCCStores() {
           <label class="input-label">Amount (₱)</label>
           <div class="input-row amt-row">
             <div class="input-prefix">₱</div>
-            <input class="big-input" type="number" min="0" step="0.01" value="${store.amt}" placeholder="0.00"
+            <input class="big-input cc-amt-input" type="number" min="0" step="0.01" value="${store.amt}" placeholder="0.00"
               oninput="ccStores[${i}].amt=this.value; updateStoreEach(${i}); updateCCSummary(); saveCC()">
           </div>
         </div>
@@ -7668,7 +7762,7 @@ function saveCC() {
 
   try {
     localStorage.setItem('va_cc_split_data', JSON.stringify({
-      people: ccPeople, stores: ccStores, personSeq: ccPersonSeq, note: ccNote,
+      people: ccPeople, stores: ccStores, personSeq: ccPersonSeq, note: ccNote, meId: ccMeId,
     }));
   } catch(e) { console.warn('CC save failed', e); }
 }
@@ -7692,6 +7786,7 @@ function ccUndo() {
   try {
     const data = raw ? JSON.parse(raw) : {};
     ccPeople    = Array.isArray(data.people) ? data.people : [];
+    ccMeId      = (typeof data.meId === 'number') ? data.meId : null;
     ccStores    = Array.isArray(data.stores) ? data.stores : [];
     ccPersonSeq = typeof data.personSeq === 'number' ? data.personSeq : 1;
     reseedIdSeqs();
@@ -7741,6 +7836,7 @@ function loadCC() {
     if (typeof data.personSeq === 'number') ccPersonSeq = data.personSeq;
     reseedIdSeqs();
     ccNote = typeof data.note === 'string' ? data.note : '';
+    ccMeId = (typeof data.meId === 'number') ? data.meId : null;
   } catch(e) { console.warn('CC load failed', e); }
   syncSessionNoteInput('cc');
 }
@@ -7752,6 +7848,7 @@ function loadCC() {
 // ════════════════════════════════════════════════════════════════
 
 let hsPeople    = [];                  // [{ id, name }]
+let hsMeId      = null;                // which person is YOU — only your share is real spending
 let _hsLastTotals = {};                // last computed { personId: amountOwed } — used by Copy message
 let _hsLastItems  = {};                // last computed { personId: [{label, amt, total, n}] } — used by Copy table
 let hsPersonSeq = 1;
@@ -7830,11 +7927,16 @@ function hsCurrencyRefresh() {
 // Convert old saved format ({drinks:[], food:[]}) to the new flat
 // item list so nobody loses previously saved sessions.
 function hsNormalizeData(data) {
-  const out = { people: [], items: [], personSeq: 1, note: '' };
+  // NOTE: this builds a FRESH object with a fixed set of fields rather than
+  // copying `data`, so anything not named here is silently dropped. Any new
+  // key added to the save payload has to be added here too or it will not
+  // survive a reload (meId did exactly that on first write).
+  const out = { people: [], items: [], personSeq: 1, note: '', meId: null };
   if (!data || typeof data !== 'object') return out;
   if (Array.isArray(data.people)) out.people = data.people;
   if (typeof data.personSeq === 'number') out.personSeq = data.personSeq;
   if (typeof data.note === 'string') out.note = data.note;
+  if (typeof data.meId === 'number') out.meId = data.meId;
   // Migration: pre-per-item saves stored one session `currency` — use it as the
   // fallback for any item that has no `cur` of its own.
   const migrateCur = (typeof data.currency === 'string' && CURRENCY_META[data.currency]) ? data.currency : 'PHP';
@@ -7880,6 +7982,8 @@ function renderHSPeople() {
   c.innerHTML = hsPeople.map(p => `
     <div class="person-tag">
       ${escH(p.name)}
+      <button class="split-me${hsMeId === p.id ? ' on' : ''}" onclick="hsSetMe(${p.id})"
+        title="Mark which name is you — only your share becomes real spending">${hsMeId === p.id ? 'you' : 'me?'}</button>
       <button class="del-btn" style="padding:2px 6px; font-size:13px;" onclick="removeHSPerson(${p.id})">✕</button>
     </div>
   `).join('');
@@ -8045,7 +8149,7 @@ function renderHSItems() {
           <label class="input-label">Amount</label>
           <div class="input-row amt-row">
             <div class="input-prefix">${curSym(cur)}</div>
-            <input class="big-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
+            <input class="big-input hs-amt-input" type="number" min="0" step="0.01" value="${item.amt}" placeholder="0.00"
               oninput="hsItems[${i}].amt=this.value; updateHSItemEach(${i}); updateHSSummary(); saveHS()">
           </div>
         </div>
@@ -8187,7 +8291,7 @@ function saveHS() {
 
   try {
     localStorage.setItem('va_hangout_split_data', JSON.stringify({
-      people: hsPeople, items: hsItems, personSeq: hsPersonSeq, note: hsNote,
+      people: hsPeople, items: hsItems, personSeq: hsPersonSeq, note: hsNote, meId: hsMeId,
     }));
   } catch(e) { console.warn('HS save failed', e); }
 }
@@ -8215,6 +8319,7 @@ function hsUndo() {
     hsPersonSeq = data.personSeq;
     reseedIdSeqs();
     hsNote      = data.note;
+    hsMeId      = (typeof data.meId === 'number') ? data.meId : null;
     hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
     syncSessionNoteInput('hs');
     renderHSPeople();
@@ -8261,6 +8366,7 @@ function loadHS() {
     hsPersonSeq = data.personSeq;
     reseedIdSeqs();
     hsNote      = data.note;
+    hsMeId      = (typeof data.meId === 'number') ? data.meId : null;
     hsLastCur   = data.items.length ? (data.items[data.items.length - 1].cur || 'PHP') : 'PHP';
   } catch(e) { console.warn('HS load failed', e); }
   syncSessionNoteInput('hs');
@@ -8274,6 +8380,7 @@ function loadHS() {
 // ─── SHARED PLAN DATA ─────────────────────────────────────────
 let savingsGoals    = [];   // [{id, name, target, saved}]
 let wishlistItems   = [];   // [{id, name, price, mode:'save'|'inst', months, startYM}]
+let sinkingFunds    = [];   // [{id, label, amt, dueYM:'YYYY-MM', every:months, saved, inc}]
 let subscriptions   = [];   // [{id, name, amt, billingDay}]
 let installments    = [];   // [{id, name, monthlyAmt, remaining}]
 let personalDebts   = [];   // [{id, type:'lent'|'owe', person, amt}]
@@ -8398,6 +8505,396 @@ function removeGoal(id) {
   savingsGoals = savingsGoals.filter(g => g.id !== id);
   renderGoals();
   savePlanData();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SINKING FUNDS — the irregular bills a monthly budget cannot see
+//
+// Everything else in this app is monthly (necessities, subs), finite
+// (installments) or goal-shaped (savings goals). None of those hold
+// "₱9,000 every October". Those bills wreck a budget precisely
+// because they are invisible until the month they land.
+//
+// A fund divides what is left to raise by the months left to raise
+// it, and reserves that much every month. The reserve — not the bill
+// — is what shows up as a budget line, every month including the due
+// month, because the due month is paid out of the pot rather than
+// out of that month's income. Double-counting the payout on top of
+// the reserves is the mistake this design exists to avoid.
+// ═══════════════════════════════════════════════════════════════
+const SINK_MAX      = 24;
+const SINK_CADENCES = [[1,'Every month'],[2,'Every 2 months'],[3,'Quarterly'],
+                       [6,'Twice a year'],[12,'Once a year'],[24,'Every 2 years']];
+
+function sinkNum(v) { return Math.round((parseFloat(v) || 0) * 100) / 100; }
+
+// Whole months from ym to the fund's due month. Negative = overdue.
+function ymDiff(from, to) {
+  const a = String(from || '').split('-'), b = String(to || '').split('-');
+  const ay = parseInt(a[0], 10), am = parseInt(a[1], 10);
+  const by = parseInt(b[0], 10), bm = parseInt(b[1], 10);
+  if (!ay || !am || !by || !bm) return 0;
+  return (by - ay) * 12 + (bm - am);
+}
+
+function sinkActive() {
+  return (sinkingFunds || []).filter(f =>
+    isInc(f) && (f.label || '').trim() && sinkNum(f.amt) > 0);
+}
+
+// What this fund needs set aside in `ym`. The due month is counted, so a
+// fund due this month needs the whole remainder now, not half of it.
+function sinkPerMonth(f, ym) {
+  const target = sinkNum(f.amt);
+  const saved  = Math.max(0, sinkNum(f.saved));
+  const left   = Math.max(0, target - saved);
+  if (left <= 0) return 0;
+  const gap = ymDiff(ym || ymNow(), f.dueYM || ymNow());
+  const divisor = Math.max(1, gap + 1);   // overdue or due now → all of it
+  return Math.round((left / divisor) * 100) / 100;
+}
+
+function sinkTotalPerMonth(ym) {
+  return Math.round(sinkActive().reduce((s, f) => s + sinkPerMonth(f, ym), 0) * 100) / 100;
+}
+
+// Once the due month has passed the bill has been paid out of the pot, so
+// the pot drops by the target and the next due date moves on by the cadence.
+// Idempotent: it only ever advances past months, so running it twice in one
+// day changes nothing.
+function sinkRollAll() {
+  const now = ymNow();
+  let changed = false;
+  (sinkingFunds || []).forEach(f => {
+    let guard = 0;
+    while (f.dueYM && ymDiff(now, f.dueYM) < 0 && guard++ < 60) {
+      const every = parseInt(f.every, 10) || 12;
+      f.saved = Math.max(0, sinkNum(f.saved) - sinkNum(f.amt));
+      f.dueYM = ymShift(f.dueYM, every);
+      changed  = true;
+    }
+  });
+  if (changed) savePlanData();
+  return changed;
+}
+
+function addSinkingFund() {
+  if ((sinkingFunds || []).length >= SINK_MAX) {
+    showToast('That is enough sinking funds for one budget', true); return;
+  }
+  sinkingFunds.push({ id: planSeq++, label: '', amt: '', dueYM: ymShift(ymNow(), 12),
+                      every: 12, saved: '', inc: true });
+  renderSinkingFunds();
+  savePlanData();
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#sinkContainer .sink-name');
+    if (rows.length) rows[rows.length - 1].focus();
+  }, 40);
+}
+
+function removeSinkingFund(id) {
+  sinkingFunds = sinkingFunds.filter(f => f.id !== id);
+  renderSinkingFunds(); savePlanData(); renderLedger();
+}
+
+function toggleSinkInc(id) {
+  const f = (sinkingFunds || []).find(x => x.id === id);
+  if (!f) return;
+  f.inc = !isInc(f);
+  renderSinkingFunds(); savePlanData(); renderLedger();
+}
+
+// "Set aside" moves this month's reserve into the pot. It is a manual tap
+// rather than an automatic monthly credit because the app cannot know
+// whether the money actually left your spending account.
+function sinkContribute(id) {
+  const f = (sinkingFunds || []).find(x => x.id === id);
+  if (!f) return;
+  const add = sinkPerMonth(f, ymNow());
+  if (!(add > 0)) { showToast('Nothing left to set aside — this one is funded', true); return; }
+  f.saved = Math.round((Math.max(0, sinkNum(f.saved)) + add) * 100) / 100;
+  renderSinkingFunds(); savePlanData(); renderLedger();
+  showToast('🏺 ' + fPHP(add) + ' set aside for ' + (f.label || 'this fund'));
+}
+
+function renderSinkingFunds() {
+  const c = document.getElementById('sinkContainer');
+  if (!c) return;
+  const now = ymNow();
+  c.innerHTML = '';
+
+  if (!(sinkingFunds || []).length) {
+    c.innerHTML = '<div style="font-size:12px; color:var(--text3); padding:6px 2px;">'
+      + 'Nothing here yet. Car registration, insurance, Christmas, dental — the bills that '
+      + 'only show up once a year are the ones worth adding.</div>';
+  }
+
+  (sinkingFunds || []).forEach((f, i) => {
+    const target = sinkNum(f.amt);
+    const saved  = Math.max(0, sinkNum(f.saved));
+    const per    = sinkPerMonth(f, now);
+    const gap    = ymDiff(now, f.dueYM || now);
+    const pct    = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
+    const done   = target > 0 && saved >= target - 0.005;
+    const barColor = done ? 'var(--green)' : gap < 0 ? 'var(--red)'
+                   : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
+    const when = gap < 0  ? '⚠️ was due ' + ymLabel(f.dueYM)
+               : gap === 0 ? 'due this month'
+               : gap === 1 ? 'due next month'
+               : 'due ' + ymLabel(f.dueYM) + ' · ' + gap + ' months away';
+    const cadOpts = SINK_CADENCES.map(([v, lbl]) =>
+      `<option value="${v}"${(parseInt(f.every,10)||12) === v ? ' selected' : ''}>${lbl}</option>`).join('');
+
+    const div = document.createElement('div');
+    div.className = 'goal-block' + (isInc(f) ? '' : ' inc-off');
+    div.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input class="nec-cat-input sink-name" value="${escH(f.label)}" placeholder="e.g. Car registration, Christmas, Insurance" style="flex:1;"
+          oninput="sinkingFunds[${i}].label=this.value; savePlanData(); renderLedger()">
+        <button class="del-btn" onclick="removeSinkingFund(${f.id})">✕</button>
+        ${incBtn(f, `toggleSinkInc(${f.id})`)}
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:120px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Bill amount (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${escH(String(f.amt == null ? '' : f.amt))}" placeholder="9,000" min="0" step="0.01" style="flex:1;"
+              oninput="sinkingFunds[${i}].amt=this.value; renderSinkFundInfo(${i}); savePlanData(); renderLedger()">
+          </div>
+        </div>
+        <div style="flex:1; min-width:120px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Already set aside (₱)</div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:12px; color:var(--text3);">₱</span>
+            <input class="nec-amt-input" type="number" value="${escH(String(f.saved == null ? '' : f.saved))}" placeholder="0" min="0" step="0.01" style="flex:1;"
+              oninput="sinkingFunds[${i}].saved=this.value; renderSinkFundInfo(${i}); savePlanData(); renderLedger()">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="flex:1; min-width:130px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Next due</div>
+          <input class="nec-cat-input" type="month" value="${escH(f.dueYM || '')}" style="height:42px; font-size:14px; width:100%;"
+            onchange="sinkingFunds[${i}].dueYM=this.value; renderSinkingFunds(); savePlanData(); renderLedger()">
+        </div>
+        <div style="flex:1; min-width:130px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Repeats</div>
+          <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer; width:100%;"
+            onchange="sinkingFunds[${i}].every=+this.value; renderSinkingFunds(); savePlanData()">${cadOpts}</select>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="flex:1; height:10px; background:var(--surface3); border-radius:5px; overflow:hidden;">
+          <div style="height:100%; width:${pct.toFixed(1)}%; background:${barColor}; border-radius:5px; transition:width 0.4s;"></div>
+        </div>
+        <span style="font-family:'DM Mono',monospace; font-size:13px; color:${barColor}; min-width:42px; text-align:right; font-weight:500;">${target > 0 ? pct.toFixed(0) + '%' : '—'}</span>
+      </div>
+      <div id="sink-info-${i}" style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.6;">${sinkInfoHtml(f, now)}</div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="add-btn" style="margin:0; padding:7px 12px; font-size:12px; width:auto;"
+          onclick="sinkContribute(${f.id})"${per > 0 ? '' : ' disabled style="margin:0; padding:7px 12px; font-size:12px; width:auto; opacity:0.45;"'}>
+          ＋ Set aside ${fPHP(per)}
+        </button>
+        <span style="font-size:11px; color:var(--text3); align-self:center;">${when}</span>
+      </div>
+    `;
+    c.appendChild(div);
+  });
+
+  const total = sinkTotalPerMonth(now);
+  const tEl = document.getElementById('sinkTotalMonthly');
+  if (tEl) tEl.textContent = fPHP(total);
+  const pEl = document.getElementById('sinkTotalPot');
+  if (pEl) pEl.textContent = fPHP(sinkActive().reduce((s, f) => s + Math.max(0, sinkNum(f.saved)), 0));
+}
+
+function sinkInfoHtml(f, ym) {
+  const target = sinkNum(f.amt);
+  if (!(target > 0)) return 'Enter the bill amount and when it lands.';
+  const saved = Math.max(0, sinkNum(f.saved));
+  const per   = sinkPerMonth(f, ym || ymNow());
+  if (saved >= target - 0.005) return `<span style="color:var(--green-text);">✓ Fully funded — ${fPHP(saved)} of ${fPHP(target)}</span>`;
+  return `${fPHP(saved)} of ${fPHP(target)} · reserving <strong style="color:var(--text2);">${fPHP(per)}/month</strong>`;
+}
+
+function renderSinkFundInfo(i) {
+  const f = (sinkingFunds || [])[i];
+  const el = document.getElementById('sink-info-' + i);
+  if (f && el) el.innerHTML = sinkInfoHtml(f, ymNow());
+  const tEl = document.getElementById('sinkTotalMonthly');
+  if (tEl) tEl.textContent = fPHP(sinkTotalPerMonth(ymNow()));
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// SPLIT RECONCILIATION — money you fronted is not money you spent
+//
+// When you pay for the group, the ledger used to see the whole bill.
+// A ₱4,000 dinner split four ways is ₱1,000 of your spending and
+// ₱3,000 of other people's, and recording it as ₱4,000 makes your
+// Food category look like a binge every time you organise something.
+//
+// So: only YOUR share becomes a ledger entry. The rest becomes a
+// receivable that shrinks as people pay you back, and stays visible
+// as money you are out if they never do. Settling a receivable does
+// NOT touch the ledger — the ledger only ever held your share, so
+// there is nothing to correct.
+// ═══════════════════════════════════════════════════════════════
+const RECV_KEY = 'va_receivables';
+const RECV_MAX = 200;
+
+let receivables = [];   // [{id, date, label, src, total, myShare, people:[{name,amt,paid}], ledgerId}]
+let recvSeq     = 1;
+
+function loadReceivables() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RECV_KEY)) || {};
+    receivables = Array.isArray(d.items) ? d.items : [];
+    recvSeq     = typeof d.seq === 'number' ? d.seq : 1;
+  } catch (e) { receivables = []; recvSeq = 1; }
+  receivables.forEach(r => { if (!r.id) r.id = recvSeq++; });
+  recvSeq = Math.max(recvSeq, maxIdIn(receivables) + 1);   // same drift guard as 23h
+}
+
+function saveReceivables() {
+  try { localStorage.setItem(RECV_KEY, JSON.stringify({ items: receivables, seq: recvSeq })); }
+  catch (e) { console.warn('Receivables save failed', e); }
+}
+
+function recvOutstanding(r) {
+  return Math.round((r.people || []).reduce((s, x) => s + (x.paid ? 0 : (parseFloat(x.amt) || 0)), 0) * 100) / 100;
+}
+function recvSettled(r) { return recvOutstanding(r) <= 0.005; }
+function recvTotalOutstanding() {
+  return Math.round(receivables.reduce((s, r) => s + recvOutstanding(r), 0) * 100) / 100;
+}
+
+function recvTogglePaid(id, idx) {
+  const r = receivables.find(x => x.id === id);
+  if (!r || !r.people[idx]) return;
+  r.people[idx].paid = !r.people[idx].paid;
+  saveReceivables();
+  renderReceivables();
+}
+
+function recvRemove(id) {
+  const r = receivables.find(x => x.id === id);
+  if (!r) return;
+  const out = recvOutstanding(r);
+  if (out > 0.005 && !confirm('₱' + out.toLocaleString('en-PH', { minimumFractionDigits: 2 })
+      + ' is still outstanding on "' + (r.label || 'this split') + '". Remove it anyway?')) return;
+  receivables = receivables.filter(x => x.id !== id);
+  saveReceivables();
+  renderReceivables();
+  showToast('Removed from what you are owed');
+}
+
+function recvMarkAll(id) {
+  const r = receivables.find(x => x.id === id);
+  if (!r) return;
+  r.people.forEach(x => { x.paid = true; });
+  saveReceivables();
+  renderReceivables();
+  showToast('✓ ' + (r.label || 'Split') + ' fully settled');
+}
+
+// Shared by both split tabs. `totals` is the {personId: ₱owed} map each
+// summary already computes, so the share arithmetic is never done twice.
+function splitLogMyShare(src, people, totals, meId, label, catInput) {
+  if (meId === null || meId === undefined) {
+    showToast('Tap a name to mark which one is you first', true); return;
+  }
+  const me = people.find(p => p.id === meId);
+  if (!me) { showToast('That person is no longer in the list', true); return; }
+
+  const myShare = Math.round((totals[meId] || 0) * 100) / 100;
+  const others  = people
+    .filter(p => p.id !== meId && (totals[p.id] || 0) > 0.005)
+    .map(p => ({ name: p.name, amt: Math.round(totals[p.id] * 100) / 100, paid: false }));
+  const owed = Math.round(others.reduce((t, o) => t + o.amt, 0) * 100) / 100;
+
+  if (myShare <= 0.005 && owed <= 0.005) { showToast('Nothing to log yet', true); return; }
+
+  const cat = (catInput || '').trim() || (src === 'cc' ? 'CC Split' : 'Hangout');
+  let entry = null;
+  if (myShare > 0.005) {
+    entry = ledgerAdd({ date: todayLocalStr(), amt: myShare, cat: cat, src: 'split',
+                        note: (label || '') + (owed > 0.005 ? ' · fronted ' + fPHP(myShare + owed) : '') });
+  }
+
+  if (owed > 0.005) {
+    receivables.push({
+      id: recvSeq++, date: todayLocalStr(), label: label || (src === 'cc' ? 'CC Split' : 'Hangout'),
+      src: src, total: Math.round((myShare + owed) * 100) / 100, myShare: myShare,
+      people: others, ledgerId: entry ? entry.id : null,
+    });
+    if (receivables.length > RECV_MAX) receivables = receivables.slice(-RECV_MAX);
+    saveReceivables();
+    renderReceivables();
+  }
+
+  showToast(myShare > 0.005
+    ? '🧾 Logged ' + fPHP(myShare) + ' as your share' + (owed > 0.005 ? ' · ' + fPHP(owed) + ' owed to you' : '')
+    : '💵 ' + fPHP(owed) + ' recorded as owed to you');
+}
+
+function hsLogMyShare() {
+  splitLogMyShare('hangout', hsPeople, _hsLastTotals, hsMeId,
+    (hsNote || '').trim() || 'Hangout ' + todayLocalStr(),
+    document.getElementById('hsLedgerCat')?.value);
+}
+function ccLogMyShare() {
+  splitLogMyShare('cc', ccPeople, _ccLastTotals, ccMeId,
+    (ccNote || '').trim() || 'CC Split ' + todayLocalStr(),
+    document.getElementById('ccLedgerCat')?.value);
+}
+
+function hsSetMe(id) { hsMeId = (hsMeId === id) ? null : id; renderHSPeople(); updateHSSummary(); saveHS(); }
+function ccSetMe(id) { ccMeId = (ccMeId === id) ? null : id; renderCCPeople(); updateCCSummary(); saveCC(); }
+
+function renderReceivables() {
+  const box = document.getElementById('recvBody');
+  if (!box) return;
+  const open   = receivables.filter(r => !recvSettled(r));
+  const closed = receivables.filter(r =>  recvSettled(r));
+  const total  = recvTotalOutstanding();
+
+  const tEl = document.getElementById('recvTotal');
+  if (tEl) tEl.textContent = fPHP(total);
+
+  if (!receivables.length) {
+    box.innerHTML = '<div style="font-size:11.5px; color:var(--text3); padding:4px 0;">'
+      + 'Nothing outstanding. When you front a bill on the CC Split or Hangout tab, '
+      + '"Log my share" puts your part in the ledger and the rest here.</div>';
+    return;
+  }
+
+  const row = (r) => {
+    const out = recvOutstanding(r);
+    const chips = (r.people || []).map((x, i) =>
+      `<button class="recv-chip${x.paid ? ' paid' : ''}" onclick="recvTogglePaid(${r.id}, ${i})"
+        title="${x.paid ? 'Paid — tap to undo' : 'Tap when they pay you'}">${escH(x.name)} · ${fPHP(x.amt)}</button>`).join('');
+    return `<div class="recv-row${out <= 0.005 ? ' done' : ''}">
+      <div class="recv-head">
+        <span class="recv-label">${escH(r.label || 'Split')}</span>
+        <span class="recv-date">${escH(r.date || '')}</span>
+        <span class="recv-out">${out > 0.005 ? fPHP(out) + ' owed' : '✓ settled'}</span>
+        <button class="ldg-del" onclick="recvRemove(${r.id})" title="Remove">\u2715</button>
+      </div>
+      <div class="recv-sub">your share ${fPHP(r.myShare || 0)} of ${fPHP(r.total || 0)}${r.ledgerId ? ' · in the ledger' : ''}</div>
+      <div class="recv-chips">${chips}</div>
+      ${out > 0.005 ? `<button class="recv-all" onclick="recvMarkAll(${r.id})">Mark everyone paid</button>` : ''}
+    </div>`;
+  };
+
+  let h = open.map(row).join('');
+  if (closed.length) {
+    h += `<div style="font-size:10.5px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:12px 0 6px;">Settled</div>`;
+    h += closed.map(row).join('');
+  }
+  box.innerHTML = h;
 }
 
 function renderGoals() {
@@ -8832,7 +9329,7 @@ function renderPayoffDebts() {
           oninput="payoffDebts[${i}].bal=this.value; renderPayoffResults(); savePlanData()">
       </div>
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-        <input class="nec-amt-input" type="number" value="${d.apr}" placeholder="APR" min="0" step="0.1" style="width:64px;"
+        <input class="nec-amt-input no-money" type="number" value="${d.apr}" placeholder="APR" min="0" step="0.1" style="width:64px;"
           oninput="payoffDebts[${i}].apr=this.value; renderPayoffResults(); savePlanData()">
         <span style="font-size:11px; color:var(--text3);">%/yr</span>
       </div>
@@ -9383,8 +9880,8 @@ const LEDGER_KEY      = 'va_expense_log';
 const MONTHS_KEY      = 'va_spend_log';
 const LEDGER_MAX      = 2000;   // hard cap so the key can never balloon
 const LEDGER_HIST_MAX = 36;     // months of snapshots kept
-const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat', bill: 'bill ticked' };
-const LEDGER_SRC_ICON  = { manual: '\u2328', receipt: '\uD83E\uDDFE', chat: '\uD83D\uDCAC', bill: '\uD83D\uDCCB' };
+const LEDGER_SRC_LABEL = { manual: 'typed', receipt: 'receipt', chat: 'chat', bill: 'bill ticked', split: 'your share of a split' };
+const LEDGER_SRC_ICON  = { manual: '\u2328', receipt: '\uD83E\uDDFE', chat: '\uD83D\uDCAC', bill: '\uD83D\uDCCB', split: '\uD83D\uDC65' };
 const INSIGHT_KEY      = 'va_insights';  // { 'YYYY-MM': { headline, bullets[], watch, sig, model, at } }
 const INSIGHT_MAX      = 12;             // months of insight cards kept
 const PL_LEDGER_LABEL  = { shopee: 'SPayLater (Shopee)', tiktok: 'TikTok PayLater', maya: 'Maya Black CC' };
@@ -9458,6 +9955,13 @@ function capSetLabel(i, v) {
   renderLedger();
 }
 
+function capSetRoll(i, v) {
+  if (!ledgerPrefs.caps[i]) return;
+  ledgerPrefs.caps[i].roll = (v === 'surplus' || v === 'both') ? v : 'reset';
+  saveLedgerPrefs();
+  renderLedger();
+}
+
 function capSetAmt(i, v) {
   if (!ledgerPrefs.caps[i]) return;
   ledgerPrefs.caps[i].amt = Math.round((parseFloat(v) || 0) * 100) / 100;
@@ -9514,6 +10018,9 @@ function renderCatCaps() {
       oninput="capSetLabel(${i}, this.value)">
     <input type="number" class="ldg-in cap-amt" inputmode="decimal" step="0.01" min="0" placeholder="Cap \u20b1"
       value="${(parseFloat(c.amt) || 0) > 0 ? escH(String(c.amt)) : ''}" oninput="capSetAmt(${i}, this.value)">
+    <select class="ldg-in cap-roll" title="What happens to this cap on the 1st" onchange="capSetRoll(${i}, this.value)">
+      ${ROLL_MODES.map(([v, lbl]) => `<option value="${v}"${capRollMode(c) === v ? ' selected' : ''}>${lbl}</option>`).join('')}
+    </select>
     <button class="ldg-del" onclick="capRemove(${i})" title="Remove this cap">\u2715</button>
   </div>`).join('');
 }
@@ -9707,6 +10214,14 @@ function ledgerBudgetLines(ym) {
     if (amt > 0) raw.push({ label: PL_LEDGER_LABEL[k], budget: amt, src: 'pay' });
   });
 
+  // Sinking funds — the RESERVE, not the bill. The bill is paid out of the
+  // pot in its due month, so charging the month's income for it as well would
+  // count the same money twice.
+  sinkActive().forEach(f => {
+    const per = sinkPerMonth(f, ym);
+    if (per > 0) raw.push({ label: f.label.trim(), budget: per, src: 'sink' });
+  });
+
   // Caps — the same every month, because that is what a monthly cap is.
   // They merge by name with anything above, so a cap named after a bill tops
   // that bill's line up rather than opening a second one.
@@ -9806,21 +10321,89 @@ function ledgerCatAvg(key, ym, n) {
 // budget line can be part money you OWE and part money you DECIDED. Several
 // readouts need that split, and all of them must read it LIVE rather than
 // from a frozen snapshot, because two of them write back to the cap.
-function capPortion(key) {
+function capPortionAt(key, ym) {
   const cap  = capsActive().reduce((s, c) =>
     s + (ledgerCatKey(c.label) === key ? (parseFloat(c.amt) || 0) : 0), 0);
-  const line = ledgerBudgetLines(ymNow()).find(l => l.key === key);
+  const line = ledgerBudgetLines(ym).find(l => l.key === key);
   const budget = line ? line.budget : cap;
   return { cap: Math.round(cap * 100) / 100,
            nonCap: Math.max(0, Math.round((budget - cap) * 100) / 100) };
+}
+function capPortion(key) { return capPortionAt(key, ymNow()); }
+
+// ══ CAP ROLLOVER ══════════════════════════════════════════════
+// A cap that resets to full on the 1st is a speed limit, not an envelope.
+// With rollover, an underspent month buys room in the next one — and an
+// overspent month costs it.
+//
+// The carry is RECURSIVE (June's carry feeds July's, which feeds August's),
+// so it is replayed forward month by month rather than derived from a single
+// prior month. Two guards keep it honest:
+//   • it starts at the first month that has any ledger activity, so months
+//     before you began recording never bank phantom money;
+//   • only spending BEYOND the bill half of a merged line counts against the
+//     cap, exactly as capSpendable does for the live month.
+const ROLL_MODES    = [['reset','Resets each month'],['surplus','Carry leftovers'],['both','Carry both ways']];
+const ROLL_LOOKBACK = 12;   // months — a year of history is plenty
+
+function capRollMode(c) {
+  const m = c && c.roll;
+  return (m === 'surplus' || m === 'both') ? m : 'reset';
+}
+
+// First month (within the lookback) that has any ledger entry at all.
+function capRollStart(ym) {
+  for (let k = ROLL_LOOKBACK; k >= 1; k--) {
+    const m = ymShift(ym, -k);
+    if (ledgerMonth(m).length) return m;
+  }
+  return null;
+}
+
+// What a single cap carries INTO ym. Returns 0 for 'reset' caps and for any
+// month with no prior history.
+function capCarry(cap, ym) {
+  const mode = capRollMode(cap);
+  if (mode === 'reset') return 0;
+  const key = ledgerCatKey(cap.label || '');
+  if (!key) return 0;
+  const amt = parseFloat(cap.amt) || 0;
+  if (!(amt > 0)) return 0;
+
+  const start = capRollStart(ym);
+  if (!start) return 0;
+  const span = ymDiff(start, ym);
+  if (span <= 0) return 0;
+
+  let carry = 0;
+  for (let i = 0; i < span && i < ROLL_LOOKBACK; i++) {
+    const m    = ymShift(start, i);
+    const rows = ledgerMonth(m);
+    if (!rows.length) continue;                  // month never recorded — skip, don't bank
+    const cp     = capPortionAt(key, m);
+    const actual = rows.reduce((t, e) => t + (ledgerCatKey(e.cat) === key ? e.amt : 0), 0);
+    const spent  = Math.max(0, actual - cp.nonCap);   // the bill gets paid first
+    carry += (amt - spent);
+    if (mode === 'surplus' && carry < 0) carry = 0;
+  }
+  return Math.round(carry * 100) / 100;
+}
+
+// Every cap on one line, combined — two caps sharing a name carry as one.
+function capCarryFor(key, ym) {
+  return Math.round(capsActive().reduce((s, c) =>
+    s + (ledgerCatKey(c.label) === key ? capCarry(c, ym) : 0), 0) * 100) / 100;
 }
 
 // What of a cap line is actually spendable, and what has actually gone
 // against it. The bill half has to be paid before anything on that line is a
 // choice, so only spending BEYOND the bill counts against the cap.
-function capSpendable(l) {
-  const cp = capPortion(l.key);
-  return { budget: cp.cap, nonCap: cp.nonCap, spent: Math.max(0, l.actual - cp.nonCap) };
+function capSpendable(l, ym) {
+  const m  = ym || ledgerViewYM || ymNow();
+  const cp = capPortionAt(l.key, m);
+  const carry = capCarryFor(l.key, m);
+  return { budget: Math.round((cp.cap + carry) * 100) / 100, base: cp.cap, carry: carry,
+           nonCap: cp.nonCap, spent: Math.max(0, l.actual - cp.nonCap) };
 }
 
 function ledgerDrift(ym, lines) {
@@ -10450,13 +11033,20 @@ function renderLedger() {
       // merely unspent, so only caps get the per-day figure.
       let allow = '';
       if (isCur && (l.src || '').indexOf('cap') !== -1 && l.budget > 0) {
-        const p = capSpendable(l);
+        const p = capSpendable(l, ym);
         if (p.budget > 0.005) {
           const rem  = p.budget - p.spent;
           const note = p.nonCap > 0.005 ? ` · cap only, ${fPHP(p.nonCap)} of this line is a bill` : '';
           allow = rem < -0.005
             ? `<div class="cap-allow over">over by ${fPHP(Math.abs(rem))} · nothing left for the last ${daysLeft} day${daysLeft === 1 ? '' : 's'}${note}</div>`
             : `<div class="cap-allow">${fPHP(rem)} left · ${daysLeft} day${daysLeft === 1 ? '' : 's'} · ${fPHP(rem / daysLeft)}/day${note}</div>`;
+          // The carry note goes UNDER the allowance, so the headline figure
+          // stays the number you can actually spend today.
+          if (Math.abs(p.carry) > 0.005) {
+            allow += p.carry > 0
+              ? `<div class="cap-allow carry">↩ ${fPHP(p.carry)} carried in — this month's cap is ${fPHP(p.base)} + ${fPHP(p.carry)}</div>`
+              : `<div class="cap-allow carry over">↩ ${fPHP(Math.abs(p.carry))} overspend carried in — this month's cap is ${fPHP(p.base)} − ${fPHP(Math.abs(p.carry))}</div>`;
+          }
         }
       }
       return `<div style="margin-bottom:10px;">
@@ -11325,6 +11915,19 @@ function getCashFlowEvents(year, month) {
     });
   }
 
+  // ── Sinking funds: the bill itself, in its due month ──────
+  // Shown as a bill because it IS one — money genuinely leaves the account
+  // that month. It is paid from the pot rather than that month's income, so
+  // the note says so and the running balance stays honest either way.
+  if (typeof sinkingFunds !== 'undefined') {
+    const ym = year + '-' + String(month + 1).padStart(2, '0');
+    sinkActive().forEach(f => {
+      if ((f.dueYM || '') !== ym) return;
+      const amt = sinkNum(f.amt);
+      if (amt > 0) events.push({ day: 1, type: 'bill', label: '🏺 ' + f.label.trim() + ' (sinking fund)', amount: amt });
+    });
+  }
+
   // Sort by day ASC; on same day, income before bills
   events.sort((a, b) => a.day !== b.day ? a.day - b.day : (a.type === 'income' ? -1 : 1));
   return events;
@@ -11559,6 +12162,7 @@ function savePlanData() {
   try {
     localStorage.setItem('va_plan_data', JSON.stringify({
       savingsGoals, wishlistItems, subscriptions, installments, personalDebts, planSeq,
+      sinkingFunds,
       payoffDebts,
       payoffBudget: document.getElementById('payoffBudget')?.value || '',
       cfStartBal:   document.getElementById('cfStartBal')?.value || '',
@@ -11580,6 +12184,7 @@ function planUndo() {
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
+    if (Array.isArray(d.sinkingFunds))    sinkingFunds    = d.sinkingFunds;
     if (typeof d.planSeq === 'number')    planSeq         = d.planSeq;
     reseedIdSeqs();
     const pb = document.getElementById('payoffBudget');
@@ -11590,6 +12195,7 @@ function planUndo() {
     if (cu) cu.checked = !!d.cfUseSavings;
     // Re-render all Plan sections
     renderGoals();
+    renderSinkingFunds();
     renderWishlist();
     renderSubs();
     renderInsts();
@@ -11623,10 +12229,13 @@ function resetPlan() {
   payoffDebts     = [];
   planSeq         = 1;
   const _pb = document.getElementById('payoffBudget'); if (_pb) _pb.value = '';
+  sinkingFunds  = [];
+  receivables   = []; recvSeq = 1; saveReceivables();
   const _cs = document.getElementById('cfStartBal');   if (_cs) _cs.value = '';
   const _cu = document.getElementById('cfUseSavings'); if (_cu) _cu.checked = false;
 
   renderGoals();
+  renderSinkingFunds();
   renderWishlist();
   renderSubs();
   renderInsts();
@@ -11649,8 +12258,10 @@ function loadPlanData() {
     if (Array.isArray(d.installments))    installments    = d.installments;
     if (Array.isArray(d.personalDebts))   personalDebts   = d.personalDebts;
     if (Array.isArray(d.payoffDebts))     payoffDebts     = d.payoffDebts;
+    if (Array.isArray(d.sinkingFunds))    sinkingFunds    = d.sinkingFunds;
     if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
     reseedIdSeqs();
+    sinkRollAll();
     const pb = document.getElementById('payoffBudget');
     if (pb && typeof d.payoffBudget === 'string') pb.value = d.payoffBudget;
     const cs = document.getElementById('cfStartBal');
@@ -11705,7 +12316,9 @@ function switchPage(page) {
   }
   if (page === 'plan') {
     renderLedger();              // ledger lives at the bottom of this tab
+    renderReceivables();
     renderGoals();
+    renderSinkingFunds();
     renderWishlist();
     renderSubs();
     renderInsts();
@@ -11750,6 +12363,7 @@ let trkrViewYear = new Date().getFullYear();
 
 loadData();
 loadLedger();       // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
+loadReceivables();  // what people still owe you from splits you fronted
 loadLedgerPrefs();  // category caps + the bill-tick logging choice (va_ledger_prefs)
 // Default the Expenses date-range "From" to today when it's empty, so the
 // range always starts from the current date without manual entry.
@@ -12339,10 +12953,14 @@ function trkrCellClick(cell, person, year, month, currentAmt) {
 
   // Build the inline input
   const input = document.createElement('input');
-  input.type        = 'number';
-  input.value       = currentAmt > 0 ? currentAmt : '';
-  input.min         = '0';
-  input.step        = '0.01';
+  // Built as a money field up front (rather than left to the sweep) because
+  // it is focused and selected immediately below — an upgrade landing after
+  // that would wipe the selection out from under the typist.
+  input.type        = 'text';
+  input.inputMode   = 'decimal';
+  input.className   = 'money-in';
+  input.dataset.moneyIn = '1';
+  input.value       = currentAmt > 0 ? (window.moneyFormat ? window.moneyFormat(String(currentAmt)) : currentAmt) : '';
   input.placeholder = '0';
   input.style.cssText = [
     'width:100%',
@@ -12600,6 +13218,7 @@ const BACKUP_KEYS = [
   'va_conv_pins',    // pinned currencies in the converter — nice to carry across devices
   'va_insights',     // month-end insight cards — synced so a second device never re-pays for one
   'va_ledger_prefs', // category caps + the bill-tick logging choice
+  'va_receivables',  // what people still owe you from splits you fronted
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -13652,6 +14271,7 @@ const STORAGE_KEY_LABELS = {
   va_due_dismiss:        'Due-soon nudge dismissal',
   va_insights:           'Month-end insights',
   va_ledger_prefs:       'Category caps',
+  va_receivables:        'Owed to you (splits)',
 };
 
 function fmtBytes(b) {
@@ -14649,7 +15269,7 @@ function ledgerAIContext(money) {
           return true;
         }).map(c => {
           const line  = bva.lines.find(l => l.key === ledgerCatKey(c.label));
-          const p     = line ? capSpendable(line) : { budget: 0, nonCap: 0, spent: 0 };
+          const p     = line ? capSpendable(line, ym) : { budget: 0, base: 0, carry: 0, nonCap: 0, spent: 0 };
           const cap   = Math.round(p.budget * 100) / 100;
           const spent = Math.round(p.spent  * 100) / 100;
           const left  = Math.round((cap - spent) * 100) / 100;
@@ -14658,11 +15278,28 @@ function ledgerAIContext(money) {
             category: c.label, cap: money(cap), spent: money(spent), left: money(left),
             // Named so the model can explain the number rather than just quote it.
             bill_on_same_line: p.nonCap > 0.005 ? money(Math.round(p.nonCap * 100) / 100) : null,
+            // `cap` above already includes the rollover, so these two just
+            // explain where that figure came from — quoting the base cap
+            // without the carry would contradict the Allowance strip.
+            rollover: capRollMode(c),
+            base_cap: money(Math.round((p.base || 0) * 100) / 100),
+            carried_in: Math.abs(p.carry || 0) > 0.005 ? money(Math.round(p.carry * 100) / 100) : null,
             days_left_in_month: days,
             per_day_left: money(Math.round(Math.max(0, left) / days * 100) / 100),
           };
         });
       })(),
+      // Irregular bills being saved for month by month. The monthly reserve
+      // is what appears in the budget lines above; the bill itself lands in
+      // its due month and is paid from the pot.
+      sinking_funds: sinkActive().map(f => ({
+        label: f.label,
+        bill: money(sinkNum(f.amt)),
+        set_aside_so_far: money(Math.max(0, sinkNum(f.saved))),
+        reserving_per_month: money(sinkPerMonth(f, ym)),
+        due: f.dueYM || null,
+        months_away: ymDiff(ymNow(), f.dueYM || ymNow()),
+      })),
       // Budget vs long-run reality, per line — the thing the plan alone can
       // never tell you.
       drift: ledgerDrift(ym, bva.lines).map(d => ({
@@ -16551,6 +17188,157 @@ chatUpdateModeTag();
     setTimeout(update, 120);
     setTimeout(update, 600);
   });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE: THOUSANDS SEPARATORS IN AMOUNT INPUTS
+//
+// Money fields show "12,500.75" while you type. Percentages, hours,
+// day-of-month and month-count fields are deliberately left alone —
+// a comma in "day 15" or "8 hours" is noise, not help.
+//
+// HOW IT WORKS
+//  1. type="number" can never hold a comma, so matching fields are
+//     switched to type="text" + inputmode="decimal" at runtime. The
+//     numeric keypad still opens on mobile; the spinner arrows go.
+//  2. Two listeners bracket each keystroke:
+//       capture  → strips commas, so the element's own inline
+//                  oninput ("necData[3].amt=this.value") stores a
+//                  CLEAN number and localStorage never sees a comma.
+//       bubble   → re-inserts commas for display and puts the caret
+//                  back where the typist left it.
+//     Inline handlers fire at the target phase, i.e. between the two.
+//  3. A debounced MutationObserver upgrades rows rendered later
+//     (necessities, subs, ledger…) and re-formats values written
+//     programmatically. The focused field is skipped so a running
+//     re-render can never yank the caret mid-word.
+//  4. Reads are safe app-wide because parseFloat/parseInt were
+//     wrapped at the top of the document to ignore commas.
+// ═══════════════════════════════════════════════════════════════
+(function initMoneyInputs() {
+  // Money fields only. `.no-money` opts an individual field out.
+  const MONEY_SEL = [
+    '#corpSalaryInput', '#otDailyRate', '#vatPriceInput', '#savingsInput',
+    '#bonusUSD', '#shopeePurchaseAmt', '#tiktokPurchaseAmt', '#mayaPurchaseAmt',
+    '#convInput', '#whatifBonus', '#intPrincipal', '#payoffBudget',
+    '#cfStartBal', '#ldgAmt', '#trkrAmt', '#ldgE-amt',
+    '.nec-amt-input', '.cap-amt', '.cc-amt-input', '.hs-amt-input',
+    '[class*="pl-amt-"]',
+  ].join(',');
+
+  const isDigit = (ch) => ch >= '0' && ch <= '9';
+
+  // "₱12,500.75" → "12500.75". Keeps one leading minus and one dot.
+  function moneyStrip(v) {
+    let s = String(v == null ? '' : v).replace(/[^0-9.\-]/g, '');
+    const neg = s.charAt(0) === '-';
+    s = s.replace(/-/g, '');
+    const i = s.indexOf('.');
+    if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, '');
+    return (neg ? '-' : '') + s;
+  }
+
+  // "12500.75" → "12,500.75". Grouping is done with a regex rather
+  // than toLocaleString so very long entries keep every digit.
+  function moneyFormat(v) {
+    let s = moneyStrip(v);
+    if (s === '' || s === '-') return s;
+    const neg = s.charAt(0) === '-';
+    if (neg) s = s.slice(1);
+    const dot = s.indexOf('.');
+    let int  = dot === -1 ? s : s.slice(0, dot);
+    const fr = dot === -1 ? null : s.slice(dot + 1);
+    int = int.replace(/^0+(?=\d)/, '');           // "007" → "7", "0" stays "0"
+    const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg ? '-' : '') + grouped + (fr === null ? '' : '.' + fr);
+  }
+
+  // Commas are the only characters the formatter moves, so the caret is
+  // anchored to everything ELSE the typist has entered. Counting digits
+  // alone is ambiguous around a decimal point — "1,000." and "1,000"
+  // both have four digits — so the dot and the minus count too.
+  const isAnchor = (c) => isDigit(c) || c === '.' || c === '-';
+
+  function anchorsBefore(str, pos) {
+    let n = 0;
+    for (let i = 0; i < pos && i < str.length; i++) if (isAnchor(str[i])) n++;
+    return n;
+  }
+
+  // Put the caret back after the Nth anchor character, wherever the
+  // regrouped commas have pushed it to.
+  function restoreCaret(el, want) {
+    const v = el.value;
+    let seen = 0, pos = 0;
+    while (pos < v.length && seen < want) { if (isAnchor(v[pos])) seen++; pos++; }
+    try { el.setSelectionRange(pos, pos); } catch (e) {}
+  }
+
+  function upgrade(el) {
+    if (el.dataset.moneyIn || el.classList.contains('no-money')) return;
+    el.dataset.moneyIn = '1';
+    if (el.type === 'number') {
+      // Order matters: drop the number-only constraints first, or the
+      // browser may blank a value it considers invalid mid-switch.
+      el.removeAttribute('step');
+      el.removeAttribute('min');
+      el.removeAttribute('max');
+      const v = el.value;
+      el.type = 'text';
+      el.value = v;
+    }
+    el.setAttribute('inputmode', 'decimal');
+    el.setAttribute('autocomplete', 'off');
+    el.classList.add('money-in');
+    el.value = moneyFormat(el.value);
+  }
+
+  function sweep() {
+    document.querySelectorAll(MONEY_SEL).forEach(upgrade);
+    // Re-format anything the app wrote directly (loadData, undo, sync).
+    document.querySelectorAll('.money-in').forEach((el) => {
+      if (el === document.activeElement) return;
+      const f = moneyFormat(el.value);
+      if (f !== el.value) el.value = f;
+    });
+  }
+
+  const isMoney = (el) => !!(el && el.classList && el.classList.contains('money-in'));
+
+  // CAPTURE — hand the element's own oninput a comma-free value.
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!isMoney(el)) return;
+    const pos = el.selectionStart == null ? el.value.length : el.selectionStart;
+    el._moneyCaret = anchorsBefore(el.value, pos);
+    const clean = moneyStrip(el.value);
+    if (clean !== el.value) el.value = clean;
+  }, true);
+
+  // BUBBLE — the data is stored; now make the display readable again.
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!isMoney(el)) return;
+    const f = moneyFormat(el.value);
+    if (f !== el.value) el.value = f;
+    restoreCaret(el, el._moneyCaret || 0);
+  }, false);
+
+  let queued = 0;
+  const soon = () => {
+    if (queued) return;
+    queued = requestAnimationFrame(() => { queued = 0; try { sweep(); } catch (e) {} });
+  };
+
+  sweep();
+  try {
+    new MutationObserver(soon).observe(document.body, { childList: true, subtree: true });
+  } catch (e) {}
+
+  // Exposed for the headless test harness.
+  window.moneyFormat = moneyFormat;
+  window.moneyStrip  = moneyStrip;
+  window.moneySweep  = sweep;
 })();
 </script>
 </body>
