@@ -248,7 +248,7 @@
      forcing its track wider than its 1fr share and spilling past the
      right edge. This was only fixed inside the mobile query before, so it
      overflowed on desktop / when zoomed out. Now applied at all widths. */
-  .savings-pl-grid > *, .paylater-grid > *, .sav3-grid > *, .sav3-right > * { min-width: 0; }
+  .paylater-grid > *, .sav3-grid > *, .sav3-right > * { min-width: 0; }
   /* Wide tables scroll inside their card instead of pushing the page off-center */
   .nec-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .section-title {
@@ -472,10 +472,6 @@
   .nec-amt-input:focus { outline: none; border-color: var(--red); background: var(--surface3); }
 
   /* "What If" current-savings rows (Plan tab) */
-  .whatif-sav-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .whatif-sav-row .nec-cat-input { flex: 1; min-width: 0; }
-  .whatif-sav-amt { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
-  .whatif-sav-amt .nec-amt-input { width: 110px; }
 
   /* "What If" planned-purchase rows, with installment mode (Plan tab) */
   .whatif-buy-row { padding: 10px 12px; background: var(--surface3); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 8px; }
@@ -551,7 +547,6 @@
   .calc-deg-btn.active { background: var(--surface2); color: var(--teal-text); }
 
   /* MONTHLY TRACKER */
-  .trkr-persons-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   .trkr-person-tag {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--surface2); border: 1px solid var(--border);
@@ -601,12 +596,6 @@
   }
   .trkr-summary-name { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3); margin-bottom: 4px; }
   .trkr-summary-amt { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--green-text); }
-  .trkr-edit-cell {
-    background: none; border: none; font-family: 'DM Mono', monospace; font-size: 13px;
-    color: var(--text2); text-align: right; width: 100%; padding: 0; cursor: pointer;
-    border-radius: 3px; transition: background 0.15s;
-  }
-  .trkr-edit-cell:hover { background: var(--surface3); color: var(--text); }
   @media (max-width: 700px) {
     .trkr-table th, .trkr-table td { padding: 6px 7px; font-size: 12px; }
     .trkr-summary-grid { grid-template-columns: 1fr 1fr; }
@@ -992,7 +981,6 @@
     .net-card          { grid-template-columns: 1fr; gap: 16px; }
     /* Override inline style on the PayLater grid */
     .paylater-grid     { grid-template-columns: 1fr !important; }
-    .savings-pl-grid   { grid-template-columns: 1fr !important; }
     .sav3-grid         { grid-template-columns: 1fr !important; }
     .sav3-right        { grid-template-columns: 1fr !important; }
 
@@ -1282,9 +1270,6 @@
   .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
   .cal-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
   .cal-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-  .va-days-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .va-day-block { display: flex; flex-direction: column; gap: 4px; }
-  .va-day-block label { font-size: 11px; color: var(--text3); }
 
   /* CASH FLOW TIMELINE */
   .cf-timeline { display: flex; flex-direction: column; }
@@ -1353,19 +1338,6 @@
   }
   .stat-tile-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
 
-  /* ── CURRENCY CONVERTER ───────────────────────────────────── */
-  .conv-dir-toggle {
-    display: flex; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); overflow: hidden; width: fit-content; margin-bottom: 16px;
-  }
-  .conv-dir-btn {
-    background: none; border: none; color: var(--text2);
-    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
-    padding: 7px 16px; cursor: pointer; transition: all 0.18s; white-space: nowrap;
-  }
-  .conv-dir-btn.active { background: var(--amber-dim); color: var(--amber-text); box-shadow: inset 0 0 0 1px var(--amber); }
-  .conv-dir-btn:not(.active):hover { background: var(--surface3); color: var(--text); }
-
   /* ── MULTI-CURRENCY CONVERTER ────────────────────────────── */
   .conv-currency-select {
     width: 100%;
@@ -1402,19 +1374,6 @@
   /* ═══════════════════════════════════════════════════════════
      FEATURE: QUICK BALANCE SYNC
      ═══════════════════════════════════════════════════════════ */
-  .qbs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
-  .qbs-item { display: flex; flex-direction: column; gap: 5px; }
-  .qbs-bank-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
-  .qbs-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .qbs-input {
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px;
-    padding: 7px 10px; border-radius: var(--radius-sm); width: 100%;
-    transition: border-color 0.2s; -moz-appearance: textfield;
-  }
-  .qbs-input::-webkit-outer-spin-button,
-  .qbs-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .qbs-input:focus { outline: none; border-color: var(--green); background: var(--surface3); }
 
   /* ═══════════════════════════════════════════════════════════
      FEATURE: BILL PAYMENT CHECKLIST
@@ -1604,9 +1563,8 @@
     .del-btn { min-width: 44px; min-height: 44px; font-size: 18px; }
 
     /* Pills & chips */
-    .preset-btn, .split-chip, .trkr-year-tab, .day-chip.tap,
-    .conv-dir-btn, .debt-type-btn { min-height: 40px; }
-    .conv-dir-btn, .debt-type-btn { display: inline-flex; align-items: center; }
+    .preset-btn, .split-chip, .trkr-year-tab, .debt-type-btn { min-height: 40px; }
+    .debt-type-btn { display: inline-flex; align-items: center; }
 
     /* Calendar navigation */
     .cal-nav-btn { min-height: 44px; min-width: 52px; font-size: 18px; }
@@ -1766,7 +1724,7 @@
 
   /* ── SPENDING LEDGER + DUE-SOON NUDGE ─────────────────────── */
   .ldg-add {
-    display: grid; grid-template-columns: 130px 1fr 1fr 1fr auto; gap: 8px;
+    display: grid; grid-template-columns: 128px 1fr 1fr 1.2fr 1fr auto; gap: 8px;
     align-items: center; margin-bottom: 14px;
   }
   .ldg-in {
@@ -1806,6 +1764,61 @@
   .ldg-src.receipt { border-color: var(--purple); color: var(--purple-text); }
   .ldg-src.chat    { border-color: var(--blue);   color: var(--blue-text); }
   .ldg-src.bill    { border-color: var(--teal);   color: var(--teal-text); }
+  .ldg-src.split   { border-color: var(--amber);  color: var(--amber-text); }
+
+  /* ── ACCOUNTS + TRANSFERS ─────────────────────────────────── */
+  .acct-wrap {
+    margin: 2px 0 14px; padding: 11px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .acct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .acct-card {
+    border: 1px solid var(--border); border-left: 3px solid var(--border2);
+    background: var(--surface3); border-radius: var(--radius-sm); padding: 8px 10px;
+  }
+  .acct-card.untracked { opacity: 0.9; border-left-style: dashed; }
+  .acct-name { font-size: 12.5px; color: var(--text); display: flex; align-items: baseline; gap: 6px; }
+  .acct-bal  { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); margin: 3px 0 1px; }
+  .acct-bal.none { font-size: 11.5px; color: var(--text3); font-family: 'Outfit', sans-serif; }
+  .acct-line { font-size: 10.5px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .acct-line.out { color: var(--red-text); }
+  .acct-line.in  { color: var(--green-text); }
+  .acct-tag {
+    font-size: 9.5px; letter-spacing: 0.4px; text-transform: uppercase;
+    color: var(--text3); border: 1px solid var(--border2); border-radius: 999px; padding: 1px 6px;
+  }
+  .acct-chip {
+    font-size: 10.5px; font-family: 'DM Mono', monospace; padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--border2); color: var(--text3); flex: 0 0 auto; white-space: nowrap;
+  }
+  .acct-chip.none { border-style: dashed; opacity: 0.75; }
+  .trf-bar { display: grid; grid-template-columns: 120px 1fr auto 1fr 1fr auto; gap: 7px; align-items: center; margin-top: 9px; }
+  .trf-arrow { font-size: 14px; color: var(--text3); text-align: center; }
+  .trf-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 7px; font-size: 10.5px; color: var(--text3); }
+  .trf-foot label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+  .ldg-row.transfer { border-color: var(--blue); background: var(--surface3); }
+  .ldg-row.transfer .ldg-amt { color: var(--blue-text); }
+
+  /* ── SPLIT ONE SPEND ACROSS CATEGORIES ────────────────────── */
+  .ldg-split {
+    margin: 2px 0 14px; padding: 11px 12px; background: var(--surface3);
+    border: 1px solid var(--amber); border-radius: var(--radius-sm);
+  }
+  .sp-row { display: grid; grid-template-columns: 1fr 130px auto; gap: 7px; align-items: center; margin-bottom: 6px; }
+  .sp-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 9px; }
+  .sp-left { flex: 1 1 160px; font-size: 11.5px; font-family: 'DM Mono', monospace; color: var(--text3); }
+  .sp-left.over { color: var(--red-text); }
+  .sp-left.exact { color: var(--green-text); }
+  .ldg-grp { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); }
+  .ldg-grp > .ldg-row { border: none; background: transparent; }
+  .ldg-grp-parts { padding: 0 11px 8px 11px; display: flex; flex-direction: column; gap: 4px; }
+  .ldg-part {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+    padding: 5px 9px; background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .ldg-part .ldg-cat { font-size: 12px; }
+  .ldg-part .ldg-amt { font-size: 12px; }
+  .ldg-part-bar { flex: 0 0 3px; align-self: stretch; background: var(--amber); border-radius: 2px; opacity: 0.55; }
   .ldg-del {
     background: none; border: none; color: var(--text3); cursor: pointer;
     font-size: 12px; padding: 2px 4px; flex: 0 0 auto;
@@ -1929,6 +1942,10 @@
   @media (max-width: 720px) {
     .ldg-add { grid-template-columns: 1fr 1fr; }
     .ldg-add .add-btn { grid-column: 1 / -1; }
+    .trf-bar { grid-template-columns: 1fr 1fr; }
+    .trf-bar .trf-arrow { display: none; }
+    .trf-bar .add-btn { grid-column: 1 / -1; }
+    .sp-row { grid-template-columns: 1fr 110px auto; }
     .cap-row { flex-wrap: wrap; }
     .cap-row .cap-amt { flex: 1 1 100px; }
     .cap-row .cap-roll { flex: 1 1 100%; }
@@ -1982,7 +1999,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-29b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-07-30c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3999,11 +4016,67 @@
         <input type="text" id="ldgNote" class="ldg-in" placeholder="Note / merchant (optional)" maxlength="120"
           oninput="onLdgNoteInput()"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
+        <select id="ldgAcct" class="ldg-in" title="Which account the money left" onchange="onLdgAcctChange(this.value)"></select>
         <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:-6px 0 10px;">
+        <button class="ldg-btn" onclick="splitOpen(0)" title="Break one payment into several categories">&#9974; Split this across categories</button>
+      </div>
+
+      <!-- SPLIT COMPOSER. Static shell for the same reason the quick-add form
+           is: only #ldgSplitBody is ever rewritten, and only when a part row is
+           added or removed, so typing inside a part is never interrupted. -->
+      <div class="ldg-split" id="ldgSplitWrap" style="display:none;">
+        <div class="cap-hd" style="margin-bottom:8px;">&#9974; Split one payment
+          <span class="cap-hd-sub" id="ldgSplitSub"></span>
+        </div>
+        <div id="ldgSplitBody"></div>
+        <button class="add-btn" style="margin-top:2px;" onclick="splitAddPart()">+ Add category</button>
+        <div class="sp-foot">
+          <span class="sp-left" id="ldgSplitLeft"></span>
+          <button class="ldg-btn" onclick="splitEven()" title="Divide the target equally across the rows">&#8776; Even</button>
+          <button class="ldg-btn" onclick="splitClose()">Cancel</button>
+          <button class="ldg-btn primary" onclick="splitSave()">Save split</button>
+        </div>
+        <div class="cap-note">Each row becomes its own ledger entry, so every category bar, cap and average sees its real share. They stay grouped here and delete together.</div>
       </div>
       <!-- category memory: learned from your own past entries, no AI call -->
       <div class="ldg-sug" id="ldgSuggest"></div>
       <datalist id="ldgCatList"></datalist>
+
+      <!-- ACCOUNTS + TRANSFERS. The ledger knew what left but never what it
+           left FROM, and the savings allocations sat in a parallel universe
+           with no link to any of it. Accounts are DERIVED from those
+           allocations (keyed on the bank, so renaming a row keeps the link)
+           plus anything extra you add here. Static shell — renderLedger()
+           rewrites #ledgerBody only. -->
+      <div class="acct-wrap">
+        <div class="cap-hd">&#127974; Accounts
+          <span class="cap-hd-sub">where the money sits, and where each spend came from</span>
+        </div>
+        <div id="ldgAcctBody"></div>
+
+        <div class="trf-bar">
+          <input type="date" id="trfDate" class="ldg-in" title="Date of the move">
+          <select id="trfFrom" class="ldg-in" title="Account the money leaves"></select>
+          <span class="trf-arrow">&#8594;</span>
+          <select id="trfTo" class="ldg-in" title="Account the money lands in"></select>
+          <input type="number" id="trfAmt" class="ldg-in ldg-money" placeholder="Amount &#8369;" inputmode="decimal" step="0.01" min="0"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddTransfer();}">
+          <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddTransfer()">&#8646; Transfer</button>
+        </div>
+        <div class="trf-foot">
+          <input type="text" id="trfNote" class="ldg-in" placeholder="Note (optional)" maxlength="120" style="flex:1 1 160px;">
+          <label title="Adjusts the two balances on the Expenses tab. Untick if you have already updated them yourself."><input type="checkbox" id="trfMove" checked> also move the balances</label>
+        </div>
+        <div class="cap-note">A transfer is not spending, so it never touches a budget line, a cap, an average or a month-end total &mdash; it only records that the money changed hands between your own accounts.</div>
+
+        <div class="trf-foot" style="margin-top:10px; padding-top:9px; border-top:1px solid var(--border);">
+          <input type="text" id="acctNewName" class="ldg-in" placeholder="Add an account not in your savings (e.g. Payroll BDO, Maya CC)" maxlength="40" style="flex:1 1 220px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); acctAddCustom();}">
+          <button class="ldg-btn" onclick="acctAddCustom()">+ Add account</button>
+        </div>
+      </div>
 
       <!-- MONTHLY CAPS. Every other budget line is DERIVED from a bill, which
            is why food and transport only ever showed up as "unbudgeted". A cap
@@ -4182,16 +4255,6 @@ let countdownTimer = null;
 let fetching = false;
 
 // ─── QUICK BALANCE SYNC STATE (hoisted) ────────────────────────
-const QBS_BANKS = [
-  { id: 'gcash',     name: 'GCash',     color: '#0070BA' },
-  { id: 'maya',      name: 'Maya',      color: '#04AE5E' },
-  { id: 'bdo',       name: 'BDO',       color: '#043673' },
-  { id: 'unionbank', name: 'UnionBank', color: '#F5821F' },
-  { id: 'rcbc',      name: 'RCBC',      color: '#9B1C2F' },
-  { id: 'gotyme',    name: 'GoTyme',    color: '#E6007E' },
-  { id: 'maribank',  name: 'MariBank',  color: '#7B2D8B' },
-  { id: 'cash',      name: 'Cash',      color: '#3FB950' },
-];
 let quickBalances = {};
 
 // ─── BILL CHECKLIST STATE (hoisted) ────────────────────────────
@@ -6713,12 +6776,6 @@ function calcClear() {
   calcRender();
 }
 
-function calcToggleSign() {
-  if (calcCurrent === '0' || calcCurrent === 'Error') return;
-  calcCurrent = calcCurrent.startsWith('-') ? calcCurrent.slice(1) : '-' + calcCurrent;
-  calcRender();
-}
-
 function calcPercent() {
   const v = parseFloat(calcCurrent) || 0;
   // If there's a pending operation, calculate percentage of that value
@@ -8423,7 +8480,8 @@ function reseedIdSeqs() {
   try { ccPersonSeq = Math.max(ccPersonSeq, maxIdIn(ccPeople) + 1); } catch (e) {}
   try { hsPersonSeq = Math.max(hsPersonSeq, maxIdIn(hsPeople) + 1); } catch (e) {}
   try { trkrSeq     = Math.max(trkrSeq,     maxIdIn(trkrEntries) + 1); } catch (e) {}
-  try { ledgerSeq   = Math.max(ledgerSeq,   maxIdIn(ledger) + 1); } catch (e) {}
+  try { ledgerSeq   = Math.max(ledgerSeq,   maxIdIn(ledger) + 1,
+    (ledger || []).reduce((m, e) => Math.max(m, (e && e.grp) || 0), 0) + 1); } catch (e) {}
 }
 
 // ─── SAVINGS GOALS ────────────────────────────────────────────
@@ -9914,7 +9972,17 @@ function loadLedgerPrefs() {
     .map(c => ({ label: String(c.label || '').slice(0, 60), amt: Math.round((parseFloat(c.amt) || 0) * 100) / 100 }))
     .slice(0, CAP_MAX);
   const al = raw && BILL_AUTOLOG.indexOf(raw.autolog) !== -1 ? raw.autolog : 'ask';
-  ledgerPrefs = { caps: caps, autolog: al };
+  // Accounts that are NOT savings allocations. Keyed by a slug of the name,
+  // exactly as acctKeyOf derives one, so an older list re-links itself.
+  const accts = (raw && Array.isArray(raw.accts) ? raw.accts : [])
+    .filter(a => a && typeof a === 'object')
+    .map(a => ({ key: String(a.key || acctKeyFromName(a.label) || ''),
+                 label: String(a.label || '').slice(0, 40),
+                 bank: String(a.bank || 'custom').slice(0, 20) }))
+    .filter(a => a.key && a.label)
+    .slice(0, ACCT_MAX);
+  ledgerPrefs = { caps: caps, autolog: al, accts: accts,
+                  lastAcct: String((raw && raw.lastAcct) || '').slice(0, 60) };
 }
 
 function saveLedgerPrefs() {
@@ -10033,6 +10101,500 @@ function daysLeftInMonth(d) {
   return Math.max(1, last - n.getDate() + 1);
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// ACCOUNTS + TRANSFERS
+//
+// The ledger recorded what left but never what it left FROM, and the
+// savings allocations on the Expenses tab sat in a parallel universe
+// with no link to any of it. So accounts are DERIVED from those
+// allocations rather than duplicated into a second list — a second
+// list is exactly the parallel universe this is meant to close.
+//
+// Identity is a KEY, not an index or an id: a named bank keys on its
+// bank id (so renaming "GCash" to "GCash main" keeps every entry
+// attached), and an "Other…" row keys on a slug of its label. No new
+// counter means no counter to drift out of step with its rows — the
+// bug class swept in 23h — and an older backup or a reordered list
+// re-links itself on load with no migration.
+//
+// Two savings rows on the same bank are ONE account: that is what
+// they are in real life. Their balances add up, and a transfer that
+// has to move a balance moves the first included row of that key.
+//
+// A TRANSFER IS NOT SPENDING. It is a ledger row with kind:'transfer'
+// that every spend total filters out (ledgerMonth is the one
+// chokepoint), so a ₱5,000 GCash→BDO move can never show up as a
+// ₱5,000 month.
+// ══════════════════════════════════════════════════════════════
+const ACCT_MAX = 24;
+
+// Stable identity for an account.
+function acctKeyOf(bankId, label) {
+  const b = String(bankId || '').trim();
+  if (b && b !== 'custom') return b;
+  const slug = String(label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return slug ? 'c:' + slug : '';
+}
+function acctKeyFromName(name) { return acctKeyOf('custom', name); }
+
+// Every account you can tag a spend with, savings-derived first.
+function accountsList() {
+  const out = [], idx = {};
+  (typeof savingsItems !== 'undefined' && Array.isArray(savingsItems) ? savingsItems : []).forEach((it, i) => {
+    const key = acctKeyOf(it.bankId, it.label);
+    if (!key) return;
+    const bank  = BANKS.find(b => b.id === it.bankId);
+    const label = String(it.label || '').trim() || (bank ? bank.name : 'Account');
+    if (idx[key] === undefined) {
+      idx[key] = out.length;
+      out.push({ key: key, label: label, bank: it.bankId || 'custom',
+                 bal: 0, tracked: true, si: null, rows: [] });
+    }
+    const a = out[idx[key]];
+    a.rows.push(i);
+    // Only an INCLUDED row can carry a balance move, for the same reason it
+    // is the only kind that counts towards the savings total.
+    if (isInc(it)) { a.bal += parseFloat(it.amt) || 0; if (a.si === null) a.si = i; }
+  });
+  ((ledgerPrefs && ledgerPrefs.accts) || []).forEach(c => {
+    const key = String((c && c.key) || '');
+    if (!key || idx[key] !== undefined) return;
+    idx[key] = out.length;
+    out.push({ key: key, label: String(c.label || key).slice(0, 40), bank: c.bank || 'custom',
+               bal: 0, tracked: false, si: null, rows: [] });
+  });
+  out.forEach(a => { a.bal = Math.round(a.bal * 100) / 100; });
+  return out;
+}
+
+function acctFind(key) {
+  if (!key) return null;
+  return accountsList().find(a => a.key === key) || null;
+}
+function acctLabel(key) {
+  const a = acctFind(key);
+  return a ? a.label : (key ? String(key).replace(/^c:/, '') : '');
+}
+function acctColor(key) {
+  const a = acctFind(key);
+  const b = a ? BANKS.find(x => x.id === a.bank) : null;
+  return b ? b.color : 'var(--border2)';
+}
+
+// Add an account that is not a savings allocation — a payroll account you
+// don't count as savings, a credit card, a wallet you keep at zero.
+function acctAddCustom() {
+  const el = document.getElementById('acctNewName');
+  const name = String(el ? el.value : '').trim().slice(0, 40);
+  if (!name) { showToast('Name the account first', true); if (el) el.focus(); return; }
+  const key = acctKeyFromName(name);
+  if (!key) { showToast('That name has no letters or digits in it', true); return; }
+  if (accountsList().some(a => a.key === key)) { showToast('You already have that account', true); return; }
+  if (!Array.isArray(ledgerPrefs.accts)) ledgerPrefs.accts = [];
+  if (ledgerPrefs.accts.length >= ACCT_MAX) { showToast('That is enough accounts for one budget', true); return; }
+  ledgerPrefs.accts.push({ key: key, label: name, bank: 'custom' });
+  saveLedgerPrefs();
+  if (el) el.value = '';
+  renderAccounts();
+  showToast('🏦 ' + name + ' added');
+}
+
+function acctRemoveCustom(key) {
+  const list = (ledgerPrefs.accts || []);
+  const i = list.findIndex(c => c.key === key);
+  if (i === -1) return;
+  const tagged = ledger.filter(e => e.acct === key || e.acct2 === key).length;
+  if (tagged && !confirm(list[i].label + ' is on ' + tagged + ' ledger row'
+    + (tagged === 1 ? '' : 's') + '.\n\nThose rows keep their amounts but go back to "no account". Remove it?')) return;
+  list.splice(i, 1);
+  saveLedgerPrefs();
+  renderAccounts();
+  renderLedger();
+}
+
+// Move a tracked account's balance. Untracked accounts have no balance to
+// move, so money going there simply leaves the tracked world — which is the
+// honest answer, not a silent no-op, and the transfer says so.
+function acctApplyDelta(key, delta) {
+  const a = acctFind(key);
+  if (!a || !a.tracked || a.si === null) return false;
+  const it = savingsItems[a.si];
+  if (!it) return false;
+  it.amt = Math.round(((parseFloat(it.amt) || 0) + delta) * 100) / 100;
+  return true;
+}
+function acctFlushBalances() {
+  try { renderSavingsItems(); } catch (e) {}
+  try { updateSavingsSummary(); } catch (e) {}
+  try { saveData(); } catch (e) {}      // Undo snapshots va_payroll_data, so this is recoverable
+}
+
+// ── per-account activity in one month ─────────────────────────
+function acctMonthStats(ym) {
+  const out = {};
+  const grab = k => out[k] || (out[k] = { spent: 0, moveIn: 0, moveOut: 0, n: 0, untagged: 0 });
+  ledger.forEach(e => {
+    if (ymOf(e.date) !== ym) return;
+    if (isTransfer(e)) {
+      if (e.acct)  grab(e.acct).moveOut += e.amt;
+      if (e.acct2) grab(e.acct2).moveIn += e.amt;
+      return;
+    }
+    if (!e.acct) return;
+    const a = grab(e.acct);
+    a.spent += e.amt; a.n++;
+  });
+  Object.keys(out).forEach(k => {
+    out[k].spent   = Math.round(out[k].spent   * 100) / 100;
+    out[k].moveIn  = Math.round(out[k].moveIn  * 100) / 100;
+    out[k].moveOut = Math.round(out[k].moveOut * 100) / 100;
+  });
+  return out;
+}
+function acctUntaggedCount(ym) {
+  return ledgerMonth(ym).filter(e => !e.acct).length;
+}
+
+// ── the pickers ───────────────────────────────────────────────
+// Rebuilt from the live account list, preserving whatever was selected so a
+// re-render mid-edit cannot silently retarget a transfer.
+function acctOptionsHTML(sel, blankLabel) {
+  const list = accountsList();
+  let h = '<option value="">' + escH(blankLabel || 'No account') + '</option>';
+  list.forEach(a => {
+    h += '<option value="' + escH(a.key) + '"' + (a.key === sel ? ' selected' : '') + '>'
+       + escH(a.label) + (a.tracked ? '' : ' ·') + '</option>';
+  });
+  return h;
+}
+function fillAcctSelect(id, sel, blankLabel) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // renderLedger runs on every keystroke in a cap field, so this can fire
+  // while a picker is open. Rewriting its options would close the dropdown
+  // under the user's finger.
+  if (el === document.activeElement) return;
+  const keep = el.value;
+  el.innerHTML = acctOptionsHTML(sel !== undefined && sel !== null ? sel : keep, blankLabel);
+  const want = (sel !== undefined && sel !== null) ? sel : keep;
+  if (want && Array.prototype.some.call(el.options, o => o.value === want)) el.value = want;
+}
+
+function onLdgAcctChange(v) {
+  ledgerPrefs.lastAcct = String(v || '');
+  saveLedgerPrefs();
+}
+
+function renderAccounts() {
+  fillAcctSelect('ldgAcct', ledgerPrefs.lastAcct || '', 'No account');
+  fillAcctSelect('trfFrom', undefined, 'From…');
+  fillAcctSelect('trfTo',   undefined, 'To…');
+  const dEl = document.getElementById('trfDate');
+  if (dEl && !dEl.value) dEl.value = todayLocalStr();
+
+  const box = document.getElementById('ldgAcctBody');
+  if (!box) return;
+  const list = accountsList();
+  if (!list.length) {
+    box.innerHTML = '<div style="font-size:11.5px; color:var(--text3); padding:2px 0 4px;">'
+      + 'No accounts yet. Every savings allocation on the Expenses tab becomes one automatically — '
+      + 'or add a plain spending account below.</div>';
+    return;
+  }
+  const ym    = ledgerViewYM || ymNow();
+  const stats = acctMonthStats(ym);
+  const custom = {};
+  (ledgerPrefs.accts || []).forEach(c => { custom[c.key] = 1; });
+
+  let h = '<div class="acct-grid">' + list.map(a => {
+    const st = stats[a.key] || { spent: 0, moveIn: 0, moveOut: 0, n: 0 };
+    return `<div class="acct-card${a.tracked ? '' : ' untracked'}" style="border-left-color:${escH(acctColor(a.key))};">
+      <div class="acct-name">
+        <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;">${escH(a.label)}</span>
+        ${a.tracked ? '' : '<span class="acct-tag" title="Not a savings allocation — no balance is tracked for it">no balance</span>'}
+        ${custom[a.key] ? `<button class="ldg-del" onclick="acctRemoveCustom('${escJS(a.key)}')" title="Remove this account">✕</button>` : ''}
+      </div>
+      ${a.tracked
+        ? `<div class="acct-bal">${fPHP(a.bal)}</div>`
+        : `<div class="acct-bal none">balance lives outside the app</div>`}
+      <div class="acct-line${st.spent > 0.005 ? ' out' : ''}">${st.spent > 0.005 ? fPHP(st.spent) + ' spent · ' + st.n + ' row' + (st.n === 1 ? '' : 's') : 'nothing logged this month'}</div>
+      ${(st.moveIn > 0.005 || st.moveOut > 0.005)
+        ? `<div class="acct-line">${st.moveIn > 0.005 ? '↓ ' + fPHP(st.moveIn) + ' in' : ''}${(st.moveIn > 0.005 && st.moveOut > 0.005) ? ' · ' : ''}${st.moveOut > 0.005 ? '↑ ' + fPHP(st.moveOut) + ' out' : ''}</div>`
+        : ''}
+    </div>`;
+  }).join('') + '</div>';
+
+  const untagged = acctUntaggedCount(ym);
+  if (untagged) {
+    const canGuess = acctmemIndex().n > 0;
+    h += `<div style="font-size:10.5px; color:var(--text3); margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span style="flex:1 1 160px;">${untagged} entr${untagged === 1 ? 'y' : 'ies'} this month have no account yet — the ✎ button on a row sets one.</span>
+      ${canGuess ? `<button class="ldg-btn" onclick="acctGuessUntagged()" title="Fill in the ones your past rows are confident about">\uD83E\uDDE0 Guess from my habits</button>` : ''}
+    </div>`;
+  }
+  box.innerHTML = h;
+}
+
+// ── transfers ─────────────────────────────────────────────────
+function isTransfer(e) { return !!(e && e.kind === 'transfer'); }
+
+function ledgerAddTransfer() {
+  const g = i => document.getElementById(i);
+  const amt = parseFloat(g('trfAmt') ? g('trfAmt').value : '');
+  const from = g('trfFrom') ? g('trfFrom').value : '';
+  const to   = g('trfTo')   ? g('trfTo').value   : '';
+  if (!(amt > 0)) { showToast('Enter an amount first', true); if (g('trfAmt')) g('trfAmt').focus(); return; }
+  if (!from || !to) { showToast('Pick both accounts', true); return; }
+  if (from === to)  { showToast('That is the same account on both sides', true); return; }
+
+  const dRaw = g('trfDate') ? g('trfDate').value : '';
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dRaw) ? dRaw : todayLocalStr();
+  const note = String(g('trfNote') ? g('trfNote').value : '').trim().slice(0, 120);
+  const move = !!(g('trfMove') && g('trfMove').checked);
+  const amtR = Math.round(amt * 100) / 100;
+
+  // Record exactly which SIDES actually moved, so deleting reverses exactly
+  // what was applied rather than guessing from the checkbox months later.
+  let mFrom = false, mTo = false;
+  if (move) {
+    mFrom = acctApplyDelta(from, -amtR);
+    mTo   = acctApplyDelta(to,    amtR);
+    if (mFrom || mTo) acctFlushBalances();
+  }
+
+  const e = ledgerAdd({
+    date: date, amt: amtR, cat: 'Transfer', src: 'manual', note: note,
+    kind: 'transfer', acct: from, acct2: to, movedFrom: mFrom, movedTo: mTo,
+  });
+
+  if (g('trfAmt'))  g('trfAmt').value = '';
+  if (g('trfNote')) g('trfNote').value = '';
+  ledgerViewYM = ymOf(e.date);
+  renderLedger();
+
+  const half = move && (mFrom !== mTo);
+  showToast('⇄ ' + fPHP(amtR) + ' · ' + acctLabel(from) + ' → ' + acctLabel(to)
+    + (move ? (half ? ' · one side has no tracked balance' : (mFrom || mTo) ? ' · balances updated' : '') : ' · balances left alone'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// SPLIT ONE PAYMENT ACROSS CATEGORIES
+//
+// ₱3,000 at the supermarket is usually ₱2,400 of groceries and ₱600 of
+// household, and forcing it into one category quietly corrupts every
+// average, cap and drift row built on top of it.
+//
+// A split is stored as N ORDINARY ENTRIES sharing a `grp` id rather than
+// as one entry carrying a parts array. Everything downstream — category
+// totals, caps, trends, drift, the month-end snapshot, the category
+// memory, the CSV — already understands entries and needs no change to
+// understand a split. The grouping is presentation.
+// ══════════════════════════════════════════════════════════════
+const SPLIT_MAX_PARTS = 12;
+let ldgSplit = null;   // { srcId, target, date, note, acct, src, bill, parts:[{cat,amt}] }
+
+function splitPartsSum() {
+  if (!ldgSplit) return 0;
+  return Math.round(ldgSplit.parts.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0) * 100) / 100;
+}
+
+// srcId 0 = from the quick-add form; otherwise the entry being broken up.
+function splitOpen(srcId) {
+  const wrap = document.getElementById('ldgSplitWrap');
+  if (!wrap) return;
+  if (srcId) {
+    const e = ledger.find(x => x.id === srcId);
+    if (!e) return;
+    if (isTransfer(e)) { showToast('A transfer is not spending — nothing to split', true); return; }
+    ldgSplit = { srcId: srcId, target: e.amt, date: e.date, note: e.note || '', acct: e.acct || '',
+                 src: e.src, bill: e.bill || '', grp: e.grp || 0,
+                 parts: [{ cat: e.cat, amt: e.amt }, { cat: '', amt: '' }] };
+  } else {
+    const g = i => document.getElementById(i);
+    const amt = parseFloat(g('ldgAmt') ? g('ldgAmt').value : '') || 0;
+    ldgSplit = {
+      srcId: 0, target: Math.round(amt * 100) / 100,
+      date: (g('ldgDate') && g('ldgDate').value) || todayLocalStr(),
+      note: String(g('ldgNote') ? g('ldgNote').value : '').trim().slice(0, 120),
+      acct: g('ldgAcct') ? g('ldgAcct').value : (ledgerPrefs.lastAcct || ''),
+      src: 'manual', bill: '', grp: 0,
+      parts: [{ cat: (g('ldgCat') ? g('ldgCat').value : '') || '', amt: '' }, { cat: '', amt: '' }],
+    };
+  }
+  wrap.style.display = '';
+  renderSplitRows();
+  const first = document.querySelector('#ldgSplitBody .sp-amt');
+  if (first) first.focus();
+  try { wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+}
+
+function splitClose() {
+  ldgSplit = null;
+  const wrap = document.getElementById('ldgSplitWrap');
+  if (wrap) { wrap.style.display = 'none'; }
+  const body = document.getElementById('ldgSplitBody');
+  if (body) body.innerHTML = '';
+}
+
+function splitAddPart() {
+  if (!ldgSplit) return;
+  if (ldgSplit.parts.length >= SPLIT_MAX_PARTS) { showToast('That is enough categories for one receipt', true); return; }
+  ldgSplit.parts.push({ cat: '', amt: '' });
+  renderSplitRows();
+  const rows = document.querySelectorAll('#ldgSplitBody .sp-cat');
+  if (rows.length) rows[rows.length - 1].focus();
+}
+
+function splitRemovePart(i) {
+  if (!ldgSplit || !ldgSplit.parts[i]) return;
+  if (ldgSplit.parts.length <= 2) { ldgSplit.parts[i] = { cat: '', amt: '' }; }
+  else ldgSplit.parts.splice(i, 1);
+  renderSplitRows();
+}
+
+// Setters deliberately do NOT re-render the rows — that would replace the
+// element being typed into. Only the running remainder is refreshed.
+function splitSetCat(i, v) { if (ldgSplit && ldgSplit.parts[i]) { ldgSplit.parts[i].cat = String(v || '').slice(0, 60); updateSplitFoot(); } }
+function splitSetAmt(i, v) { if (ldgSplit && ldgSplit.parts[i]) { ldgSplit.parts[i].amt = v; updateSplitFoot(); } }
+
+// Fill this row with whatever is still unallocated.
+function splitRest(i) {
+  if (!ldgSplit || !ldgSplit.parts[i]) return;
+  const others = ldgSplit.parts.reduce((s, p, j) => s + (j === i ? 0 : (parseFloat(p.amt) || 0)), 0);
+  const rest = Math.round((ldgSplit.target - others) * 100) / 100;
+  if (!(rest > 0)) { showToast('Nothing left to allocate', true); return; }
+  ldgSplit.parts[i].amt = rest;
+  renderSplitRows();
+}
+
+function splitEven() {
+  if (!ldgSplit) return;
+  const n = ldgSplit.parts.length;
+  if (!n || !(ldgSplit.target > 0)) { showToast('Set a target amount first', true); return; }
+  const each = Math.floor((ldgSplit.target / n) * 100) / 100;
+  ldgSplit.parts.forEach(p => { p.amt = each; });
+  // Centavos left over by the rounding go on the first row, so the parts
+  // always add up to the target exactly.
+  const drift = Math.round((ldgSplit.target - each * n) * 100) / 100;
+  if (Math.abs(drift) > 0.001) ldgSplit.parts[0].amt = Math.round((each + drift) * 100) / 100;
+  renderSplitRows();
+}
+
+function splitSetTarget(v) {
+  if (!ldgSplit) return;
+  ldgSplit.target = Math.round((parseFloat(v) || 0) * 100) / 100;
+  updateSplitFoot();
+}
+
+function updateSplitFoot() {
+  const el = document.getElementById('ldgSplitLeft');
+  if (!el || !ldgSplit) return;
+  const sum  = splitPartsSum();
+  const left = Math.round((ldgSplit.target - sum) * 100) / 100;
+  el.className = 'sp-left' + (left < -0.005 ? ' over' : Math.abs(left) <= 0.005 && sum > 0 ? ' exact' : '');
+  el.textContent = ldgSplit.target > 0
+    ? fPHP(sum) + ' of ' + fPHP(ldgSplit.target)
+      + (Math.abs(left) <= 0.005 ? ' · balances' : left > 0 ? ' · ' + fPHP(left) + ' left' : ' · over by ' + fPHP(Math.abs(left)))
+    : fPHP(sum) + ' across ' + ldgSplit.parts.filter(p => (parseFloat(p.amt) || 0) > 0).length + ' categories';
+}
+
+function renderSplitRows() {
+  const body = document.getElementById('ldgSplitBody');
+  if (!body || !ldgSplit) return;
+  const sub = document.getElementById('ldgSplitSub');
+  if (sub) {
+    sub.textContent = ldgSplit.srcId
+      ? 'breaking up the ' + fPHP(ldgSplit.target) + ' entry from ' + ldgSplit.date
+      : 'one payment, several categories';
+  }
+  body.innerHTML = `<div class="sp-row" style="margin-bottom:9px;">
+      <span style="font-size:11.5px; color:var(--text3);">Total paid</span>
+      <input type="number" class="ldg-in ldg-money sp-target" inputmode="decimal" step="0.01" min="0" placeholder="Total \u20b1"
+        value="${(ldgSplit.target > 0) ? escH(String(ldgSplit.target)) : ''}" oninput="splitSetTarget(this.value)">
+      <span></span>
+    </div>`
+    + ldgSplit.parts.map((p, i) => `<div class="sp-row">
+      <input type="text" class="ldg-in sp-cat" list="ldgCatList" maxlength="60" placeholder="Category"
+        value="${escH(p.cat || '')}" oninput="splitSetCat(${i}, this.value)">
+      <input type="number" class="ldg-in ldg-money sp-amt" inputmode="decimal" step="0.01" min="0" placeholder="\u20b1"
+        value="${(parseFloat(p.amt) || 0) > 0 ? escH(String(p.amt)) : ''}" oninput="splitSetAmt(${i}, this.value)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); splitSave();}">
+      <span style="display:flex; gap:2px;">
+        <button class="ldg-edit-btn" onclick="splitRest(${i})" title="Fill this row with what is left">\u21b3</button>
+        <button class="ldg-del" onclick="splitRemovePart(${i})" title="Remove this row">\u2715</button>
+      </span>
+    </div>`).join('');
+  updateSplitFoot();
+  // These rows are built after the thousands-separator sweep has already run,
+  // and its MutationObserver is rAF-debounced — so without this the amount
+  // fields spend a frame as plain number inputs, and splitOpen focuses one
+  // before it has been upgraded. Sweeping here makes it deterministic.
+  try { if (window.moneySweep) window.moneySweep(); } catch (e) {}
+}
+
+function splitSave() {
+  if (!ldgSplit) return;
+  const parts = ldgSplit.parts
+    .map(p => ({ cat: String(p.cat || '').trim().slice(0, 60) || 'Uncategorised',
+                 amt: Math.round((parseFloat(p.amt) || 0) * 100) / 100 }))
+    .filter(p => p.amt > 0);
+  if (parts.length < 2) { showToast('A split needs at least two rows with an amount', true); return; }
+
+  const sum = Math.round(parts.reduce((s, p) => s + p.amt, 0) * 100) / 100;
+  // The parts ARE the truth. If they don't add up to the target the target was
+  // a guess, so it follows them rather than blocking the save — but say so,
+  // because a mismatch is usually a typo.
+  const off = Math.round((sum - ldgSplit.target) * 100) / 100;
+
+  // Splitting a row that is ALREADY part of a split refines that same payment
+  // (the ₱600 household half turning out to be ₱400 + ₱200), so it keeps the
+  // group it was in rather than breaking off into a second block.
+  const grp = ldgSplit.grp || ledgerSeq++;
+  if (ldgSplit.srcId) ledger = ledger.filter(e => e.id !== ldgSplit.srcId);
+
+  parts.forEach((p, i) => ledgerAdd({
+    date: ldgSplit.date, amt: p.amt, cat: p.cat, src: ldgSplit.src || 'manual',
+    note: ldgSplit.note, acct: ldgSplit.acct, grp: grp,
+    bill: i === 0 ? (ldgSplit.bill || '') : '',
+  }, true));
+
+  ledgerViewYM = ymOf(ldgSplit.date);
+  const fromForm = !ldgSplit.srcId;
+  splitClose();
+  ledgerCommit();
+
+  if (fromForm) {
+    ['ldgAmt', 'ldgNote', 'ldgCat'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _ldgCatAuto = false;
+    try { renderCatSuggest(); } catch (e) {}
+  }
+  showToast('\u2702 Split ' + fPHP(sum) + ' across ' + parts.length + ' categories'
+    + (Math.abs(off) > 0.005 ? ' \u00b7 total adjusted by ' + (off > 0 ? '+' : '\u2212') + fPHP(Math.abs(off)) : ''));
+}
+
+// Every row of one split, oldest id first so the block renders in the order
+// it was entered.
+function splitMembers(grp) {
+  if (!grp) return [];
+  return ledger.filter(e => e.grp === grp).sort((a, b) => a.id - b.id);
+}
+
+function ledgerDeleteGroup(grp) {
+  const rows = splitMembers(grp);
+  if (!rows.length) return;
+  const total = Math.round(rows.reduce((s, e) => s + e.amt, 0) * 100) / 100;
+  // A part whose date was edited can sit in another month, and the block on
+  // screen only shows this one — so say what is actually about to go.
+  const ym   = ledgerViewYM || ymNow();
+  const away = rows.filter(e => ymOf(e.date) !== ym).length;
+  if (!confirm('Delete all ' + rows.length + ' rows of this split (' + fPHP(total) + ')?'
+    + (away ? '\n\n' + away + ' of them ' + (away === 1 ? 'is' : 'are') + ' in another month.' : ''))) return;
+  ledger = ledger.filter(e => e.grp !== grp);
+  ledgerCommit();
+  showToast('🗑 Split removed — ' + rows.length + ' rows');
+}
+
 // ── month-key helpers ─────────────────────────────────────────
 function ymNow() {
   const d = new Date();
@@ -10079,6 +10641,18 @@ function loadLedger() {
     // which checklist row logged this, so un-ticking can find it again
     bill: String(e.bill || '').slice(0, 80),
     edited: !!e.edited,
+    // Where the money came from, and — for a transfer — where it went.
+    kind:  e.kind === 'transfer' ? 'transfer' : '',
+    acct:  String(e.acct  || '').slice(0, 60),
+    acct2: String(e.acct2 || '').slice(0, 60),
+    movedFrom: !!e.movedFrom,
+    movedTo:   !!e.movedTo,
+    // Rows of one split share a grp; 0 means an ordinary standalone entry.
+    grp: (typeof e.grp === 'number' && isFinite(e.grp) && e.grp > 0) ? e.grp : 0,
+    // What the block is called. Manual splits leave it blank and fall back to
+    // the shared note; a receipt sets it, because each of its rows carries its
+    // own raw line as the note (the category memory is trained on that).
+    glbl: String(e.glbl || '').slice(0, 60),
   }));
   catmemInvalidate();
   ledgerSeq = seq;
@@ -10086,7 +10660,11 @@ function loadLedger() {
   // backup can leave rows with ids above a counter that restarted at 1, and
   // then a new row silently reuses an id (so deleting hits the wrong entry).
   ledger.forEach(e => { if (!e.id) e.id = ledgerSeq++; });
-  ledgerSeq = Math.max(ledgerSeq, maxIdIn(ledger) + 1);
+  // Group ids are drawn from the same counter, so they have to be covered by
+  // the same drift guard — otherwise a restored split could be handed a grp
+  // that a later split reuses, and the two would render as one block.
+  ledgerSeq = Math.max(ledgerSeq, maxIdIn(ledger) + 1,
+    ledger.reduce((m, e) => Math.max(m, e.grp || 0), 0) + 1);
   if (!ledgerViewYM) ledgerViewYM = ymNow();
 }
 
@@ -10113,6 +10691,13 @@ function ledgerAdd(e, defer) {
     note: String((e && e.note) || '').trim().slice(0, 120),
     bill: String((e && e.bill) || '').slice(0, 80),
     edited: false,
+    kind:  (e && e.kind === 'transfer') ? 'transfer' : '',
+    acct:  String((e && e.acct)  || '').slice(0, 60),
+    acct2: String((e && e.acct2) || '').slice(0, 60),
+    movedFrom: !!(e && e.movedFrom),
+    movedTo:   !!(e && e.movedTo),
+    grp: (e && typeof e.grp === 'number' && e.grp > 0) ? e.grp : 0,
+    glbl: String((e && e.glbl) || '').slice(0, 60),
   };
   ledger.push(entry);
   if (ledger.length > LEDGER_MAX) ledger = ledger.slice(-LEDGER_MAX);
@@ -10124,12 +10709,28 @@ function ledgerAdd(e, defer) {
 // so a stale index would keep suggesting a category you just renamed away.
 function ledgerCommit() { catmemInvalidate(); saveLedger(); renderLedger(); }
 
-function ledgerDelete(id) {
-  const before = ledger.length;
-  ledger = ledger.filter(e => e.id !== id);
-  if (ledger.length === before) return;
+// noPrompt is for the chat path, which has already shown a confirm card —
+// a second browser dialog on top of it would be the 26c bill-tick mistake.
+function ledgerDelete(id, noPrompt) {
+  const e = ledger.find(x => x.id === id);
+  if (!e) return false;
+
+  // A transfer that moved balances has to put them back, or deleting it
+  // quietly invents money. Only the sides that actually moved are reversed.
+  if (isTransfer(e) && (e.movedFrom || e.movedTo)) {
+    const both = e.movedFrom && e.movedTo;
+    if (!noPrompt && !confirm('Delete this ' + fPHP(e.amt) + ' transfer?\n\n'
+      + (both ? acctLabel(e.acct) + ' and ' + acctLabel(e.acct2) + ' go back to their balances before it.'
+              : acctLabel(e.movedFrom ? e.acct : e.acct2) + ' goes back to its balance before it.'))) return false;
+    if (e.movedFrom) acctApplyDelta(e.acct,   e.amt);
+    if (e.movedTo)   acctApplyDelta(e.acct2, -e.amt);
+    acctFlushBalances();
+  }
+
+  ledger = ledger.filter(x => x.id !== id);
   ledgerCommit();
-  showToast('🗑 Ledger entry removed');
+  if (!noPrompt) showToast(isTransfer(e) ? '🗑 Transfer removed' : '🗑 Ledger entry removed');
+  return true;
 }
 
 function ledgerAddFromForm() {
@@ -10140,12 +10741,14 @@ function ledgerAddFromForm() {
   if (!aEl) return;
   const amt = parseFloat(aEl.value);
   if (!(amt > 0)) { showToast('Enter an amount first', true); aEl.focus(); return; }
+  const acEl = document.getElementById('ldgAcct');
   const entry = ledgerAdd({
     date: dEl && dEl.value ? dEl.value : todayLocalStr(),
     amt: amt,
     cat: cEl ? cEl.value : '',
     src: 'manual',
     note: nEl ? nEl.value : '',
+    acct: acEl ? acEl.value : (ledgerPrefs.lastAcct || ''),
   });
   aEl.value = ''; if (nEl) nEl.value = '';
   // A guessed category belonged to the note that just cleared, so it goes
@@ -10160,7 +10763,14 @@ function ledgerAddFromForm() {
 }
 
 // ── reading ───────────────────────────────────────────────────
-function ledgerMonth(ym) { return ledger.filter(e => ymOf(e.date) === ym); }
+// THE chokepoint for "what was spent". A transfer between your own accounts
+// is not spending, so it is filtered out here once rather than in each of the
+// dozen places that ask for a month's rows — totals, category bars, caps,
+// rollover, drift, averages, burn, the month-end snapshot and the printed
+// sheet all read through this. ledgerMonthAll is for display only.
+function ledgerMonth(ym)    { return ledger.filter(e => ymOf(e.date) === ym && !isTransfer(e)); }
+function ledgerMonthAll(ym) { return ledger.filter(e => ymOf(e.date) === ym); }
+function ledgerTransfers(ym){ return ledger.filter(e => ymOf(e.date) === ym &&  isTransfer(e)); }
 function ledgerMonthTotal(ym) { return ledgerMonth(ym).reduce((s, e) => s + e.amt, 0); }
 
 function ledgerCatTotals(ym) {
@@ -10539,11 +11149,12 @@ function ledgerEditSave(id) {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dRaw) ? dRaw : e.date;
   const cat  = String(g('ldgE-cat')  ? g('ldgE-cat').value  : '').trim().slice(0, 60) || 'Uncategorised';
   const note = String(g('ldgE-note') ? g('ldgE-note').value : '').trim().slice(0, 120);
+  const acct = String(g('ldgE-acct') ? g('ldgE-acct').value : (e.acct || '')).slice(0, 60);
   const amtR = Math.round(amt * 100) / 100;
 
-  const changed = date !== e.date || amtR !== e.amt || cat !== e.cat || note !== e.note;
+  const changed = date !== e.date || amtR !== e.amt || cat !== e.cat || note !== e.note || acct !== (e.acct || '');
   const wasYM   = ymOf(e.date);
-  e.date = date; e.amt = amtR; e.cat = cat; e.note = note;
+  e.date = date; e.amt = amtR; e.cat = cat; e.note = note; e.acct = acct;
   if (changed) e.edited = true;
   ledgerEditId = 0;
   ledgerViewYM = ymOf(e.date);           // follow the row if it moved months
@@ -10582,7 +11193,7 @@ function catmemTokens(s) {
   return out.slice(0, 10);
 }
 
-function catmemInvalidate() { _catmem = null; }
+function catmemInvalidate() { _catmem = null; _acctmem = null; }
 
 function catmemIndex() {
   if (_catmem) return _catmem;
@@ -10595,6 +11206,7 @@ function catmemIndex() {
     if (date > c.last) { c.last = date; c.label = label; }
   }
   ledger.forEach(e => {
+    if (isTransfer(e)) return;   // "Transfer" is not a category anyone means
     const key = ledgerCatKey(e.cat);
     const label = String(e.cat || '').trim() || 'Uncategorised';
     const cc = cats[key] || (cats[key] = { key: key, label: label, n: 0, last: '' });
@@ -10653,6 +11265,89 @@ function catTopCats(limit) {
   return Object.keys(idx.cats).map(k => idx.cats[k])
     .sort((a, b) => (a.last < b.last ? 1 : a.last > b.last ? -1 : b.n - a.n))
     .slice(0, limit || 4);
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// ACCOUNT MEMORY — which account a spend probably came from
+//
+// Chat- and receipt-logged rows arrive with no account, because nothing in
+// the message says which one. But your own history usually does: food
+// deliveries come off GCash, utilities off BDO. So this is the same trick
+// as the merchant→category memory and shares its shape — an index DERIVED
+// from `ledger`, not stored, so it needs no key, no migration, and costs
+// exactly zero AI requests.
+//
+// Only rows that HAVE an account train it, and transfers are skipped: a
+// transfer names two accounts and means neither of them spent anything.
+// ══════════════════════════════════════════════════════════════
+let _acctmem = null;
+
+function acctmemIndex() {
+  if (_acctmem) return _acctmem;
+  const tok = {};   // token -> { total, accts: { key: n } }
+  const use = {};   // key   -> times used overall
+  function bump(t, key, w) {
+    const e = tok[t] || (tok[t] = { total: 0, accts: {} });
+    e.accts[key] = (e.accts[key] || 0) + w;
+    e.total += w;
+  }
+  ledger.forEach(e => {
+    if (isTransfer(e) || !e.acct) return;
+    use[e.acct] = (use[e.acct] || 0) + 1;
+    catmemTokens(e.note).forEach(t => bump(t, e.acct, 1));
+    catmemTokens(e.cat ).forEach(t => bump(t, e.acct, 0.6));
+  });
+  _acctmem = { tok: tok, use: use, n: Object.keys(use).length };
+  return _acctmem;
+}
+
+// Same scoring rule as catSuggest: a token that appears under many accounts
+// splits its weight and so decides nothing.
+function acctSuggest(text, cat) {
+  const idx = acctmemIndex();
+  const toks = catmemTokens(text).concat(catmemTokens(cat || ''));
+  if (!toks.length) return [];
+  const acc = {};
+  toks.forEach(t => {
+    const e = idx.tok[t];
+    if (!e || e.total <= 0) return;
+    Object.keys(e.accts).forEach(k => {
+      const r = acc[k] || (acc[k] = { key: k, score: 0 });
+      r.score += e.accts[k] / e.total;
+    });
+  });
+  const list = Object.keys(acc).map(k => acc[k]);
+  const sum = list.reduce((s, r) => s + r.score, 0);
+  list.forEach(r => { r.confidence = sum > 0 ? r.score / sum : 0; });
+  list.sort((a, b) => b.score - a.score);
+  // An account the user has since deleted must never be suggested.
+  const live = accountsList().map(a => a.key);
+  return list.filter(r => live.indexOf(r.key) !== -1);
+}
+
+function acctSuggestBest(text, cat) {
+  const l = acctSuggest(text, cat);
+  if (!l.length) return null;
+  const best = l[0];
+  if (best.score < CATMEM_MIN_SCORE || best.confidence <= CATMEM_MIN_CONF) return null;
+  return best.key;
+}
+
+// One tap in the Accounts panel: fill in every untagged row this month the
+// memory is confident about, and leave the rest alone rather than guessing.
+function acctGuessUntagged() {
+  const ym = ledgerViewYM || ymNow();
+  const rows = ledgerMonth(ym).filter(e => !e.acct);
+  if (!rows.length) { showToast('Nothing untagged this month'); return; }
+  let n = 0;
+  rows.forEach(e => {
+    const k = acctSuggestBest(e.note, e.cat);
+    if (k) { e.acct = k; n++; }
+  });
+  if (!n) { showToast('Not confident about any of them yet — tag a few by hand first', true); return; }
+  ledgerCommit();
+  showToast('🏦 Tagged ' + n + ' of ' + rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' from your habits');
 }
 
 let _ldgCatAuto = false;   // the category box currently holds a guess, not a choice
@@ -10914,6 +11609,85 @@ function insightCardHTML(ym) {
 }
 
 // ── rendering ─────────────────────────────────────────────────
+// ── row renderers shared by the flat list and the split blocks ──
+function ledgerEditRowHTML(e) {
+  const k = `if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}`;
+  return `<div class="ldg-row editing">
+    <input type="date" id="ldgE-date" class="ldg-in" style="flex:0 0 auto;" value="${escH(e.date)}">
+    <input type="number" id="ldgE-amt" class="ldg-in ldg-money" style="flex:0 0 110px;" inputmode="decimal" step="0.01" min="0" value="${escH(String(e.amt))}"
+      onkeydown="${k}">
+    <input type="text" id="ldgE-cat" class="ldg-in" list="ldgCatList" maxlength="60" style="flex:1 1 120px;" value="${escH(e.cat)}"
+      onkeydown="${k}">
+    <input type="text" id="ldgE-note" class="ldg-in" maxlength="120" placeholder="Note" style="flex:1 1 120px;" value="${escH(e.note || '')}"
+      onkeydown="${k}">
+    <select id="ldgE-acct" class="ldg-in" style="flex:1 1 120px;" title="Which account this came from">${acctOptionsHTML(e.acct || '', 'No account')}</select>
+    <button class="ldg-edit-btn" style="color:var(--green-text);" onclick="ledgerEditSave(${e.id})" title="Save">\u2713</button>
+    <button class="ldg-edit-btn" onclick="ledgerEditCancel()" title="Cancel">\u2715</button>
+  </div>`;
+}
+
+// A small chip so a row says which account it came from without a column.
+// An untagged row shows a dashed placeholder rather than nothing, because
+// "no account" is a thing worth noticing on a row you meant to tag.
+function acctChipHTML(key) {
+  if (!accountsList().length) return '';
+  if (!key) return `<span class="acct-chip none" title="No account on this row">\u2014</span>`;
+  const a = acctFind(key);
+  if (!a) return `<span class="acct-chip none" title="This account no longer exists">${escH(String(key).replace(/^c:/, ''))}</span>`;
+  return `<span class="acct-chip" style="border-color:${escH(acctColor(key))};" title="Paid from ${escH(a.label)}">${escH(a.label)}</span>`;
+}
+
+// One split, drawn as a headed block. The head carries the whole payment;
+// each part keeps its own edit and delete, so fixing one category never
+// means retyping the rest.
+//
+// Scoped to the month on screen. Editing one part's date moves just that row,
+// and without the filter BOTH months drew the whole group — so a month holding
+// ₱2,400 of a split showed a ₱3,000 header, contradicting its own "Spent"
+// strip two inches above. A block only ever totals the rows in front of you.
+function ledgerGroupHTML(grp, ym) {
+  const all   = splitMembers(grp);
+  const parts = ym ? all.filter(e => ymOf(e.date) === ym) : all;
+  if (!parts.length) return '';
+  const head  = parts[0];
+  const total = Math.round(parts.reduce((s, e) => s + e.amt, 0) * 100) / 100;
+  const edited = parts.some(e => e.edited);
+  const away   = all.length - parts.length;
+  return `<div class="ldg-grp">
+    <div class="ldg-row">
+      <span class="ldg-date">${escH(head.date.slice(5))}</span>
+      <span class="ldg-cat">${escH(head.glbl || head.note || 'Split payment')}<span class="ldg-note">\u2702 split ${parts.length} way${parts.length === 1 ? '' : 's'}${away ? ' \u00b7 ' + away + ' more in another month' : ''}</span></span>
+      ${acctChipHTML(head.acct)}
+      <span class="ldg-src split" title="${escH(LEDGER_SRC_LABEL[head.src] || head.src)} \u00b7 split across categories${edited ? ' \u00b7 edited since' : ''}">${LEDGER_SRC_ICON[head.src] || '\u2022'}${edited ? '<sup class="ldg-ed">\u270e</sup>' : ''}</span>
+      <span class="ldg-amt">${fPHP(total)}</span>
+      <button class="ldg-del" onclick="ledgerDeleteGroup(${grp})" title="Delete the whole split">\u2715</button>
+    </div>
+    <div class="ldg-grp-parts">${parts.map(e =>
+      e.id === ledgerEditId ? ledgerEditRowHTML(e) : `<div class="ldg-part">
+        <span class="ldg-part-bar"></span>
+        <span class="ldg-cat">${escH(e.cat)}</span>
+        <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this part">\u270e</button>
+        <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Remove just this part">\u2715</button>
+      </div>`).join('')}</div>
+  </div>`;
+}
+
+// A transfer never counts as spending, so it renders in its own colour with
+// both ends named and no edit button: correcting one means putting the
+// balances back, which delete already does exactly.
+function ledgerTransferHTML(e) {
+  const moved = e.movedFrom || e.movedTo;
+  return `<div class="ldg-row transfer">
+    <span class="ldg-date">${escH(e.date.slice(5))}</span>
+    <span class="ldg-cat">${escH(acctLabel(e.acct) || '?')} \u2192 ${escH(acctLabel(e.acct2) || '?')}
+      <span class="ldg-note">${e.note ? escH(e.note) + ' \u00b7 ' : ''}transfer \u2014 not counted as spending${moved ? '' : ' \u00b7 balances untouched'}</span></span>
+    <span class="ldg-src" title="Transfer between your own accounts">\u21c4</span>
+    <span class="ldg-amt">${fPHP(e.amt)}</span>
+    <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this transfer">\u2715</button>
+  </div>`;
+}
+
 function ledgerShiftMonth(delta) {
   ledgerViewYM = ymShift(ledgerViewYM || ymNow(), delta);
   renderLedger();
@@ -10932,7 +11706,11 @@ function renderLedger() {
   if (!ledgerViewYM) ledgerViewYM = ymNow();
   const ym  = ledgerViewYM;
   const bva = ledgerBudgetVsActual(ym);
-  const rows = ledgerMonth(ym).slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+  // The list shows transfers too — they are part of the month's story even
+  // though no total counts them. Everything else reads ledgerMonth.
+  const rows  = ledgerMonthAll(ym).slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+  const spend = ledgerMonth(ym);
+  try { renderAccounts(); } catch (e) {}
 
   // header
   const lbl = document.getElementById('ledgerMonthLabel');
@@ -10940,8 +11718,10 @@ function renderLedger() {
   if (lbl) lbl.textContent = ymLabel(ym);
   if (sub) {
     const off = ymOffsetFromNow(ym);
+    const nTrf = rows.length - spend.length;
     sub.innerHTML = (off === 0 ? 'this month' : off === -1 ? 'last month' : off > 0 ? 'future' : Math.abs(off) + ' months ago')
-      + ' · ' + rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies')
+      + ' · ' + spend.length + ' entr' + (spend.length === 1 ? 'y' : 'ies')
+      + (nTrf ? ' · ' + nTrf + ' transfer' + (nTrf === 1 ? '' : 's') : '')
       + (bva.closed ? ' · <span style="color:var(--green-text);">closed</span>' : '');
   }
 
@@ -11095,9 +11875,9 @@ function renderLedger() {
     // typed from memory is a weaker record than one backed by receipts, and
     // until now nothing said which kind you were looking at.
     const srcN = { manual: 0, receipt: 0, chat: 0, bill: 0 };
-    rows.forEach(e => { srcN[e.src] = (srcN[e.src] || 0) + 1; });
-    const editedN = rows.filter(e => e.edited).length;
-    const backed  = Math.round((srcN.receipt / rows.length) * 100);
+    spend.forEach(e => { srcN[e.src] = (srcN[e.src] || 0) + 1; });
+    const editedN = spend.filter(e => e.edited).length;
+    const backed  = spend.length ? Math.round((srcN.receipt / spend.length) * 100) : 0;
     h += `<div class="ldg-cover">
       ${['receipt', 'chat', 'bill', 'manual'].filter(k => srcN[k]).map(k =>
         `<span title="${escH(LEDGER_SRC_LABEL[k])}">${LEDGER_SRC_ICON[k]} ${srcN[k]} ${escH(LEDGER_SRC_LABEL[k])}</span>`).join('')}
@@ -11105,25 +11885,26 @@ function renderLedger() {
       ${editedN ? `<span title="edited after they were logged">✎ ${editedN} edited</span>` : ''}
     </div>`;
 
+    // Rows of one split collapse into a single block, headed by the whole
+    // payment. Only the FIRST member of a group draws; the rest are drawn
+    // inside it, so the month reads as "₱3,000 at the supermarket" rather
+    // than as two unrelated entries that happen to share a date.
+    const drawn = {};
     h += `<div class="ldg-rows">` + rows.map(e => {
-      if (e.id === ledgerEditId) {
-        return `<div class="ldg-row editing">
-          <input type="date" id="ldgE-date" class="ldg-in" style="flex:0 0 auto;" value="${escH(e.date)}">
-          <input type="number" id="ldgE-amt" class="ldg-in" style="flex:0 0 110px;" inputmode="decimal" step="0.01" min="0" value="${escH(String(e.amt))}"
-            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
-          <input type="text" id="ldgE-cat" class="ldg-in" list="ldgCatList" maxlength="60" style="flex:1 1 120px;" value="${escH(e.cat)}"
-            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
-          <input type="text" id="ldgE-note" class="ldg-in" maxlength="120" placeholder="Note" style="flex:1 1 120px;" value="${escH(e.note || '')}"
-            onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}">
-          <button class="ldg-edit-btn" style="color:var(--green-text);" onclick="ledgerEditSave(${e.id})" title="Save">✓</button>
-          <button class="ldg-edit-btn" onclick="ledgerEditCancel()" title="Cancel">✕</button>
-        </div>`;
+      if (e.grp) {
+        if (drawn[e.grp]) return '';
+        drawn[e.grp] = 1;
+        return ledgerGroupHTML(e.grp, ym);
       }
+      if (isTransfer(e)) return ledgerTransferHTML(e);
+      if (e.id === ledgerEditId) return ledgerEditRowHTML(e);
       return `<div class="ldg-row">
         <span class="ldg-date">${escH(e.date.slice(5))}</span>
         <span class="ldg-cat">${escH(e.cat)}${e.note ? `<span class="ldg-note">${escH(e.note)}</span>` : ''}</span>
+        ${acctChipHTML(e.acct)}
         <span class="ldg-src ${escH(e.src)}" title="${escH(LEDGER_SRC_LABEL[e.src] || e.src)}${e.edited ? ' · edited since' : ''}">${LEDGER_SRC_ICON[e.src] || '•'}${e.edited ? '<sup class="ldg-ed">✎</sup>' : ''}</span>
         <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <button class="ldg-edit-btn" onclick="splitOpen(${e.id})" title="Split this across categories">✂</button>
         <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this entry">✎</button>
         <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this entry">✕</button>
       </div>`;
@@ -11511,14 +12292,6 @@ function updateConverter() {
 }
 
 // Legacy alias kept for any older call sites
-function setConvDir(dir) {
-  const fromEl = document.getElementById('convFrom');
-  const toEl   = document.getElementById('convTo');
-  if (fromEl) fromEl.value = dir === 'usd' ? 'USD' : 'PHP';
-  if (toEl)   toEl.value   = dir === 'usd' ? 'PHP' : 'USD';
-  updateConverter();
-}
-
 function convertCurrency() {
   const input    = parseFloat(document.getElementById('convInput').value) || 0;
   const resultEl = document.getElementById('convResult');
@@ -12822,13 +13595,6 @@ function trkrAddEntry() {
   const amtEl = document.getElementById('trkrAmt');
   if (amtEl) { amtEl.value = ''; amtEl.focus(); }
   showToast('✓ Entry saved');
-}
-
-function trkrDeleteEntry(id) {
-  trkrEntries = trkrEntries.filter(e => e.id !== id);
-  trkrSave();
-  trkrRenderTable();
-  trkrRenderSummaryCards();
 }
 
 // ─── Year Tabs ────────────────────────────────────────────────
@@ -14185,10 +14951,6 @@ function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function currentTheme() {
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-}
-
 // What the user picked ('dark' | 'light' | 'auto') vs. what's applied
 function savedThemeChoice() {
   try { return localStorage.getItem('va_theme') || 'dark'; } catch(e) { return 'dark'; }
@@ -14376,10 +15138,25 @@ function buildCSV() {
     out += csvRow([x.name || '', mo.toFixed(2), rem, (mo * rem).toFixed(2), isInc(x) ? 'yes' : 'no']);
   });
 
-  // Spending ledger — the actual record
-  out += csvSection('SPENDING LEDGER', ['Date', 'Month', 'Category', 'Amount', 'Source', 'Note']);
-  ledger.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
-    .forEach(e => out += csvRow([e.date, ymOf(e.date), e.cat, e.amt.toFixed(2), e.src, e.note || '']));
+  // Spending ledger — the actual record. Transfers get their own section
+  // rather than a row here, so summing this column can never overstate a month.
+  out += csvSection('SPENDING LEDGER', ['Date', 'Month', 'Category', 'Amount', 'Account', 'Source', 'Split group', 'Note']);
+  ledger.slice().filter(e => !isTransfer(e))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
+    .forEach(e => out += csvRow([e.date, ymOf(e.date), e.cat, e.amt.toFixed(2),
+      acctLabel(e.acct), e.src, e.grp || '', e.note || '']));
+
+  // Transfers between your own accounts — recorded, never counted as spending
+  out += csvSection('TRANSFERS', ['Date', 'Month', 'From', 'To', 'Amount', 'Balances moved', 'Note']);
+  ledger.slice().filter(isTransfer)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
+    .forEach(e => out += csvRow([e.date, ymOf(e.date), acctLabel(e.acct), acctLabel(e.acct2),
+      e.amt.toFixed(2), (e.movedFrom || e.movedTo) ? 'yes' : 'no', e.note || '']));
+
+  // Accounts — balance now, so the CSV can be reconciled against a statement
+  out += csvSection('ACCOUNTS', ['Account', 'Type', 'Balance', 'Tracked']);
+  accountsList().forEach(a => out += csvRow([a.label, a.bank,
+    a.tracked ? a.bal.toFixed(2) : '', a.tracked ? 'yes' : 'no']));
 
   // Month-end history
   out += csvSection('CLOSED MONTHS', ['Month', 'Budgeted', 'Actual', 'Difference', 'Income', 'Savings rate %', 'Entries', 'Closed at']);
@@ -14428,7 +15205,7 @@ function exportCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   const msg = document.getElementById('settingsMsg');
-  if (msg) msg.textContent = '✓ CSV downloaded — 7 sections.';
+  if (msg) msg.textContent = '✓ CSV downloaded — 9 sections.';
 }
 
 // ─── PRINTABLE MONTH SHEET ────────────────────────────────────
@@ -14460,10 +15237,12 @@ function printMonthSheet(ym) {
   }).join('');
 
   const entryRows = rows.length
-    ? rows.map(e => '<tr><td>' + escH(e.date) + '</td><td>' + escH(e.cat) + '</td>'
-        + '<td>' + escH(e.note || '') + '</td><td>' + escH(LEDGER_SRC_LABEL[e.src] || e.src) + '</td>'
+    ? rows.map(e => '<tr><td>' + escH(e.date) + '</td><td>' + escH(e.cat)
+        + (e.grp ? ' <em>(split)</em>' : '') + '</td>'
+        + '<td>' + escH(e.note || '') + '</td><td>' + escH(acctLabel(e.acct) || '\u2014') + '</td>'
+        + '<td>' + escH(LEDGER_SRC_LABEL[e.src] || e.src) + '</td>'
         + '<td class="n">' + money(e.amt) + '</td></tr>').join('')
-    : '<tr><td colspan="5"><em>No entries logged for this month.</em></td></tr>';
+    : '<tr><td colspan="6"><em>No entries logged for this month.</em></td></tr>';
 
   const billRows = bills.length
     ? '<h2>Still unticked</h2><table><tbody>' + bills.map(b =>
@@ -14506,7 +15285,7 @@ function printMonthSheet(ym) {
     + '<tfoot><tr><td>Total</td><td class="n">' + money(bva.plannedTotal) + '</td><td class="n">' + money(bva.actualTotal)
     + '</td><td class="n' + (diff > 0.005 ? ' over' : '') + '">' + (diff > 0 ? '+' : '') + money(diff) + '</td></tr></tfoot></table>'
     + '<h2>Ledger entries (' + rows.length + ')</h2>'
-    + '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Source</th><th class="n">Amount</th></tr></thead>'
+    + '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th>Account</th><th>Source</th><th class="n">Amount</th></tr></thead>'
     + '<tbody>' + entryRows + '</tbody></table>'
     + billRows
     + '<div class="foot">Budgeted = necessities, subscriptions, running installments and PayLater bills for this month. '
@@ -14720,7 +15499,11 @@ function chatCacheSet(k, v) {
 }
 // Every action that changes data — these are the ones that need a confirm card.
 const CHAT_WRITE_ACTIONS = ['add', 'deduct', 'set', 'move', 'paybill', 'wish',
-                            'addnec', 'addsub', 'addinst', 'addgoal', 'log'];
+                            'addnec', 'addsub', 'addinst', 'addgoal', 'log',
+                            'delentry', 'editentry'];
+// Corrections are never batched: Undo does not cover the ledger, so a batch
+// of deletes would be unrecoverable in one tap.
+const CHAT_SOLO_ACTIONS = ['delentry', 'editentry'];
 // 1st / 2nd / 3rd / 4th — for "due on the 21st" in confirm cards.
 function ordSuffix(n) {
   n = parseInt(n) || 0;
@@ -14784,7 +15567,12 @@ const CHAT_VERBS = {
   add:    ['add', 'added', 'deposit', 'deposited', 'dagdag', 'magdagdag', 'plus', 'put', 'topup',
            'credit', 'credited', 'received', 'receive', 'recieved', 'got', 'save', 'saved', 'ipasok'],
   deduct: ['deduct', 'minus', 'less', 'subtract', 'withdraw', 'withdrew', 'spend', 'spent',
-           'bawas', 'magbawas', 'kaltas', 'took', 'take', 'remove', 'gastos', 'ginastos', 'used'],
+           'bawas', 'magbawas', 'kaltas', 'took', 'take', 'gastos', 'ginastos', 'used'],
+  // "remove that gas entry" used to sit in `deduct`, so it took money out of a
+  // savings bucket instead of deleting the row. It now means delete — and
+  // falls back to a deduction only when nothing in the ledger matches and an
+  // allocation clearly does ("remove 500 from gcash").
+  del:    ['remove', 'delete', 'erase', 'burahin', 'alisin'],
   set:    ['set', 'itakda', 'correct', 'exactly'],
   move:   ['move', 'transfer', 'lipat', 'ilipat', 'shift'],
   query:  ['howmuch', 'magkano', 'check', 'show', 'whats', 'what'],
@@ -14826,6 +15614,29 @@ function chatSavName(i) {
   return bank ? bank.name : 'Allocation';
 }
 
+// Find the ledger entry a phrase is talking about. Newest first, because
+// "that gas entry" almost always means the one just logged.
+function chatFindEntry(q, amount) {
+  const words = chatNorm(q);
+  if (!words && amount == null) return null;
+  const rows = ledger.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+  let best = null;
+  rows.forEach(e => {
+    let sc = 0;
+    if (words) {
+      sc = Math.max(chatScore(q, e.cat || ''), chatScore(q, e.note || ''));
+      if (!sc) return;
+    } else {
+      sc = 60;   // amount-only match ("delete the 450")
+    }
+    // An exact amount is a strong signal, so it lifts a shaky text match.
+    if (amount != null && Math.abs((parseFloat(e.amt) || 0) - amount) < 0.005) sc += 25;
+    else if (amount != null) return;      // an amount was given and does not match
+    if (!best || sc > best.score) best = { entry: e, score: sc };
+  });
+  return (best && best.score >= 55) ? best : null;
+}
+
 function chatFindBill(q) {
   let items = [];
   try { items = bclBuildItems(); } catch (e) { return null; }
@@ -14863,6 +15674,9 @@ function chatParse(raw) {
   if (/^(net|net summary|freetospend|left|remaining)$/.test(t))   return { action: 'net' };
   if (/^(bills?|due|checklist)$/.test(t))                          return { action: 'bills' };
   if (/^(spending|ledger|actual|actuals|budget|spent this month)$/.test(t)) return { action: 'ledger' };
+  // Deterministic, so it never spends an AI request.
+  if (/^(suggest|propose|recommend)?\s*(my )?(caps|limits|budgets)$/.test(t)
+      || /^(suggest|set) (me )?(some )?(caps|limits)$/.test(t)) return { action: 'suggestcaps' };
 
   // ── move / transfer: needs two targets ──
   let mv = t.match(/\b(?:move|transfer|lipat|ilipat|shift)\b\s*(.*)$/);
@@ -14911,6 +15725,19 @@ function chatParse(raw) {
     if (amt == null) return { error: 'Try: `log 250 groceries`' };
     return { action: 'log', amount: amt.n, category: targetTxt || 'Uncategorised',
              date: todayLocalStr(), note: '' };
+  }
+
+  // ── delete a ledger entry (item 3 + 5) ──
+  if (verb === 'del') {
+    const hit = chatFindEntry(targetTxt, amt ? amt.n : null);
+    if (hit) return { action: 'delentry', id: hit.entry.id, _score: hit.score };
+    // Nothing recorded matches — fall back to the old reading only when an
+    // allocation clearly does, so "remove 500 from gcash" still works.
+    if (amt && targetTxt) {
+      const sav = chatFindSav(targetTxt);
+      if (sav && sav.score >= 66) return { action: 'deduct', target: sav.idx, amount: amt.n, _score: sav.score };
+    }
+    return { error: targetTxt ? `Nothing in the ledger matching \u201c${targetTxt}\u201d.` : 'Try: `remove the 450 gas entry`' };
   }
 
   // ── pay a bill (no amount → tick the checklist) ──
@@ -15010,8 +15837,25 @@ function chatApplyOne(intent) {
     updateSavingsSummary();
     recalcAll();
     saveData();
+
+    // The Transfer bar records this move; the chat used to change the two
+    // balances and leave no trace, so the same request gave a worse result
+    // depending on which door you came through. It now writes the same row.
+    // Only when the two sides are genuinely different ACCOUNTS: two savings
+    // rows on one bank are one account, and a transfer to itself is nonsense.
+    const kFrom = acctKeyOf(f.bankId, f.label);
+    const kTo   = acctKeyOf(tgt.bankId, tgt.label);
+    let logged = false;
+    if (kFrom && kTo && kFrom !== kTo) {
+      ledgerAdd({ date: todayLocalStr(), amt: intent.amount, cat: 'Transfer', src: 'chat',
+                  note: 'moved in chat', kind: 'transfer', acct: kFrom, acct2: kTo,
+                  movedFrom: true, movedTo: true });
+      logged = true;
+    }
     return `✓ Moved <b>${fPHP(intent.amount)}</b>\n${escH(chatSavName(intent.from))} → ${fPHP(fa)}\n`
          + `${escH(chatSavName(intent.to))} → ${fPHP(ta)}`
+         + (logged ? '\nRecorded as a transfer — not counted as spending.'
+                   : '\nBoth rows are the same account, so nothing was recorded.')
          + (fa < 0 ? '\n⚠️ The source is now negative.' : '');
   }
 
@@ -15069,14 +15913,51 @@ function chatApplyOne(intent) {
   }
 
   if (a === 'log') {
+    // Nothing in "spent 450 on gas" names an account, but your own history
+    // usually does. Costs no request — it is read off your past rows.
+    const guessAcct = acctSuggestBest(intent.note, intent.category);
     const entry = ledgerAdd({ date: intent.date, amt: intent.amount, cat: intent.category,
-                              src: 'chat', note: intent.note });
+                              src: 'chat', note: intent.note, acct: guessAcct || '' });
     const ym  = ymOf(entry.date);
     const bva = ledgerBudgetVsActual(ym);
     const over = bva.actualTotal - bva.plannedTotal;
-    return `✓ Logged <b>${fPHP(entry.amt)}</b> on <b>${escH(entry.cat)}</b> — ${escH(entry.date)}.\n`
+    return `✓ Logged <b>${fPHP(entry.amt)}</b> on <b>${escH(entry.cat)}</b> — ${escH(entry.date)}`
+         + (entry.acct ? ` · ${escH(acctLabel(entry.acct))}` : '') + `.\n`
          + `${escH(ymLabel(ym))}: ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted`
          + (over > 0.005 ? `  ⚠️ over by ${fPHP(over)}` : '') + '.';
+  }
+
+  if (a === 'delentry') {
+    const e = ledger.find(x => x.id === intent.id);
+    if (!e) return 'That entry is already gone.';
+    const what = `${fPHP(e.amt)} on ${escH(e.cat)}${e.note ? ' (' + escH(e.note) + ')' : ''} — ${escH(e.date)}`;
+    // noPrompt: the confirm card WAS the confirmation.
+    if (!ledgerDelete(e.id, true)) return 'Could not remove that entry.';
+    return `✓ Removed ${what}.\nUndo does not cover the ledger, so re-log it if that was wrong.`;
+  }
+
+  if (a === 'editentry') {
+    const e = ledger.find(x => x.id === intent.id);
+    if (!e) return 'That entry no longer exists.';
+    const wasYM = ymOf(e.date);
+    const before = `${fPHP(e.amt)} on ${e.cat}`;
+    if (intent.amount   !== undefined) e.amt  = Math.round(intent.amount * 100) / 100;
+    if (intent.category !== undefined) e.cat  = intent.category;
+    if (intent.date     !== undefined) e.date = intent.date;
+    if (intent.note     !== undefined) e.note = intent.note;
+    if (intent.account  !== undefined) e.acct = intent.account;
+    e.edited = true;
+    ledgerViewYM = ymOf(e.date);
+    ledgerCommit();
+    let out = `✓ <b>${escH(before)}</b> → <b>${fPHP(e.amt)} on ${escH(e.cat)}</b>${escH(e.date !== wasYM ? '' : '')}`;
+    // A closed month keeps the total it was closed with, exactly as the
+    // inline editor warns — the chat must not be quieter about it.
+    const hist = loadMonthHistory();
+    [wasYM, ymOf(e.date)].forEach((k, i, arr) => {
+      if (i && arr[0] === k) return;
+      if (hist[k]) out += `\n⚠️ ${ymLabel(k)} is closed — re-close it to refresh its snapshot.`;
+    });
+    return out;
   }
 
   if (a === 'wish') {
@@ -15093,9 +15974,256 @@ function chatApplyOne(intent) {
   return 'I did not recognise that action.';
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// GROUNDED LEDGER QUERIES
+//
+// The model only ever saw the last 15 rows, so "how much on food since May?"
+// was answered by estimating from a window — a guess wearing the clothes of
+// a figure. Here the model does the only part it is good at (turning a
+// sentence into a filter) and the APP does the arithmetic, over every row.
+// The answer is then phrased from exact totals, with no second AI call.
+//
+// Transfers are excluded, because ledgerQuery reads through the same
+// chokepoint every other spending figure does.
+// ══════════════════════════════════════════════════════════════
+const LQ_MAX_ROWS = 8;      // sample rows quoted back
+const LQ_MAX_CATS = 8;
+
+function lqDateOK(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d + 'T00:00:00')); }
+
+function ledgerQuery(q) {
+  q = q || {};
+  const to   = lqDateOK(q.to)   ? q.to   : todayLocalStr();
+  // Default window is a year — long enough for "this year" and "since May",
+  // short enough that a bare query never scans a decade of nothing.
+  let from   = lqDateOK(q.from) ? q.from : (function () {
+    const d = new Date(to + 'T00:00:00');
+    d.setFullYear(d.getFullYear() - 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  })();
+  if (from > to) { const t = from; from = to; q = Object.assign({}, q); q.to = t; }
+  const hi = (q.to && lqDateOK(q.to) && q.to >= from) ? q.to : to;
+
+  const catKey = q.cat ? ledgerCatKey(q.cat) : '';
+  const text   = String(q.text || '').trim().toLowerCase();
+  const acct   = String(q.acct || '');
+
+  const rows = ledger.filter(e => {
+    if (isTransfer(e)) return false;
+    if (e.date < from || e.date > hi) return false;
+    if (acct && e.acct !== acct) return false;
+    if (catKey && ledgerCatKey(e.cat) !== catKey) return false;
+    if (text) {
+      const hay = ((e.cat || '') + ' ' + (e.note || '')).toLowerCase();
+      if (hay.indexOf(text) === -1) return false;
+    }
+    return true;
+  });
+
+  const total = Math.round(rows.reduce((s, e) => s + e.amt, 0) * 100) / 100;
+  const byCat = {};
+  rows.forEach(e => {
+    const k = ledgerCatKey(e.cat);
+    if (!byCat[k]) byCat[k] = { label: e.cat || 'Uncategorised', amt: 0, n: 0 };
+    byCat[k].amt += e.amt; byCat[k].n++;
+  });
+  const cats = Object.keys(byCat).map(k => byCat[k])
+    .map(c => ({ label: c.label, amt: Math.round(c.amt * 100) / 100, n: c.n }))
+    .sort((a, b) => b.amt - a.amt);
+
+  const byMonth = {};
+  rows.forEach(e => { const m = ymOf(e.date); byMonth[m] = Math.round(((byMonth[m] || 0) + e.amt) * 100) / 100; });
+  const months = Object.keys(byMonth).sort();
+
+  return {
+    from: from, to: hi, total: total, n: rows.length,
+    cats: cats.slice(0, LQ_MAX_CATS),
+    months: months.map(m => ({ month: m, amt: byMonth[m] })),
+    perMonth: months.length ? Math.round((total / months.length) * 100) / 100 : 0,
+    sample: rows.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id))
+      .slice(0, LQ_MAX_ROWS)
+      .map(e => ({ id: e.id, date: e.date, cat: e.cat, amt: e.amt, note: e.note || '', acct: acctLabel(e.acct) })),
+    filter: { text: text || null, cat: q.cat || null, acct: acct ? acctLabel(acct) : null },
+  };
+}
+
+// The app writes the answer, so every number in it is exact by construction.
+function ledgerQueryAnswer(q) {
+  const r = ledgerQuery(q);
+  const what = [
+    r.filter.cat  ? '<b>' + escH(r.filter.cat) + '</b>'      : null,
+    r.filter.text ? '“' + escH(r.filter.text) + '”'          : null,
+    r.filter.acct ? 'from <b>' + escH(r.filter.acct) + '</b>' : null,
+  ].filter(Boolean).join(' · ') || 'everything';
+
+  if (!r.n) {
+    return `No entries for ${what} between ${escH(r.from)} and ${escH(r.to)}.`;
+  }
+
+  let out = `<b>${fPHP(r.total)}</b> — ${what}\n`
+          + `${escH(r.from)} → ${escH(r.to)} · ${r.n} entr${r.n === 1 ? 'y' : 'ies'}`;
+  if (r.months.length > 1) out += ` · ${fPHP(r.perMonth)}/month across ${r.months.length} months`;
+
+  if (r.cats.length > 1) {
+    out += '\n\n' + r.cats.slice(0, 5).map(c =>
+      `${escH(c.label)} — ${fPHP(c.amt)}${r.total > 0 ? ' (' + Math.round((c.amt / r.total) * 100) + '%)' : ''}`).join('\n');
+  }
+  if (r.months.length > 1) {
+    const hi = r.months.slice().sort((a, b) => b.amt - a.amt)[0];
+    out += `\n\nBiggest month: ${escH(ymLabel(hi.month))} at ${fPHP(hi.amt)}.`;
+  }
+  if (r.sample.length) {
+    out += '\n\nMost recent:\n' + r.sample.slice(0, 4).map(e =>
+      `${escH(e.date)} · ${escH(e.cat)} · ${fPHP(e.amt)}`).join('\n');
+  }
+  return out;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// SUGGEST MY CAPS
+//
+// Every budget line in this app is DERIVED from a bill, which is why food
+// and transport only ever showed up as "unbudgeted" — the app knew exactly
+// what they cost and never offered to budget for them.
+//
+// The maths is deterministic (ledgerCatAvg over your own rows), so this
+// costs ZERO AI requests. The chat is only a way in; the card and the
+// arithmetic are the app's.
+// ══════════════════════════════════════════════════════════════
+const CAPSUG_LOOKBACK = 6;
+const CAPSUG_MIN_MONTHS = 2;    // one month is an anecdote
+const CAPSUG_MIN_AMT = 100;     // below this a cap is noise
+const CAPSUG_MAX = 8;
+
+// Round to something a person would actually type.
+function capSugRound(v) {
+  if (v >= 5000) return Math.round(v / 500) * 500;
+  if (v >= 1000) return Math.round(v / 100) * 100;
+  if (v >= 200)  return Math.round(v / 50)  * 50;
+  return Math.round(v / 10) * 10;
+}
+
+function capSuggestions() {
+  const ym = ymNow();
+  const bva = ledgerBudgetVsActual(ym);
+  // Categories that already have a budget line of any kind are left alone —
+  // a cap on top of a bill would stack, which is the 28a merged-line trap.
+  const budgeted = {};
+  bva.lines.forEach(l => { if (l.budgeted && l.budget > 0) budgeted[l.key] = 1; });
+  capsActive().forEach(c => { budgeted[ledgerCatKey(c.label)] = 1; });
+
+  // Every category seen in the lookback window, not just this month's.
+  const seen = {};
+  for (let k = 0; k <= CAPSUG_LOOKBACK; k++) {
+    ledgerMonth(ymShift(ym, -k)).forEach(e => {
+      const key = ledgerCatKey(e.cat);
+      if (!seen[key]) seen[key] = e.cat || 'Uncategorised';
+    });
+  }
+
+  const out = [];
+  Object.keys(seen).forEach(key => {
+    if (budgeted[key]) return;
+    if (key === 'uncategorised') return;
+    const a = ledgerCatAvg(key, ym, CAPSUG_LOOKBACK);
+    if (a.months < CAPSUG_MIN_MONTHS || a.avg < CAPSUG_MIN_AMT) return;
+    out.push({ key: key, label: seen[key], avg: Math.round(a.avg * 100) / 100,
+               months: a.months, cap: capSugRound(a.avg) });
+  });
+  out.sort((x, y) => y.avg - x.avg);
+  return out.slice(0, CAPSUG_MAX);
+}
+
+let _capSug = {};   // session-namespaced, like the confirm and review cards
+
+function chatSuggestCaps() {
+  let rows = [];
+  try { rows = capSuggestions(); } catch (e) { rows = []; }
+  if (!rows.length) {
+    chatPush('app', 'Nothing to suggest yet — I look for categories you have spent on in at least '
+      + CAPSUG_MIN_MONTHS + ' of the last ' + CAPSUG_LOOKBACK + ' months that have no budget line. '
+      + 'Log a bit more and ask again.');
+    return;
+  }
+  const id = CHAT_SESSION + '-cap' + (++_chatIntentSeq);
+  _capSug[id] = rows;
+  chatMsgs.push({ who: 'confirm', text: chatCapsCard(id, rows) });
+  chatSaveLog();
+  chatRender();
+}
+
+function chatCapsCard(id, rows) {
+  return `<div class="chat-review" id="chatCap-${escH(id)}">
+    <div class="cc-title">🎯 Suggested monthly caps</div>
+    <div style="font-size:11px; color:var(--text3); margin-bottom:8px; line-height:1.5;">
+      What these have actually cost you, rounded. Untick anything you would rather set yourself.
+      Caps are limits, not bills — your Net Summary and obligations are untouched.
+    </div>
+    <table class="cc-table"><tbody>${rows.map((r, i) => `<tr>
+      <td style="width:22px;"><input type="checkbox" class="cap-sug-tick" data-i="${i}" checked></td>
+      <td>${escH(r.label)}<div style="font-size:10px; color:var(--text3);">averaged ${escH(fPHP(r.avg))} over ${r.months} month${r.months === 1 ? '' : 's'}</div></td>
+      <td class="n">${escH(fPHP(r.cap))}</td>
+    </tr>`).join('')}</tbody></table>
+    <div class="cc-btns">
+      <button class="cc-ok" onclick="chatCapsApply('${escJS(id)}')">Add the ticked caps</button>
+      <button class="cc-no" onclick="chatCapsDismiss('${escJS(id)}')">Not now</button>
+    </div>
+  </div>`;
+}
+
+function chatCapsFinish(id, msg) {
+  delete _capSug[id];
+  const card = document.getElementById('chatCap-' + id);
+  if (card) {
+    card.classList.add('done');
+    const b = card.querySelector('.cc-btns');
+    if (b) b.innerHTML = '<span style="font-size:11.5px;color:var(--text3);">' + escH(msg) + '</span>';
+  }
+  const m = chatMsgs.find(x => x.who === 'confirm' && x.text.indexOf('id="chatCap-' + id + '"') !== -1);
+  if (m) m.text = m.text.replace(/<div class="cc-btns">[\s\S]*?<\/div>/,
+      '<div class="cc-btns"><span style="font-size:11.5px;color:var(--text3);">' + escH(msg) + '</span></div>')
+    .replace('class="chat-review"', 'class="chat-review done"');
+  chatSaveLog();
+}
+
+function chatCapsApply(id) {
+  const rows = _capSug[id];
+  if (!rows) { chatPush('app', 'That card is no longer active — ask for suggestions again.', 'err'); return; }
+  const card = document.getElementById('chatCap-' + id);
+  const ticks = card ? card.querySelectorAll('.cap-sug-tick') : [];
+  const chosen = [];
+  Array.prototype.forEach.call(ticks, t => { if (t.checked) { const r = rows[parseInt(t.dataset.i, 10)]; if (r) chosen.push(r); } });
+  if (!chosen.length) { chatCapsFinish(id, 'Nothing ticked'); chatRender(); return; }
+
+  if (!Array.isArray(ledgerPrefs.caps)) ledgerPrefs.caps = [];
+  let added = 0, full = 0;
+  chosen.forEach(r => {
+    if (ledgerPrefs.caps.length >= CAP_MAX) { full++; return; }
+    // Never open a second cap on a name that already has one.
+    if (ledgerPrefs.caps.some(c => ledgerCatKey(c.label) === r.key)) return;
+    ledgerPrefs.caps.push({ label: r.label, amt: r.cap, roll: 'reset' });
+    added++;
+  });
+  saveLedgerPrefs();
+  renderCatCaps();
+  renderLedger();
+  chatCapsFinish(id, added + ' cap' + (added === 1 ? '' : 's') + ' added');
+  chatRender();
+  chatPush('app', `✓ Added ${added} cap${added === 1 ? '' : 's'}.`
+    + (full ? `  (${full} skipped — you are at the ${CAP_MAX}-cap limit.)` : '')
+    + '\nThey are on the Plan tab under Monthly caps, where you can change the amount or turn on rollover.');
+}
+
+function chatCapsDismiss(id) { chatCapsFinish(id, 'Dismissed'); chatRender(); }
+
 // ─── READ-ONLY ANSWERS (no confirm needed) ────────────────────
 function chatAnswer(intent) {
   const a = intent.action;
+
+  if (a === 'ledgerq') return ledgerQueryAnswer(intent.q || {});
+  if (a === 'suggestcaps') return null;   // handled by chatSubmit — it posts a card
 
   if (a === 'help') {
     return 'I do two things.\n\n'
@@ -15106,6 +16234,7 @@ function chatAnswer(intent) {
       + '<b>gcash</b> — show a balance · <b>total</b> · <b>net</b> · <b>bills</b>\n'
       + '<b>pay electricity</b> — tick a bill · <b>wish airpods 12000</b> · <b>undo</b>\n'
       + '<b>log 250 groceries</b> — record actual spending · <b>spent 450 on gas</b> · <b>ledger</b> — this month, budget vs actual\n'
+      + '<b>remove the 450 gas entry</b> — delete a ledger row · <b>suggest caps</b> — limits from what you actually spend\n'
       + 'Tagalog works — dagdag, bawas, lipat, bayad.\n\n'
       + '<b>② Ask me anything</b> (needs a provider in Settings):\n'
       + 'Questions about your money — “how much on subscriptions?”, “can I afford the ₱12k lens before payday?” — or anything else at all. '
@@ -15233,7 +16362,30 @@ function ledgerAIContext(money) {
     const bva = ledgerBudgetVsActual(ym);
     const hist = loadMonthHistory();
     return {
-      note: 'ACTUAL recorded spending. Everything else in this payload is the PLAN — compare the two when it is useful.',
+      note: 'ACTUAL recorded spending. Everything else in this payload is the PLAN — compare the two when it is useful. '
+          + 'Transfers between the user\'s own accounts are NOT spending and are excluded from every figure here.',
+      // Where the money sits and where each spend came from. Balances are the
+      // savings allocations; an account with tracked:false is one the user
+      // named here but whose balance lives outside the app.
+      accounts: (function () {
+        const st = acctMonthStats(ym);
+        return accountsList().map(a => {
+          const x = st[a.key] || { spent: 0, moveIn: 0, moveOut: 0, n: 0 };
+          return {
+            account: a.label,
+            balance: a.tracked ? money(a.bal) : null,
+            tracked: a.tracked,
+            spent_this_month: money(x.spent),
+            entries_this_month: x.n,
+            moved_in: money(x.moveIn),
+            moved_out: money(x.moveOut),
+          };
+        });
+      })(),
+      entries_without_an_account: ledgerMonth(ym).filter(e => !e.acct).length,
+      recent_transfers: ledgerTransfers(ym).slice(-8).map(t => ({
+        date: t.date, from: acctLabel(t.acct), to: acctLabel(t.acct2), amt: money(t.amt),
+      })),
       this_month: {
         month: ym,
         budgeted: money(Math.round(bva.plannedTotal * 100) / 100),
@@ -15316,8 +16468,14 @@ function ledgerAIContext(money) {
       // one out of the model's view. Same comparator the entry list uses.
       recent_entries: ledger.slice()
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id))
+        .filter(e => !isTransfer(e))
         .slice(0, 15).map(e => ({
+          id: e.id,
           date: e.date, category: e.cat, amt: money(e.amt), source: e.src, note: e.note || null,
+          account: acctLabel(e.acct) || null,
+          // Rows sharing a split_of are one payment broken across categories,
+          // so they must never be described as separate purchases.
+          split_of: e.grp || null,
         })),
       closed_months: Object.keys(hist).sort().reverse().slice(0, 12).map(k => ({
         month: k,
@@ -15664,9 +16822,18 @@ function chatAISystemPrompt(parserHint) {
     '   {"action":"addinst","name":"<text>","monthly":<number>,"months":<whole number of months left>}   — a new installment plan',
     '   {"action":"addgoal","name":"<text>","target":<number>,"saved":<number, optional>}   — a new savings goal',
     '   {"action":"log","amount":<number>,"category":"<text>","date":"YYYY-MM-DD, optional (defaults to today)","note":"<text, optional>"}   — record money that was ACTUALLY spent, into the spending ledger',
+    '   {"action":"delentry","id":<entry id from recent_entries>}   — remove ONE wrong ledger entry',
+    '   {"action":"editentry","id":<entry id>,"amount":<number, optional>,"category":"<text, optional>","date":"YYYY-MM-DD, optional","note":"<text, optional>","account":"<account key, optional>"}   — correct ONE ledger entry; send only the fields that change',
+    '   Corrections are never batched and only work on ids you can actually see in spending_ledger.recent_entries. If the user means an entry you cannot see, say so and ask them to name the date and amount rather than guessing an id.',
     '   Batch example — "add 250 gcash and 100 maya": {"intents":[{"action":"add","target":0,"amount":250},{"action":"add","target":3,"amount":100}]}',
     '',
     'B) A read-only budget lookup that maps exactly to a screen → {"action":"query","target":<index>} | {"action":"total"} | {"action":"net"} | {"action":"bills"} | {"action":"ledger"} | {"action":"help"}',
+    '',
+    'B2) A QUESTION ABOUT WHAT THEY ACTUALLY SPENT over any period or category ("how much on food since May?", "what did I spend at the vet last year?", "how much came off GCash in March?") → DO NOT answer it yourself and DO NOT add up recent_entries, which is only the last 15 rows. Return a FILTER and the app will compute the exact answer over every entry and phrase it for you:',
+    '   {"action":"ledgerq","query":{"cat":"<category name, optional>","text":"<merchant or note substring, optional>","acct":"<account key, optional>","from":"YYYY-MM-DD","to":"YYYY-MM-DD"}}',
+    '   Use today\'s date (in the data below) to turn "since May", "last year" or "this month" into real from/to dates. Omit from/to only if the user truly means no limit — the app then defaults to the last 12 months.',
+    '',
+    'B3) "What should my spending limits be?" / "suggest caps" → {"action":"suggestcaps"}. The app works the figures out from their own history and shows a tick-list; do not invent cap amounts yourself.',
     '',
     'C) ANYTHING ELSE — a question about their finances you can answer from the data below (e.g. "how much on subscriptions?", "can I afford the ₱12k lens before payday?"), OR a general question/request with nothing to do with this app (math, advice, explanations, chit-chat) → answer the user directly and helpfully:',
     '   {"action":"say","reply":"<your full answer, plain text, ₱ for pesos>"}',
@@ -15677,6 +16844,8 @@ function chatAISystemPrompt(parserHint) {
     + 'If a total is quoted rather than a monthly figure ("12k phone over 6 months"), send addinst with monthly = total ÷ months. '
     + 'Use "log" when they are telling you what they SPENT ("spent 450 on groceries", "gumastos ako 200 sa jeep") — that records history and never changes a balance; use deduct only when they mean take it out of a named savings allocation.',
     'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
+    'To CORRECT something, prefer editentry over deleting and re-adding: an edit keeps the entry\'s date order and its provenance (whether it came from a receipt, the chat or a bill tick), and a delete throws both away. Undo does not cover the ledger, so never delete more than the one entry the user named.',
+    'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete.',
     'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
     + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
@@ -16200,6 +17369,9 @@ function chatValidateIntent(o) {
   if (list) {
     if (!list.length) throw new Error('Empty batch.');
     const out = list.map(chatValidateOne);
+    if (out.length > 1 && out.some(x => CHAT_SOLO_ACTIONS.includes(x.action))) {
+      throw new Error('Corrections are done one at a time — ask again for just one entry.');
+    }
     // A batch only makes sense for writes; a read/say inside a batch is dropped.
     const writes = out.filter(x => CHAT_WRITE_ACTIONS.includes(x.action));
     if (!writes.length) throw new Error('Nothing to apply in that batch.');
@@ -16216,7 +17388,18 @@ function chatValidateOne(o) {
 
   if (a === 'say')   return { action: 'say',  reply: String(o.reply || '').slice(0, 4000) };
   if (a === 'none')  return { action: 'say',  reply: String(o.reply || 'I am not sure how to do that.').slice(0, 4000) };
-  if (['help', 'total', 'net', 'bills', 'ledger'].includes(a)) return { action: a };
+  if (['help', 'total', 'net', 'bills', 'ledger', 'suggestcaps'].includes(a)) return { action: a };
+  // The model builds the FILTER; the app does the arithmetic over every row.
+  if (a === 'ledgerq') {
+    const q = (o.query && typeof o.query === 'object') ? o.query : o;
+    return { action: 'ledgerq', q: {
+      text: String(q.text || '').slice(0, 60),
+      cat:  String(q.cat  || '').slice(0, 60),
+      acct: String(q.acct || '').slice(0, 60),
+      from: String(q.from || '').slice(0, 10),
+      to:   String(q.to   || '').slice(0, 10),
+    } };
+  }
   if (a === 'query') { if (!idxOK(o.target)) throw new Error('Unknown allocation.'); return { action: 'query', target: o.target }; }
   if (['add', 'deduct', 'set'].includes(a)) {
     if (!idxOK(o.target)) throw new Error('Unknown allocation.');
@@ -16250,6 +17433,41 @@ function chatValidateOne(o) {
     const nm = String(o.name || '').trim().slice(0, 60);
     if (!nm) throw new Error('No item name.');
     return { action: 'wish', name: nm, amount: amtOK(o.amount) ? o.amount : 0, viaAI: true };
+  }
+  // Corrections. The id has to be one the model was actually shown, so it is
+  // checked against the live ledger rather than trusted.
+  if (a === 'delentry') {
+    const e = ledger.find(x => x.id === o.id);
+    if (!e) throw new Error('No ledger entry with that id.');
+    return { action: 'delentry', id: e.id, viaAI: true };
+  }
+  if (a === 'editentry') {
+    const e = ledger.find(x => x.id === o.id);
+    if (!e) throw new Error('No ledger entry with that id.');
+    if (isTransfer(e)) throw new Error('A transfer cannot be edited — delete it and make it again.');
+    const patch = { action: 'editentry', id: e.id, viaAI: true };
+    if (o.amount !== undefined && o.amount !== null) {
+      if (!amtOK(o.amount) || o.amount <= 0) throw new Error('Bad amount.');
+      patch.amount = o.amount;
+    }
+    if (o.category !== undefined && o.category !== null) {
+      const c = String(o.category).trim().slice(0, 60);
+      if (c) patch.category = c;
+    }
+    if (o.date !== undefined && o.date !== null) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date) || isNaN(new Date(o.date + 'T00:00:00'))) throw new Error('Bad date.');
+      patch.date = o.date;
+    }
+    if (o.note !== undefined && o.note !== null) patch.note = String(o.note).trim().slice(0, 120);
+    if (o.account !== undefined && o.account !== null) {
+      const k = String(o.account);
+      if (k && !acctFind(k)) throw new Error('Unknown account.');
+      patch.account = k;
+    }
+    if (['amount','category','date','note','account'].every(k => patch[k] === undefined)) {
+      throw new Error('Nothing to change on that entry.');
+    }
+    return patch;
   }
   // New rows on the Expenses / Plan tabs. Names are trimmed and capped, amounts
   // re-checked, billing day clamped to a real day-of-month.
@@ -16394,6 +17612,16 @@ function chatCancel(id) {
 }
 
 // Turns one intent into the {line, sub} shown on a confirm card.
+// Whether a savings move is between two genuinely different accounts, and so
+// worth a transfer row. Shared by the preview and the apply so the card can
+// never promise something the write does not do.
+function chatMoveIsCrossAccount(intent) {
+  const f = savingsItems[intent.from], t = savingsItems[intent.to];
+  if (!f || !t) return false;
+  const a = acctKeyOf(f.bankId, f.label), b = acctKeyOf(t.bankId, t.label);
+  return !!(a && b && a !== b);
+}
+
 function chatPreviewOne(intent) {
   const a = intent.action;
   if (a === 'add' || a === 'deduct' || a === 'set') {
@@ -16415,7 +17643,8 @@ function chatPreviewOne(intent) {
       line: `Move <b>${fPHP(intent.amount)}</b> — <b>${escH(chatSavName(intent.from))}</b> → <b>${escH(chatSavName(intent.to))}</b>`
             + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
       sub: `${escH(chatSavName(intent.from))} ${fPHP(fb)} → ${fPHP(fb - intent.amount)}   ·   ${escH(chatSavName(intent.to))} ${fPHP(tb)} → ${fPHP(tb + intent.amount)}`
-           + ((fb - intent.amount) < 0 ? '  ⚠️ source goes negative' : ''),
+           + ((fb - intent.amount) < 0 ? '  ⚠️ source goes negative' : '')
+           + (chatMoveIsCrossAccount(intent) ? '  ·  recorded as a transfer' : ''),
     };
   }
   if (a === 'paybill') {
@@ -16430,6 +17659,27 @@ function chatPreviewOne(intent) {
   }
   if (a === 'wish') {
     return { line: `Add <b>${escH(intent.name)}</b> to your Wishlist`, sub: intent.amount ? fPHP(intent.amount) : 'no price set' };
+  }
+  if (a === 'delentry') {
+    const e = ledger.find(x => x.id === intent.id);
+    if (!e) return { line: 'That entry is already gone.', sub: '' };
+    return { line: `Remove <b>${fPHP(e.amt)}</b> on <b>${escH(e.cat)}</b>`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: [e.date, e.note || null, isTransfer(e) ? 'transfer — balances go back' : 'Undo does not cover the ledger']
+                    .filter(Boolean).map(escH).join(' · ') };
+  }
+  if (a === 'editentry') {
+    const e = ledger.find(x => x.id === intent.id);
+    if (!e) return { line: 'That entry no longer exists.', sub: '' };
+    const bits = [];
+    if (intent.amount   !== undefined) bits.push(`${fPHP(e.amt)} → ${fPHP(intent.amount)}`);
+    if (intent.category !== undefined) bits.push(`${e.cat} → ${intent.category}`);
+    if (intent.date     !== undefined) bits.push(`${e.date} → ${intent.date}`);
+    if (intent.account  !== undefined) bits.push(`account → ${acctLabel(intent.account) || 'none'}`);
+    if (intent.note     !== undefined) bits.push(`note → ${intent.note || '(cleared)'}`);
+    return { line: `Change the <b>${fPHP(e.amt)}</b> <b>${escH(e.cat)}</b> entry`
+                   + (intent.viaAI ? ' <span style="font-size:10.5px;color:var(--text3);">· via AI</span>' : ''),
+             sub: bits.map(escH).join('  ·  ') };
   }
   if (a === 'addnec' || a === 'addsub') {
     const where = a === 'addnec' ? 'Necessities & Expenses' : 'Subscriptions';
@@ -16529,7 +17779,14 @@ function chatReviewApply(id, dest) {
     } else if (to === 'ledger') {
       // Straight into the spending record — a receipt IS actual spend, so
       // this is its most natural home. Foreign amounts convert to ₱ first.
-      let added = 0, skipped = 0, learned = 0;
+      let added = 0, skipped = 0, learned = 0, tagged = 0;
+      // A receipt is ONE payment, so its lines belong to one split block
+      // rather than arriving as N unrelated rows dated today. Same mechanism
+      // the manual splitter uses — the grouping is presentation, and every
+      // category still sees its own share.
+      const usable = rev.rows.filter(r => curToPhp(parseFloat(r.amt) || 0, CURRENCY_META[r.cur] ? r.cur : 'PHP') !== null);
+      const grp = usable.length > 1 ? ledgerSeq++ : 0;
+      const glbl = grp ? 'Receipt \u00b7 ' + usable.length + ' items' : '';
       rev.rows.forEach(r => {
         const cur = CURRENCY_META[r.cur] ? r.cur : 'PHP';
         const php = curToPhp(parseFloat(r.amt) || 0, cur);
@@ -16540,17 +17797,24 @@ function chatReviewApply(id, dest) {
         const raw   = String(r.name || '').slice(0, 60);
         const guess = catSuggestBest(raw);
         if (guess) learned++;
+        // Your habits usually answer which account paid, even though the
+        // receipt never says. Costs nothing — it is read off your own rows.
+        const acct = acctSuggestBest(raw, guess ? guess.label : raw);
+        if (acct) tagged++;
         ledgerAdd({ date: todayLocalStr(), amt: php,
                     cat: guess ? guess.label : raw,
-                    src: 'receipt', note: guess ? raw : '' }, true);
+                    src: 'receipt', note: guess ? raw : '',
+                    acct: acct || '', grp: grp, glbl: glbl }, true);
         added++;
       });
       ledgerCommit();
       const ymNowKey = ymNow();
       const bva = ledgerBudgetVsActual(ymNowKey);
-      res = `✓ Logged ${added} item${added === 1 ? '' : 's'} to the spending ledger — `
+      res = `✓ Logged ${added} item${added === 1 ? '' : 's'} to the spending ledger`
+          + (grp ? ' as one split payment' : '') + ` — `
           + `${ymLabel(ymNowKey)} is now ${fPHP(bva.actualTotal)} spent of ${fPHP(bva.plannedTotal)} budgeted.`
           + (learned ? `  (${learned} categorised from your past entries — check them.)` : '')
+          + (tagged  ? `  (${tagged} tagged to an account from your habits.)` : '')
           + (skipped ? `  (${skipped} skipped — no live ₱ rate yet; resend once rates load.)` : '');
     } else {
       rev.rows.forEach(r => {
@@ -16602,7 +17866,8 @@ async function chatSubmit() {
   }
 
   // Read-only answers go straight out.
-  if (!forceAI && intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'ledger', 'undo'].includes(intent.action)) {
+  if (!forceAI && intent && !intent.error && intent.action === 'suggestcaps') { chatSuggestCaps(); return; }
+  if (!forceAI && intent && !intent.error && ['help', 'query', 'total', 'net', 'bills', 'ledger', 'ledgerq', 'undo'].includes(intent.action)) {
     const ans = chatAnswer(intent);
     if (ans != null) { chatPush('app', ans); return; }
   }
@@ -16638,7 +17903,8 @@ async function chatSubmit() {
           + '↻ switched to ' + escH(_aiSwitchedTo) + ' — your usual model hit its daily cap</div>';
         chatPush('app', h);
       }
-      else if (['help', 'query', 'total', 'net', 'bills', 'ledger'].includes(ai.action)) {
+      else if (ai.action === 'suggestcaps') { chatSuggestCaps(); }
+      else if (['help', 'query', 'total', 'net', 'bills', 'ledger', 'ledgerq'].includes(ai.action)) {
         const ans = chatAnswer(ai);
         chatPush('app', ans != null ? ans : 'I did not understand that.');
       } else {
@@ -17222,7 +18488,7 @@ chatUpdateModeTag();
     '#bonusUSD', '#shopeePurchaseAmt', '#tiktokPurchaseAmt', '#mayaPurchaseAmt',
     '#convInput', '#whatifBonus', '#intPrincipal', '#payoffBudget',
     '#cfStartBal', '#ldgAmt', '#trkrAmt', '#ldgE-amt',
-    '.nec-amt-input', '.cap-amt', '.cc-amt-input', '.hs-amt-input',
+    '.nec-amt-input', '.cap-amt', '.cc-amt-input', '.hs-amt-input', '.ldg-money',
     '[class*="pl-amt-"]',
   ].join(',');
 
