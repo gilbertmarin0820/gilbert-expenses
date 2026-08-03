@@ -561,7 +561,62 @@
   }
   .calc-deg-btn.active { background: var(--surface2); color: var(--teal-text); }
 
+  /* CALCULATOR HISTORY TAPE — fixed height, scrolls left/right.
+     The strip is ALWAYS on screen (a dim placeholder fills it when the
+     history is empty) so the display and keypad below it never jump when
+     the first result lands or the history is cleared. Chips never wrap and
+     never shrink — they scroll sideways instead. */
+  .calc-tape-row  { display: flex; align-items: center; gap: 6px; height: 34px; margin-bottom: 8px; }
+  .calc-tape-fade { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; }
+  .calc-tape-fade::before,
+  .calc-tape-fade::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 22px;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 2;
+  }
+  .calc-tape-fade::before { left: 0;  background: linear-gradient(to right, var(--surface), transparent); }
+  .calc-tape-fade::after  { right: 0; background: linear-gradient(to left,  var(--surface), transparent); }
+  .calc-tape-fade.more-left::before { opacity: 1; }
+  .calc-tape-fade.more-right::after { opacity: 1; }
+  .calc-tape-strip {
+    height: 100%; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+  }
+  .calc-tape-strip::-webkit-scrollbar { height: 4px; }
+  .calc-tape-strip::-webkit-scrollbar-track { background: transparent; }
+  .calc-tape-strip::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .calc-tape-chip {
+    flex: 0 0 auto; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text3); border-radius: var(--radius-sm);
+    font-family: 'DM Mono', monospace; font-size: 11px; padding: 4px 10px;
+    cursor: pointer; white-space: nowrap; line-height: 1.4;
+  }
+  .calc-tape-chip:hover  { border-color: var(--teal); color: var(--text2); }
+  .calc-tape-chip:active { transform: scale(0.96); }
+  .calc-tape-empty {
+    flex: 0 0 auto; font-size: 10px; color: var(--text3); opacity: 0.55;
+    white-space: nowrap; user-select: none; padding-left: 2px;
+  }
+  .calc-tape-clear {
+    flex: 0 0 auto; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text3); border-radius: var(--radius-sm); font-size: 11px;
+    padding: 5px 8px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .calc-tape-clear:disabled { opacity: 0.3; cursor: default; }
+
   /* MONTHLY TRACKER */
+  .trkr-mode-row   { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .trkr-mode-label { font-size: 11px; color: var(--text3); }
+  .trkr-mode-toggle {
+    display: inline-flex; background: var(--surface3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .trkr-mode-btn {
+    background: none; border: none; color: var(--text3); cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 11px; padding: 6px 12px;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .trkr-mode-btn.active { background: var(--surface2); color: var(--teal-text); }
   .trkr-person-tag {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--surface2); border: 1px solid var(--border);
@@ -2017,7 +2072,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-02a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3140,13 +3195,16 @@
         </div>
 
         <div id="calcMainPanel">
-        <!-- History tape: past calculations, tap to reuse the result -->
-        <div id="calcTapeWrap" style="display:none; margin-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <div id="calcTape" style="flex:1; display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:3px; scrollbar-width:thin;"></div>
-            <button onclick="clearCalcTape()" title="Clear calculation history"
-              style="flex:0 0 auto; background:var(--surface2); border:1px solid var(--border2); color:var(--text3); border-radius:var(--radius-sm); font-size:11px; padding:5px 8px; cursor:pointer;">✕</button>
+        <!-- History tape: past calculations, tap to reuse the result.
+             Always rendered at a FIXED height (never display:none) so the
+             calculator never resizes when history appears or is cleared;
+             the chips scroll left/right instead of stacking. -->
+        <div id="calcTapeWrap" class="calc-tape-row">
+          <div class="calc-tape-fade" id="calcTapeFade">
+            <div id="calcTape" class="calc-tape-strip"></div>
           </div>
+          <button id="calcTapeClear" onclick="clearCalcTape()" title="Clear calculation history"
+            class="calc-tape-clear">✕</button>
         </div>
         <div id="calcDisplay" style="
           background:var(--surface2); border:1px solid var(--border);
@@ -4170,7 +4228,19 @@
     <div class="section-title">Add / Edit Entry</div>
     <div class="card">
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; padding:8px 12px; background:var(--surface2); border-radius:var(--radius-sm); border-left:3px solid var(--teal);">
-        💡 <strong style="color:var(--text2);">Tip:</strong> Tap any cell in the Monthly Breakdown table to edit it directly. Use this form to add entries for months that haven't been filled in yet.
+        💡 <strong style="color:var(--text2);">Tip:</strong> Tap any cell in the Monthly Breakdown table to set its exact amount. This form <strong style="color:var(--text2);">adds to</strong> whatever that month already holds, so a second ₱1,000 makes ₱2,000.
+      </div>
+      <!-- What "+ Add" does to a month that already has a value. Default is
+           ADD — the button says Add, so entering 1,000 twice must reach 2,000.
+           Replace keeps the old overwrite behaviour for fixing a typo. -->
+      <div class="trkr-mode-row">
+        <span class="trkr-mode-label">If that month already has an amount:</span>
+        <div class="trkr-mode-toggle">
+          <button type="button" class="trkr-mode-btn active" id="trkrModeAddBtn" onclick="trkrSetAddMode('add')"
+            title="Adds on top of what's already recorded for that month">➕ Add to it</button>
+          <button type="button" class="trkr-mode-btn" id="trkrModeRepBtn" onclick="trkrSetAddMode('replace')"
+            title="Overwrites whatever is recorded for that month">✏️ Replace it</button>
+        </div>
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;" class="trkr-add-row" id="trkrFormGrid">
         <div>
@@ -6800,18 +6870,38 @@ function calcRender() {
     calcRender();
   });
 
-  // Direct keyboard input into the screen div
+  // Direct keyboard input into the screen div.
+  //
+  // The screen sits at "0" between entries (fresh, after AC, and after every
+  // operator), and a contenteditable happily appends to that — so typing 96
+  // used to read "096" and you had to clear before every number. Two rules
+  // fix it, and they are the SAME rules the keypad buttons already follow:
+  //   • typing straight after "=" starts a NEW number instead of extending
+  //     the result (calcDigit's calcJustEq branch)
+  //   • a lone leading 0 is replaced by the first real digit, while "0."
+  //     and a plain "0" are left alone (calcDigit's leading-zero branch)
+  // Done here rather than by intercepting keydown so it also covers Android
+  // soft keyboards (which report key "Unidentified") and mid-string edits.
   screen.addEventListener('input', e => {
     // Grab whatever the user typed, keep only valid characters
     const raw = screen.textContent || '';
-    const cleaned = raw.replace(/[^0-9.\-]/g, '').slice(0, 16);
-    if (cleaned !== raw) {
-      // Illegal characters were removed — sync back
-      calcCurrent = cleaned || '0';
-      calcRender();
-    } else {
-      calcCurrent = cleaned || '0';
+    let cleaned = raw.replace(/[^0-9.\-]/g, '').slice(0, 16);
+
+    // Typing right after a result: keep only what was just typed.
+    if (calcJustEq && calcCurrent && cleaned.length > calcCurrent.length
+        && cleaned.startsWith(calcCurrent)) {
+      cleaned = cleaned.slice(calcCurrent.length);
     }
+    calcJustEq = false;
+
+    cleaned = calcStripLeadZeros(cleaned);
+    if (cleaned === '' || cleaned === '-') cleaned = '0';
+
+    calcCurrent = cleaned;
+    // Re-render (which also puts the caret back at the end) only when what
+    // should be on screen differs from what is — otherwise a mid-string edit
+    // would yank the caret to the end on every keystroke.
+    if (cleaned !== raw) calcRender();
   });
 
   // Allow tab out but not enter (enter = equals).
@@ -6837,8 +6927,13 @@ function calcRender() {
   if (window.matchMedia && matchMedia('(pointer:fine)').matches) {
     const kbHint = document.getElementById('calcKbHint');
     if (kbHint) {
-      screen.addEventListener('focus', () => { kbHint.style.display = 'block'; });
-      screen.addEventListener('blur',  () => { kbHint.style.display = 'none'; });
+      // Reserve the line permanently and toggle VISIBILITY, not display —
+      // showing it on focus used to nudge the whole keypad down a row.
+      // Mobile never reaches this branch, so no space is wasted there.
+      kbHint.style.display    = 'block';
+      kbHint.style.visibility = 'hidden';
+      screen.addEventListener('focus', () => { kbHint.style.visibility = 'visible'; });
+      screen.addEventListener('blur',  () => { kbHint.style.visibility = 'hidden'; });
     }
   }
 
@@ -6872,6 +6967,15 @@ function calcToggleInv() {
   if (sinBtn) sinBtn.textContent = calcIsInv ? 'sin⁻¹' : 'sin';
   if (cosBtn) cosBtn.textContent = calcIsInv ? 'cos⁻¹' : 'cos';
   if (tanBtn) tanBtn.textContent = calcIsInv ? 'tan⁻¹' : 'tan';
+}
+
+// "096" → "96", "007" → "7". Leaves "0", "0." and "-0.5" alone — only a
+// leading zero that is directly followed by another digit is meaningless.
+function calcStripLeadZeros(v) {
+  const neg  = v.startsWith('-');
+  let body   = neg ? v.slice(1) : v;
+  if (/^0[0-9]/.test(body)) body = body.replace(/^0+(?=[0-9])/, '');
+  return (neg ? '-' : '') + body;
 }
 
 function calcDigit(d) {
@@ -7110,19 +7214,50 @@ function pushCalcTape(expr, result) {
   renderCalcTape();
 }
 
-function renderCalcTape() {
-  const wrap = document.getElementById('calcTapeWrap');
+// Fade cues on the tape: dim whichever edge still has chips off-screen,
+// so it reads as a sideways-scrolling strip rather than a cut-off list.
+function calcTapeUpdateFade() {
   const tape = document.getElementById('calcTape');
-  if (!wrap || !tape) return;
-  if (!calcTape.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
+  const fade = document.getElementById('calcTapeFade');
+  if (!tape || !fade) return;
+  const max = tape.scrollWidth - tape.clientWidth;
+  fade.classList.toggle('more-right', tape.scrollLeft < max - 1);
+  fade.classList.toggle('more-left',  tape.scrollLeft > 1);
+}
+
+function renderCalcTape() {
+  const tape  = document.getElementById('calcTape');
+  const clear = document.getElementById('calcTapeClear');
+  if (!tape) return;
+
+  // The strip is NEVER hidden — an empty history shows a placeholder of the
+  // same height. Hiding it made the whole calculator jump up and down the
+  // moment a first result landed.
+  if (!calcTape.length) {
+    tape.innerHTML = '<span class="calc-tape-empty">History appears here — tap a result to reuse it</span>';
+    if (clear) clear.disabled = true;
+    calcTapeUpdateFade();
+    return;
+  }
+  if (clear) clear.disabled = false;
+
   tape.innerHTML = calcTape.map((t, i) => `
-    <button type="button" onclick="calcTapeUse(${i})" title="Tap to reuse ${t.r}"
-      style="flex:0 0 auto; background:var(--surface2); border:1px solid var(--border); color:var(--text3); border-radius:var(--radius-sm); font-family:'DM Mono',monospace; font-size:11px; padding:5px 10px; cursor:pointer; white-space:nowrap;">
+    <button type="button" class="calc-tape-chip" onclick="calcTapeUse(${i})" title="Tap to reuse ${t.r}">
       ${t.e} = <span style="color:var(--teal-text); font-weight:500;">${t.r}</span>
     </button>`).join('');
   tape.scrollLeft = 0;
+  calcTapeUpdateFade();
 }
+
+// Wired once — the strip itself is static markup, so this survives every
+// re-render of its contents.
+(function initCalcTapeScroll() {
+  const tape = document.getElementById('calcTape');
+  if (!tape) return;
+  tape.addEventListener('scroll', calcTapeUpdateFade, { passive: true });
+  window.addEventListener('resize', calcTapeUpdateFade);
+  setTimeout(calcTapeUpdateFade, 200);
+})();
 
 function calcTapeUse(i) {
   const t = calcTape[i];
@@ -13702,6 +13837,10 @@ let trkrEntries  = [];
 let trkrSeq      = 1;
 let trkrYears    = [];
 let trkrViewYear = new Date().getFullYear();
+// What the "+ Add" form does when the chosen month ALREADY has a value.
+// 'add' (default) accumulates — entering 1,000 twice must reach 2,000.
+// 'replace' is the old behaviour, kept for correcting a wrong figure.
+let trkrAddMode  = 'add';
 
 loadData();
 loadLedger();       // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
@@ -14032,7 +14171,7 @@ function renderSplitArchive(listId, filterType) {
 
 function trkrSave() {
   try {
-    localStorage.setItem('va_tracker', JSON.stringify({ trkrPersons, trkrEntries, trkrSeq, trkrYears, trkrViewYear }));
+    localStorage.setItem('va_tracker', JSON.stringify({ trkrPersons, trkrEntries, trkrSeq, trkrYears, trkrViewYear, trkrAddMode }));
   } catch(e) {}
 }
 
@@ -14046,6 +14185,8 @@ function trkrLoad() {
     if (Array.isArray(d.trkrYears))   trkrYears    = d.trkrYears;
     if (typeof d.trkrSeq === 'number') trkrSeq     = d.trkrSeq;
     if (typeof d.trkrViewYear === 'number') trkrViewYear = d.trkrViewYear;
+    // Older saves have no mode — they predate the toggle, so default to 'add'.
+    trkrAddMode = (d.trkrAddMode === 'replace') ? 'replace' : 'add';
     reseedIdSeqs();
   } catch(e) {}
   // Always have the current year
@@ -14133,6 +14274,19 @@ function trkrUpdateMonthSelect() {
 }
 
 // ─── Entry Management ─────────────────────────────────────────
+// Which way "+ Add" resolves a month that already has a value.
+function trkrSetAddMode(mode) {
+  trkrAddMode = (mode === 'replace') ? 'replace' : 'add';
+  trkrUpdateModeButtons();
+  trkrSave();
+}
+function trkrUpdateModeButtons() {
+  const a = document.getElementById('trkrModeAddBtn');
+  const r = document.getElementById('trkrModeRepBtn');
+  if (a) a.classList.toggle('active', trkrAddMode === 'add');
+  if (r) r.classList.toggle('active', trkrAddMode === 'replace');
+}
+
 function trkrAddEntry() {
   const person = document.getElementById('trkrSelPerson')?.value;
   const year   = parseInt(document.getElementById('trkrSelYear')?.value);
@@ -14145,13 +14299,27 @@ function trkrAddEntry() {
   if (amt <= 0){ if (msg) msg.textContent = '⚠ Please enter an amount greater than 0.'; return; }
   if (msg) msg.textContent = '';
 
-  // Check if entry already exists for this person+year+month; if so, update it
+  const where = `${person} · ${TRKR_MONTHS[month] || ''} ${year}`;
+  let note;
+
+  // A month that already has a value: ADD to it by default. It used to be
+  // overwritten, so putting in 1,000 twice left the breakdown reading 1,000
+  // and the second entry looked like it had been swallowed. Tapping the cell
+  // is still the way to set an exact figure.
   const existing = trkrEntries.find(e => e.person === person && e.year === year && e.month === month);
   if (existing) {
-    existing.amount = amt;
+    const before = parseFloat(existing.amount) || 0;
+    if (trkrAddMode === 'add') {
+      existing.amount = Math.round((before + amt) * 100) / 100;
+      note = `✓ ${trkrFmt(amt)} added to ${trkrFmt(before)} — ${where} is now ${trkrFmt(existing.amount)}`;
+    } else {
+      existing.amount = amt;
+      note = `✓ ${where} replaced: ${trkrFmt(before)} → ${trkrFmt(amt)}`;
+    }
   } else {
     trkrEntries.push({ id: trkrSeq++, person, year, month, amount: amt });
     if (!trkrYears.includes(year)) { trkrYears.push(year); trkrYears.sort((a,b)=>a-b); }
+    note = `✓ ${trkrFmt(amt)} recorded — ${where}`;
   }
 
   trkrViewYear = year;
@@ -14163,7 +14331,10 @@ function trkrAddEntry() {
   // Reset amount
   const amtEl = document.getElementById('trkrAmt');
   if (amtEl) { amtEl.value = ''; amtEl.focus(); }
-  showToast('✓ Entry saved');
+  // The message stays on screen after the toast fades, so a running total is
+  // still readable when you are entering several payments in a row.
+  if (msg) msg.textContent = note;
+  showToast(note);
 }
 
 // ─── Year Tabs ────────────────────────────────────────────────
@@ -14368,6 +14539,7 @@ function resetTracker() {
 
 function trkrInit() {
   trkrLoad();
+  trkrUpdateModeButtons();
   trkrRenderPersonList();
   trkrPopulatePersonSelect();
   trkrPopulateYearSelect();
