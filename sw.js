@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v25';
+const CACHE = 'gilbert-expenses-v26';
 
 const APP_SHELL = [
   './',
@@ -75,6 +75,10 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ── Static assets: cache-first, refresh in the background ────
+  // NOTE: respondWith() must always receive a Response. Offline with nothing
+  // cached, the fetch rejects and the old `.catch(() => hit)` handed back
+  // `undefined`, which throws inside the fetch handler and surfaces as an
+  // opaque network error. A real 504 is returned instead.
   event.respondWith(
     caches.match(req).then((hit) => {
       const refresh = fetch(req)
@@ -85,8 +89,16 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => hit);
-      return hit || refresh;
-    })
+        .catch(() => hit || null);
+      return hit || refresh.then((res) => res || offlineResponse(req));
+    }).catch(() => offlineResponse(req))
   );
 });
+
+function offlineResponse(req) {
+  return new Response('Offline and not in the cache.', {
+    status: 504,
+    statusText: 'Offline',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}

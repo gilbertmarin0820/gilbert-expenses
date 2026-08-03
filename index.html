@@ -1849,6 +1849,11 @@
   .ldg-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); flex: 0 0 auto; }
   .ldg-cat  { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
   .ldg-note { display: block; font-size: 10.5px; color: var(--text3); }
+  /* "the income under this rate was borrowed from another month" */
+  .ldg-est { display: inline-block; margin-left: 4px; padding: 0 4px; border: 1px solid var(--border);
+             border-radius: 999px; font-size: 9.5px; color: var(--text3); cursor: help; }
+  /* a refund: money that came back, so it nets off the category it reverses */
+  .ldg-amt.refund { color: var(--green-text); }
   .ldg-amt  { font-family: 'DM Mono', monospace; font-size: 12.5px; color: var(--red-text); flex: 0 0 auto; }
   .ldg-src {
     font-size: 11px; line-height: 1; padding: 3px 7px;
@@ -2095,7 +2100,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03c</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03d</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -4138,7 +4143,7 @@
            rewrites #ledgerBody, so typing here is never interrupted. -->
       <div class="ldg-add">
         <input type="date" id="ldgDate" class="ldg-in" title="Date of the spend">
-        <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01" min="0"
+        <input type="number" id="ldgAmt" class="ldg-in" placeholder="Amount ₱" inputmode="decimal" step="0.01"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
         <input type="text" id="ldgCat" class="ldg-in" list="ldgCatList" placeholder="Category" maxlength="60"
           oninput="onLdgCatInput()"
@@ -4147,10 +4152,11 @@
           oninput="onLdgNoteInput()"
           onkeydown="if(event.key==='Enter'){event.preventDefault(); ledgerAddFromForm();}">
         <select id="ldgAcct" class="ldg-in" title="Which account the money left" onchange="onLdgAcctChange(this.value)"></select>
-        <button class="add-btn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
+        <button class="add-btn" id="ldgAddBtn" style="margin-top:0; white-space:nowrap;" onclick="ledgerAddFromForm()">+ Log spend</button>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin:-6px 0 10px;">
         <button class="ldg-btn" onclick="splitOpen(0)" title="Break one payment into several categories">&#9974; Split this across categories</button>
+        <button class="ldg-btn" id="ldgRefundBtn" onclick="ledgerToggleRefund()" title="Money that came back on a purchase — logged against the same category, so it nets off what you spent">&#8617; Refund</button>
       </div>
 
       <!-- SPLIT COMPOSER. Static shell for the same reason the quick-add form
@@ -10903,6 +10909,22 @@ function renderAccounts() {
 // ── transfers ─────────────────────────────────────────────────
 function isTransfer(e) { return !!(e && e.kind === 'transfer'); }
 
+// ── REFUNDS ───────────────────────────────────────────────────
+// A refund is an ORDINARY ENTRY WITH A NEGATIVE AMOUNT — no new field, no new
+// key, no new kind. Deleting the original purchase was the only way to record
+// one before, which destroyed its date and its provenance and made a PARTIAL
+// refund impossible to express at all.
+//
+// The sign carries the whole meaning, so every total, cap remainder, category
+// average, drift figure, burn rate and month-end snapshot nets it off with no
+// change of their own — the same reason splitting a payment was stored as N
+// ordinary entries rather than as a parts array. A refund is deliberately NOT
+// a transfer: transfers are filtered out of spending, while a refund belongs
+// inside the category it reverses.
+function isRefund(e)  { return !!(e && e.amt < 0 && !isTransfer(e)); }
+// toLocaleString renders a negative as "₱-450.00"; this puts the sign first.
+function fPHPs(n)     { return (n < -0.0001 ? '\u2212' : '') + fPHP(Math.abs(n)); }
+
 function ledgerAddTransfer() {
   const g = i => document.getElementById(i);
   const amt = parseFloat(g('trfAmt') ? g('trfAmt').value : '');
@@ -11298,14 +11320,33 @@ function ledgerDelete(id, noPrompt) {
   return true;
 }
 
+// Refund mode is a per-session toggle on the quick-add form, not a stored
+// preference: it flips the sign of the NEXT row and then turns itself off, so
+// it can never sit on silently and turn a week of spending into credits.
+let _ldgRefund = false;
+function ledgerToggleRefund(on) {
+  _ldgRefund = (on === undefined) ? !_ldgRefund : !!on;
+  const btn = document.getElementById('ldgRefundBtn');
+  const add = document.getElementById('ldgAddBtn');
+  const amt = document.getElementById('ldgAmt');
+  if (btn) btn.classList.toggle('primary', _ldgRefund);
+  if (add) add.textContent = _ldgRefund ? '+ Log refund' : '+ Log spend';
+  if (amt) amt.placeholder = _ldgRefund ? 'Refund ₱' : 'Amount ₱';
+  if (_ldgRefund && amt) amt.focus();
+}
+
 function ledgerAddFromForm() {
   const dEl = document.getElementById('ldgDate');
   const aEl = document.getElementById('ldgAmt');
   const cEl = document.getElementById('ldgCat');
   const nEl = document.getElementById('ldgNote');
   if (!aEl) return;
-  const amt = parseFloat(aEl.value);
-  if (!(amt > 0)) { showToast('Enter an amount first', true); aEl.focus(); return; }
+  let amt = parseFloat(aEl.value);
+  // A refund is a negative entry, so "> 0" can no longer be the test — zero
+  // and NaN are what actually have to be refused. A typed minus works on its
+  // own; the toggle is the discoverable way in.
+  if (!isFinite(amt) || Math.abs(amt) < 0.005) { showToast('Enter an amount first', true); aEl.focus(); return; }
+  if (_ldgRefund) amt = -Math.abs(amt);
   const acEl = document.getElementById('ldgAcct');
   const entry = ledgerAdd({
     date: dEl && dEl.value ? dEl.value : todayLocalStr(),
@@ -11322,9 +11363,13 @@ function ledgerAddFromForm() {
   _ldgCatAuto = false;
   // Jump the view to the month the entry landed in, so it is visible.
   ledgerViewYM = ymOf(entry.date);
+  const wasRefund = _ldgRefund;
+  if (wasRefund) ledgerToggleRefund(false);   // one row, then back to spending
   renderLedger();
   aEl.focus();
-  showToast('🧾 Logged ' + fPHP(entry.amt) + ' — ' + entry.cat);
+  showToast(entry.amt < 0
+    ? '↩ Refund of ' + fPHP(Math.abs(entry.amt)) + ' — ' + entry.cat + ' nets off by that much'
+    : '🧾 Logged ' + fPHP(entry.amt) + ' — ' + entry.cat);
 }
 
 // ── reading ───────────────────────────────────────────────────
@@ -11636,16 +11681,77 @@ function ledgerIncomeNow() {
 }
 
 // ── month-end close ───────────────────────────────────────────
+// Which income figure a month should be FROZEN against:
+//   • the current month  → a live reading of the Net Summary, correct by
+//     definition, and refreshed every time you re-close
+//   • a re-close of a past month → whatever it was already frozen with, kept
+//     untouched, because today's Net Summary is not that month's pay
+//   • a past month closed for the first time → today's reading is the only
+//     figure available, so it is used but MARKED as estimated and can be
+//     corrected with ledgerSetIncome()
+function ledgerCloseIncome(ym, prev, isCur) {
+  const live = ledgerIncomeNow();
+  if (isCur) return { income: live, from: ym, est: false };
+  if (prev && prev.income !== undefined && prev.income !== null) {
+    return {
+      income: parseFloat(prev.income) || 0,
+      from:   prev.incomeYM || '',
+      // Snapshots taken before this fix carry no provenance, and every one of
+      // them was a live reading — so absent means estimated, not verified.
+      est:    (prev.incomeEst === undefined) ? true : !!prev.incomeEst,
+    };
+  }
+  return { income: live, from: ymNow(), est: true };
+}
+
+// Correct a closed month's income by hand. The savings rate is re-derived
+// from it on the spot so the two can never disagree.
+function ledgerSetIncome(ym) {
+  const hist = loadMonthHistory();
+  const s = hist[ym];
+  if (!s) return;
+  const cur = parseFloat(s.income) || 0;
+  const raw = prompt('What did you actually earn in ' + ymLabel(ym) + '?\n\n'
+    + 'This is the income its savings rate is measured against.'
+    + (s.incomeEst ? '\n\nThe figure on file was read off the Net Summary when the month was closed, not from ' + ymLabel(ym) + ' itself.' : ''),
+    cur ? String(cur) : '');
+  if (raw === null) return;
+  const v = parseFloat(String(raw).replace(/[^0-9.\-]/g, ''));
+  if (!isFinite(v) || v < 0) { showToast('That is not an amount', true); return; }
+  s.income    = Math.round(v * 100) / 100;
+  s.incomeYM  = ym;
+  s.incomeEst = false;
+  const actual = parseFloat(s.actual) || 0;
+  s.savingsRate = s.income > 0 ? Math.round(((s.income - actual) / s.income) * 1000) / 10 : null;
+  saveMonthHistory(hist);
+  renderLedger();
+  showToast('\u2713 ' + ymLabel(ym) + ' income set to ' + fPHP(s.income));
+}
+
 function ledgerCloseMonth(ym) {
   ym = ym || ledgerViewYM || ymNow();
   const hist = loadMonthHistory();
-  if (hist[ym] && !confirm(ymLabel(ym) + ' is already closed.\n\nRe-snapshot it with the current numbers?')) return;
+  if (hist[ym] && !confirm(ymLabel(ym) + ' is already closed.\n\nRe-snapshot it with the current numbers?'
+    + (ym === ymNow()
+        ? ''
+        : '\n\nIts income stays as it was frozen — only the spending and the budget are re-read.'))) return;
 
   const lines   = ledgerBudgetLines(ym);
   const planned = lines.reduce((s, l) => s + l.budget, 0);
   const actual  = ledgerMonthTotal(ym);
-  const income  = ledgerIncomeNow();
   const rows    = ledgerMonth(ym);
+
+  // INCOME IS FROZEN LIKE THE BUDGET IS. ledgerIncomeNow() reads the Net
+  // Summary that is on screen RIGHT NOW, so closing (or re-closing) an old
+  // month used to stamp TODAY'S pay into it and recompute its savings rate
+  // off a figure from a different month. Only the current month may take a
+  // live reading; a re-close keeps whatever the month was already frozen
+  // with, and a past month closed for the first time is marked as estimated
+  // rather than quietly presented as fact.
+  const prev  = hist[ym];
+  const isCur = ym === ymNow();
+  const inc   = ledgerCloseIncome(ym, prev, isCur);
+  const income = inc.income;
 
   hist[ym] = {
     ym: ym,
@@ -11653,6 +11759,10 @@ function ledgerCloseMonth(ym) {
     planned: Math.round(planned * 100) / 100,
     actual:  Math.round(actual  * 100) / 100,
     income:  Math.round(income  * 100) / 100,
+    // Where that income figure came from, so the month can say so instead of
+    // presenting a borrowed number as its own.
+    incomeYM:  inc.from,
+    incomeEst: inc.est,
     // A REAL savings rate: what was left of the month's income after the
     // money that actually went out, not a projection of what should have.
     savingsRate: income > 0 ? Math.round(((income - actual) / income) * 1000) / 10 : null,
@@ -11660,7 +11770,12 @@ function ledgerCloseMonth(ym) {
     // The balance sheet at the moment the month was frozen, alongside the
     // cash flow. A closed month now answers both "what did I spend" and
     // "what was I worth".
-    netWorth: (() => { try { return netWorthNow().net; } catch (e) { return null; } })(),
+    // Same reasoning as income: netWorthNow() is a reading taken today. Only
+    // the current month may refresh it; a past month keeps the balance sheet
+    // it was frozen with rather than acquiring today's.
+    netWorth: (!isCur && prev && prev.netWorth !== undefined && prev.netWorth !== null)
+      ? prev.netWorth
+      : (() => { try { return netWorthNow().net; } catch (e) { return null; } })(),
     lines: lines.map(l => ({ key: l.key, label: l.label, budget: l.budget, src: l.src })),
     byCat: Object.keys(ledgerCatTotals(ym)).map(k => {
       const c = ledgerCatTotals(ym)[k];
@@ -11712,7 +11827,9 @@ function ledgerEditSave(id) {
   const g = i => document.getElementById(i);
   const amtEl = g('ldgE-amt');
   const amt = parseFloat(amtEl ? amtEl.value : '');
-  if (!(amt > 0)) { showToast('Enter an amount first', true); if (amtEl) amtEl.focus(); return; }
+  // Negative is legal here too — it is how a row is corrected INTO a refund,
+  // or a refund's size fixed, without deleting and retyping it.
+  if (!isFinite(amt) || Math.abs(amt) < 0.005) { showToast('Enter an amount first', true); if (amtEl) amtEl.focus(); return; }
 
   const dRaw = g('ldgE-date') ? g('ldgE-date').value : '';
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dRaw) ? dRaw : e.date;
@@ -12047,6 +12164,9 @@ function insightPayload(ym) {
     spent: r2(bva.actualTotal),
     difference: r2(bva.actualTotal - bva.plannedTotal),
     savings_rate_pct: (snap.savingsRate === undefined) ? null : snap.savingsRate,
+    // The rate is only as good as the income under it; a past month closed
+    // late borrowed today's Net Summary and is flagged rather than trusted.
+    savings_rate_income_estimated: !!snap.incomeEst,
     entries: ledgerMonth(ym).length,
     categories: bva.lines.filter(l => l.actual > 0 || l.budget > 0).slice(0, 12).map(l => ({
       category: l.label,
@@ -12063,6 +12183,7 @@ function insightPayload(ym) {
       spent: r2(hist[k].actual),
       income: r2(hist[k].income),
       savings_rate_pct: (hist[k].savingsRate === undefined) ? null : hist[k].savingsRate,
+      savings_rate_income_estimated: !!hist[k].incomeEst,
     })),
   };
 }
@@ -12183,7 +12304,7 @@ function ledgerEditRowHTML(e) {
   const k = `if(event.key==='Enter'){event.preventDefault(); ledgerEditSave(${e.id});} if(event.key==='Escape'){ledgerEditCancel();}`;
   return `<div class="ldg-row editing">
     <input type="date" id="ldgE-date" class="ldg-in" style="flex:0 0 auto;" value="${escH(e.date)}">
-    <input type="number" id="ldgE-amt" class="ldg-in ldg-money" style="flex:0 0 110px;" inputmode="decimal" step="0.01" min="0" value="${escH(String(e.amt))}"
+    <input type="number" id="ldgE-amt" class="ldg-in ldg-money" style="flex:0 0 110px;" inputmode="decimal" step="0.01" value="${escH(String(e.amt))}"
       onkeydown="${k}">
     <input type="text" id="ldgE-cat" class="ldg-in" list="ldgCatList" maxlength="60" style="flex:1 1 120px;" value="${escH(e.cat)}"
       onkeydown="${k}">
@@ -12312,11 +12433,11 @@ function renderLedger() {
   // ── summary strip: budgeted → spent ──
   h += `<div style="padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:12px;">
     <div class="nb-row"><span class="nb-label">Budgeted (plan)</span><span style="font-family:'DM Mono',monospace; color:var(--text2);">${fPHP(bva.plannedTotal)}</span></div>
-    <div class="nb-row"><span class="nb-label">Spent (actual)</span><span style="font-family:'DM Mono',monospace; color:${overCol}; font-weight:500;">${fPHP(bva.actualTotal)}</span></div>
+    <div class="nb-row"><span class="nb-label">Spent (actual)</span><span style="font-family:'DM Mono',monospace; color:${overCol}; font-weight:500;">${fPHPs(bva.actualTotal)}</span></div>
     <div class="divider"></div>
     <div class="nb-row"><span class="nb-label" style="color:var(--text);">${diff > 0.005 ? '= Over by' : '= Under by'}</span><span style="font-family:'DM Mono',monospace; color:${overCol}; font-weight:500;">${fPHP(Math.abs(diff))}</span></div>
     <div style="height:8px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden; margin-top:10px;">
-      <div style="height:100%; width:${Math.min(100, pct).toFixed(1)}%; background:${ledgerBarColor(bva.actualTotal, bva.plannedTotal)}; border-radius:999px; transition:width .35s ease;"></div>
+      <div style="height:100%; width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%; background:${ledgerBarColor(bva.actualTotal, bva.plannedTotal)}; border-radius:999px; transition:width .35s ease;"></div>
     </div>
     <div style="font-size:10.5px; color:var(--text3); margin-top:6px;">${bva.plannedTotal > 0 ? pct.toFixed(0) + '% of the month\u2019s budget used' : 'No budget lines for this month yet — add bills under Necessities, Subscriptions or Installments.'}</div>
   </div>`;
@@ -12416,11 +12537,11 @@ function renderLedger() {
         <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
           <span style="font-size:12.5px; color:var(--text); flex:1; min-width:100px;">${escH(l.label)}${l.budgeted ? '' : ' <span style="font-size:10px; color:var(--text3);">(unbudgeted)</span>'}</span>
           ${trend}
-          <span style="font-family:'DM Mono',monospace; font-size:12px; color:${col};">${fPHP(l.actual)}</span>
+          <span style="font-family:'DM Mono',monospace; font-size:12px; color:${col};">${fPHPs(l.actual)}</span>
           <span style="font-size:10.5px; color:var(--text3); font-family:'DM Mono',monospace;">${l.budget > 0 ? '/ ' + fPHP(l.budget) : '/ —'}</span>
         </div>
         <div style="height:6px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden;">
-          <div style="height:100%; width:${Math.min(100, p).toFixed(1)}%; background:${col}; border-radius:999px;"></div>
+          <div style="height:100%; width:${Math.max(0, Math.min(100, p)).toFixed(1)}%; background:${col}; border-radius:999px;"></div>
         </div>
         ${over > 0.005 ? `<div style="font-size:10px; color:var(--red-text); margin-top:3px; font-family:'DM Mono',monospace;">over by ${fPHP(over)}</div>` : ''}
         ${allow}
@@ -12494,6 +12615,14 @@ function renderLedger() {
         `<span title="${escH(LEDGER_SRC_LABEL[k])}">${LEDGER_SRC_ICON[k]} ${srcN[k]} ${escH(LEDGER_SRC_LABEL[k])}</span>`).join('')}
       <span style="color:${backed >= 50 ? 'var(--green-text)' : 'var(--text3)'};">${backed}% receipt-backed</span>
       ${editedN ? `<span title="edited after they were logged">✎ ${editedN} edited</span>` : ''}
+      ${(() => {
+        // Refunds are already netted off every total above; the roll-up is the
+        // one place that says how much of the month's figure is money returned.
+        const r = spend.filter(isRefund);
+        if (!r.length) return '';
+        const back = r.reduce((s, e) => s + Math.abs(e.amt), 0);
+        return `<span style="color:var(--green-text);" title="Already netted off the totals above">↩ ${r.length} refund${r.length === 1 ? '' : 's'} · ${escH(fPHP(back))} back</span>`;
+      })()}
     </div>`;
 
     // Rows of one split collapse into a single block, headed by the whole
@@ -12514,7 +12643,7 @@ function renderLedger() {
         <span class="ldg-cat">${escH(e.cat)}${e.note ? `<span class="ldg-note">${escH(e.note)}</span>` : ''}</span>
         ${acctChipHTML(e.acct)}
         <span class="ldg-src ${escH(e.src)}" title="${escH(LEDGER_SRC_LABEL[e.src] || e.src)}${e.edited ? ' · edited since' : ''}">${LEDGER_SRC_ICON[e.src] || '•'}${e.edited ? '<sup class="ldg-ed">✎</sup>' : ''}</span>
-        <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <span class="ldg-amt${isRefund(e) ? ' refund' : ''}"${isRefund(e) ? ' title="Refund — nets off what this category cost"' : ''}>${isRefund(e) ? '↩ ' : ''}${fPHPs(e.amt)}</span>
         <button class="ldg-edit-btn" onclick="splitOpen(${e.id})" title="Split this across categories">✂</button>
         <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this entry">✎</button>
         <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this entry">✕</button>
@@ -12541,9 +12670,14 @@ function renderLedger() {
       const d  = (parseFloat(s.actual) || 0) - (parseFloat(s.planned) || 0);
       const c  = d > 0.005 ? 'var(--red-text)' : 'var(--green-text)';
       const sr = (s.savingsRate === null || s.savingsRate === undefined) ? null : s.savingsRate;
+      // A savings rate is only as honest as the income under it. When that
+      // income was read off the Net Summary at closing time rather than from
+      // the month itself, say so instead of printing a confident percentage.
+      const est = !!s.incomeEst;
       return `<div class="ldg-row" style="cursor:pointer;" onclick="ledgerViewYM='${escJS(k)}'; renderLedger();" title="Open ${escH(ymLabel(k))}">
         <span class="ldg-cat" style="flex:1;">${escH(ymLabel(k))}
-          <span class="ldg-note">${fPHP(parseFloat(s.planned) || 0)} budgeted${sr !== null ? ' · saved ' + sr + '%' : ''}</span></span>
+          <span class="ldg-note">${fPHP(parseFloat(s.planned) || 0)} budgeted${sr !== null ? ' · saved ' + sr + '%' + (est ? '<span class="ldg-est" title="Income was read from the Net Summary when this month was closed, not from ' + escH(ymLabel(k)) + ' — tap ✎ to set what you actually earned">≈</span>' : '') : ''}</span></span>
+        <button class="ldg-edit-btn" onclick="event.stopPropagation(); ledgerSetIncome('${escJS(k)}')" title="Set the income this month is measured against">✎</button>
         <span class="ldg-amt" style="color:${c};">${fPHP(parseFloat(s.actual) || 0)}</span>
         <span style="font-size:10.5px; font-family:'DM Mono',monospace; color:${c}; min-width:64px; text-align:right;">${d > 0.005 ? '+' : ''}${fPHP(d)}</span>
       </div>`;
@@ -16193,7 +16327,9 @@ function printMonthSheet(ym) {
     try { bills = bclBuildItems().filter(b => !billChecks.checks[b.key]); } catch (e) {}
   }
 
-  const money = n => '\u20b1' + (n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Sign first, so a refund prints as \u2212\u20b1450.00 rather than \u20b1-450.00.
+  const money = n => ((n || 0) < -0.0001 ? '\u2212' : '') + '\u20b1'
+    + Math.abs(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const lineRows = bva.lines.map(l => {
     const over = l.budget > 0 ? l.actual - l.budget : 0;
@@ -17508,6 +17644,7 @@ function ledgerAIContext(money) {
         spent:    money(parseFloat(hist[k].actual)  || 0),
         income:   money(parseFloat(hist[k].income)  || 0),
         savings_rate_pct: (hist[k].savingsRate === undefined) ? null : hist[k].savingsRate,
+        savings_rate_income_estimated: !!hist[k].incomeEst,
       })),
     };
   } catch (e) { return null; }
@@ -17943,7 +18080,7 @@ function chatAISystemPrompt(parserHint) {
     'owed_to_you is what OTHER people still owe from splits the user paid for. Their own share of each of those splits is already in the spending ledger, so an outstanding amount here is money coming IN, never an expense and never something to log. Use settle when they say someone paid them back.',
     'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
     'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
-    'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete.',
+    'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete. A NEGATIVE amount is a REFUND \u2014 money that came back on a purchase in that same category. It is already netted off every total, cap remainder and average you are shown, so never add it back, never subtract it a second time, and never call it income or a transfer.',
     'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
     + 'You have NO live internet access on this path and your own knowledge stops at your training cutoff, which is well before today. '
