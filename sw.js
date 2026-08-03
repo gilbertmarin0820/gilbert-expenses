@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v26';
+const CACHE = 'gilbert-expenses-v27';
 
 const APP_SHELL = [
   './',
@@ -26,10 +26,24 @@ const APP_SHELL = [
   './apple-touch-icon.png',
 ];
 
+// The app itself. If this one is missing there is nothing to install; every
+// other entry is an icon or the manifest and must not be able to stop the
+// install on its own.
+const APP_SHELL_REQUIRED = ['./', './index.html'];
+
 self.addEventListener('install', (event) => {
+  // cache.addAll() is ALL-OR-NOTHING: one 404 (a renamed icon, a half-finished
+  // deploy) rejected the whole install, so the worker never activated and the
+  // app silently lost offline support entirely. Each file is added on its own
+  // and an optional one is allowed to fail.
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => Promise.all(APP_SHELL.map((url) =>
+        cache.add(url).catch((err) => {
+          if (APP_SHELL_REQUIRED.indexOf(url) !== -1) throw err;
+          console.warn('[sw] skipped optional asset', url, err);
+        })
+      )))
       .then(() => self.skipWaiting()) // don't wait for old tabs to close
   );
 });
@@ -63,8 +77,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy));
+          // ONLY a real page gets written over the cached shell. Without this
+          // check a 404 or 502 from the host — a bad deploy, a paused Pages
+          // build — was cached as index.html, so the app stayed broken offline
+          // long after the host recovered. The static branch below always
+          // checked res.ok; this one did not.
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
           return res;
         })
         .catch(() =>

@@ -1537,6 +1537,26 @@
     font-family: 'DM Mono', monospace; font-size: 10px;
     color: var(--green-text); margin-top: 6px; text-align: right;
   }
+  /* Year in review (build 2026-08-03e) — a card per year of closed months */
+  .yr-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px;
+  }
+  .yr-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .yr-year { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--text); }
+  .yr-sub  { font-size: 10.5px; color: var(--text3); }
+  .yr-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .yr-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .yr-lbl  { font-size: 9.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .yr-val  { font-family: 'DM Mono', monospace; font-size: 12.5px; color: var(--text2); overflow-wrap: anywhere; }
+  .yr-line {
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+    font-size: 10.5px; color: var(--text3); margin-top: 8px; line-height: 1.6;
+  }
+  .yr-line b { color: var(--text2); font-weight: 500; }
+  @media (max-width: 700px) {
+    .yr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 6px; }
+  }
   .nec-inst-select {
     background: var(--surface2); border: 1px solid var(--border);
     color: var(--text); font-family: 'Outfit', sans-serif;
@@ -2100,7 +2120,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03d</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03e</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3948,6 +3968,7 @@
         <span style="font-size:13px; color:var(--text2);">Monthly subscriptions total</span>
         <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="subsTotal">₱0.00</span>
       </div>
+      <div class="paid-note" id="subsPaidNote" style="display:none;"></div>
     </div>
   </div>
 
@@ -3964,9 +3985,17 @@
             <option value="always">Ticking a bill → always log it</option>
             <option value="never">Ticking a bill → never log it</option>
           </select>
+          <select id="bclPayBal" onchange="setBillPayBal(this.value)" title="A ticked bill is money you have just said actually left. This can take it out of an account balance too, so you don't have to remember to."
+            style="background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;">
+            <option value="never">…and leave balances alone</option>
+            <option value="ask">…and ask to deduct it</option>
+            <option value="always">…and deduct it</option>
+          </select>
+          <select id="bclPayAcct" onchange="setBillPayAcct(this.value)" title="Which account bills are paid from" style="display:none; background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;"></select>
           <span style="font-size:12px; font-family:'DM Mono',monospace; color:var(--text3);" id="bclProgress">0 / 0 paid</span>
         </div>
       </div>
+      <div id="bclPayNote" style="display:none; font-size:11px; color:var(--text3); line-height:1.5; margin:-4px 0 10px;"></div>
       <div class="bcl-progress-bar"><div class="bcl-progress-fill" id="bclBar" style="width:0%"></div></div>
       <div id="bclContainer"></div>
     </div>
@@ -5682,6 +5711,7 @@ function recalcAll() {
   paidC.total  = paidC.nec + paidC.subs + paidC.shopee + paidC.tiktok + paidC.maya;
 
   setPaidNote('necPaidNote',    paidC.nec,    necSum);
+  setPaidNote('subsPaidNote',   paidC.subs,   subsSum);
   setPaidNote('shopeePaidNote', paidC.shopee, shopeeSum);
   setPaidNote('tiktokPaidNote', paidC.tiktok, tiktokSum);
   setPaidNote('mayaPaidNote',   paidC.maya,   mayaSum);
@@ -6794,6 +6824,16 @@ function necBillKeys() {
   return map;
 }
 
+// The checklist key a subscription ticks, or null when it is not a bill this
+// month (unmarked, no name, no amount). Subscriptions key on their own id, so
+// unlike necessities there is nothing to disambiguate — but a row that is not
+// in bclBuildItems must not offer a chip that ticks a key nothing credits.
+function subPaidKey(sub) {
+  if (!sub || !isInc(sub)) return null;
+  if (!((parseFloat(sub.amt) || 0) > 0) || !String(sub.name || '').trim()) return null;
+  return 'sub_' + sub.id;
+}
+
 // The chip itself. Null key (row has no amount, no category, excluded, or an
 // installment that is dormant this month) → nothing to pay, so no chip.
 function paidChip(key, extraStyle) {
@@ -6812,6 +6852,10 @@ function paidChip(key, extraStyle) {
 function refreshPaidUI() {
   try { renderNec(); } catch (e) {}                                  // ends in recalcAll()
   try { ['shopee', 'tiktok', 'maya'].forEach(t => renderPL(t)); } catch (e) {}
+  // Subscriptions are credited back by billPaidCredit exactly like the other
+  // two buckets, but until now the panel showed nothing — the Net Summary
+  // moved by ₱549 and the only place that said why was the checklist.
+  try { renderSubs(); } catch (e) {}
 }
 
 function addNec() {
@@ -9741,11 +9785,14 @@ function renderSubs() {
   c.innerHTML = '';
   subscriptions.forEach((s, i) => {
     const div = document.createElement('div');
-    div.className = 'sub-row' + (isInc(s) ? '' : ' inc-off');
+    const subKey  = subPaidKey(s);
+    const subPaid = !!(subKey && billChecks && billChecks.checks && billChecks.checks[subKey]);
+    div.className = 'sub-row' + (isInc(s) ? '' : ' inc-off') + (subPaid ? ' paid-row' : '');
     div.innerHTML = `
       <input class="nec-cat-input" value="${escH(s.name)}" placeholder="e.g. Netflix, Spotify, iCloud" style="flex:1; min-width:130px;"
         oninput="subscriptions[${i}].name=this.value; bclSoon(); savePlanData()">
       <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        ${paidChip(subPaidKey(s))}
         ${incBtn(s, `toggleSubInc(${s.id})`)}
         <span style="font-size:12px; color:var(--text3);">₱/mo</span>
         <input class="nec-amt-input" type="number" value="${s.amt}" placeholder="0.00" min="0" step="0.01"
@@ -10480,7 +10527,7 @@ const LEDGER_PREFS_KEY = 'va_ledger_prefs';
 const CAP_MAX          = 24;    // more than this and it stops being a budget
 const BILL_AUTOLOG     = ['ask', 'always', 'never'];
 
-let ledgerPrefs  = { caps: [], autolog: 'ask' };
+let ledgerPrefs  = { caps: [], autolog: 'ask', payBal: 'never', payAcct: '' };
 let ledger       = [];   // [{id, date:'YYYY-MM-DD', amt, cat, src, note, bill}]
 let ledgerSeq    = 1;
 let ledgerViewYM = '';   // 'YYYY-MM' currently on screen
@@ -10510,7 +10557,13 @@ function loadLedgerPrefs() {
                  bank: String(a.bank || 'custom').slice(0, 20) }))
     .filter(a => a.key && a.label)
     .slice(0, ACCT_MAX);
+  // Whether ticking a bill paid also takes it out of an account balance, and
+  // which one. Legacy prefs have neither, and the safe reading of "absent" is
+  // 'never': balances have never moved on their own before this build.
+  const pb = raw && BILL_AUTOLOG.indexOf(raw.payBal) !== -1 ? raw.payBal : 'never';
   ledgerPrefs = { caps: caps, autolog: al, accts: accts,
+                  payBal: pb,
+                  payAcct: String((raw && raw.payAcct) || '').slice(0, 60),
                   lastAcct: String((raw && raw.lastAcct) || '').slice(0, 60),
                   // 'month' | 'payday' — which window the allowance divides by
                   period: (raw && raw.period === 'payday') ? 'payday' : 'month' };
@@ -10603,6 +10656,45 @@ function capSetTo(label, target) {
 function setBillAutolog(v) {
   ledgerPrefs.autolog = BILL_AUTOLOG.indexOf(v) !== -1 ? v : 'ask';
   saveLedgerPrefs();
+  updateBillPayUI();
+}
+
+function setBillPayBal(v) {
+  ledgerPrefs.payBal = BILL_AUTOLOG.indexOf(v) !== -1 ? v : 'never';
+  saveLedgerPrefs();
+  updateBillPayUI();
+}
+
+function setBillPayAcct(v) {
+  ledgerPrefs.payAcct = String(v || '').slice(0, 60);
+  saveLedgerPrefs();
+  updateBillPayUI();
+}
+
+// Shows the account picker only when it can do something, and says plainly
+// when the balance move cannot happen — the move rides on the ledger entry
+// the tick writes, so "never log it" also means "never move a balance".
+function updateBillPayUI() {
+  const sel  = document.getElementById('bclPayBal');
+  const acct = document.getElementById('bclPayAcct');
+  const note = document.getElementById('bclPayNote');
+  if (sel && sel !== document.activeElement) sel.value = ledgerPrefs.payBal || 'never';
+  const on = (ledgerPrefs.payBal || 'never') !== 'never';
+  if (acct) {
+    acct.style.display = on ? '' : 'none';
+    if (on) fillAcctSelect('bclPayAcct', ledgerPrefs.payAcct || '', 'Pick an account…');
+  }
+  if (note) {
+    let msg = '';
+    if (on && ledgerPrefs.autolog === 'never')
+      msg = '⚠ Logging is off, so nothing is written and no balance can move — the entry is what makes the move reversible.';
+    else if (on && !billPayFromAcct())
+      msg = '⚠ Pick an account with a tracked balance, or the tick records the payment and leaves balances alone.';
+    else if (on)
+      msg = 'Ticking a bill takes it out of ' + escH(acctLabel(ledgerPrefs.payAcct)) + '. Un-ticking or deleting the entry puts it back.';
+    note.innerHTML = msg;
+    note.style.display = msg ? '' : 'none';
+  }
 }
 
 function renderCatCaps() {
@@ -10862,6 +10954,8 @@ function renderAccounts() {
   fillAcctSelect('trfTo',   undefined, 'To…');
   const dEl = document.getElementById('trfDate');
   if (dEl && !dEl.value) dEl.value = todayLocalStr();
+  // The bill checklist's "pay it out of…" picker reads the same list.
+  try { updateBillPayUI(); } catch (e) {}
 
   const box = document.getElementById('ldgAcctBody');
   if (!box) return;
@@ -10993,6 +11087,11 @@ function splitOpen(srcId) {
     const e = ledger.find(x => x.id === srcId);
     if (!e) return;
     if (isTransfer(e)) { showToast('A transfer is not spending — nothing to split', true); return; }
+    // A refund is money coming BACK, and every field in this composer is a
+    // positive share of one payment — it opened blank and then refused to
+    // save, which is a dead end dressed up as a feature. Split the purchase
+    // it reverses instead, then correct the part that was returned.
+    if (isRefund(e)) { showToast('A refund cannot be split — split the purchase it reverses instead', true); return; }
     ldgSplit = { srcId: srcId, target: e.amt, date: e.date, note: e.note || '', acct: e.acct || '',
                  src: e.src, bill: e.bill || '', grp: e.grp || 0,
                  parts: [{ cat: e.cat, amt: e.amt }, { cat: '', amt: '' }] };
@@ -11312,6 +11411,14 @@ function ledgerDelete(id, noPrompt) {
     if (e.movedFrom) acctApplyDelta(e.acct,   e.amt);
     if (e.movedTo)   acctApplyDelta(e.acct2, -e.amt);
     acctFlushBalances();
+  }
+
+  // A spend row only ever moves a balance when a ticked bill was told to.
+  // Deleting it has to put that back for exactly the reason a transfer does.
+  if (!isTransfer(e) && e.movedFrom && e.acct) {
+    if (!noPrompt && !confirm('Delete this ' + fPHP(e.amt) + ' entry?\n\n'
+      + acctLabel(e.acct) + ' goes back to its balance before it.')) return false;
+    entryUnmoveBalance(e);
   }
 
   ledger = ledger.filter(x => x.id !== id);
@@ -11796,6 +11903,95 @@ function ledgerCloseMonth(ym) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// YEAR IN REVIEW
+// A closed month already freezes income, what actually went out, the budget
+// it was measured against and the balance sheet at the time — so a year is
+// something the app can already answer without recording one new thing.
+// The rate is taken from the YEAR'S TOTALS rather than by averaging twelve
+// monthly percentages: one thin-income month would otherwise swing a figure
+// that is supposed to describe the whole year.
+// ═══════════════════════════════════════════════════════════════
+function yearReview() {
+  const hist = loadMonthHistory();
+  const years = {};
+  Object.keys(hist).sort().forEach(k => {
+    const s = hist[k];
+    if (!s) return;
+    const y = String(k).slice(0, 4);
+    if (!/^\d{4}$/.test(y)) return;
+    if (!years[y]) years[y] = { year: y, months: 0, income: 0, actual: 0, planned: 0,
+                                est: 0, cats: {}, first: null, last: null, best: null, worst: null };
+    const r = years[y];
+    r.months++;
+    r.income  += parseFloat(s.income)  || 0;
+    r.actual  += parseFloat(s.actual)  || 0;
+    r.planned += parseFloat(s.planned) || 0;
+    // A year built partly on borrowed income figures has to say so — the same
+    // ≈ that each closed month carries.
+    if (s.incomeEst) r.est++;
+    (Array.isArray(s.byCat) ? s.byCat : []).forEach(c => {
+      const key = c.key || ledgerCatKey(c.label);
+      if (!r.cats[key]) r.cats[key] = { label: c.label || 'Uncategorised', amt: 0 };
+      r.cats[key].amt += parseFloat(c.amt) || 0;
+    });
+    if (s.netWorth !== null && s.netWorth !== undefined && isFinite(parseFloat(s.netWorth))) {
+      const nw = parseFloat(s.netWorth);
+      if (r.first === null) r.first = { ym: k, nw: nw };
+      r.last = { ym: k, nw: nw };
+    }
+    const a = parseFloat(s.actual) || 0;
+    if (!r.best  || a < r.best.amt)  r.best  = { ym: k, amt: a };
+    if (!r.worst || a > r.worst.amt) r.worst = { ym: k, amt: a };
+  });
+  return Object.keys(years).sort().reverse().map(y => {
+    const r = years[y];
+    r.income  = Math.round(r.income  * 100) / 100;
+    r.actual  = Math.round(r.actual  * 100) / 100;
+    r.planned = Math.round(r.planned * 100) / 100;
+    r.saved   = Math.round((r.income - r.actual) * 100) / 100;
+    r.rate    = r.income > 0 ? Math.round((r.saved / r.income) * 1000) / 10 : null;
+    r.top     = Object.keys(r.cats).map(k => r.cats[k])
+                  .filter(c => c.amt > 0.005)
+                  .sort((a, b) => b.amt - a.amt).slice(0, 3);
+    r.nwDelta = (r.first && r.last && r.first.ym !== r.last.ym)
+      ? Math.round((r.last.nw - r.first.nw) * 100) / 100 : null;
+    return r;
+  });
+}
+
+function yearReviewHTML() {
+  // One closed month is not a year. Two is the point at which totals and a
+  // best/worst month start meaning something.
+  const years = yearReview().filter(r => r.months >= 2);
+  if (!years.length) return '';
+  let h = `<div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin:18px 0 8px;">\uD83D\uDCC5 Year in review</div>`;
+  h += years.map(r => {
+    const rateCol = r.rate === null ? 'var(--text3)' : (r.rate >= 20 ? 'var(--green-text)' : r.rate >= 0 ? 'var(--amber-text)' : 'var(--red-text)');
+    const nwCol   = (r.nwDelta || 0) >= 0 ? 'var(--green-text)' : 'var(--red-text)';
+    return `<div class="yr-card">
+      <div class="yr-head">
+        <span class="yr-year">${escH(r.year)}</span>
+        <span class="yr-sub">${r.months} month${r.months === 1 ? '' : 's'} closed${r.est ? ` \u00b7 <span title="${r.est} of them measured against an income figure read off the Net Summary at closing time \u2014 tap \u270e on those months to correct it">${r.est} estimated \u2248</span>` : ''}</span>
+      </div>
+      <div class="yr-grid">
+        <div class="yr-cell"><span class="yr-lbl">Earned</span><span class="yr-val">${escH(fPHPs(r.income))}</span></div>
+        <div class="yr-cell"><span class="yr-lbl">Spent</span><span class="yr-val">${escH(fPHPs(r.actual))}</span></div>
+        <div class="yr-cell"><span class="yr-lbl">Kept</span><span class="yr-val" style="color:${rateCol};">${escH(fPHPs(r.saved))}</span></div>
+        <div class="yr-cell"><span class="yr-lbl">Savings rate</span><span class="yr-val" style="color:${rateCol};">${r.rate === null ? '\u2014' : r.rate + '%'}</span></div>
+      </div>
+      <div class="yr-line">
+        ${r.best  ? `<span title="the month the least actually went out">\uD83C\uDF31 Lightest: <b>${escH(ymLabel(r.best.ym))}</b> ${escH(fPHPs(r.best.amt))}</span>` : ''}
+        ${r.worst ? `<span title="the month the most actually went out">\uD83D\uDD25 Heaviest: <b>${escH(ymLabel(r.worst.ym))}</b> ${escH(fPHPs(r.worst.amt))}</span>` : ''}
+        ${r.nwDelta !== null ? `<span title="net worth at the end of ${escH(ymLabel(r.first.ym))} compared with the end of ${escH(ymLabel(r.last.ym))}">\uD83D\uDCC8 Net worth <b style="color:${nwCol};">${r.nwDelta >= 0 ? '+' : ''}${escH(fPHPs(r.nwDelta))}</b> across ${escH(ymLabel(r.first.ym))}\u2013${escH(ymLabel(r.last.ym))}</span>` : ''}
+      </div>
+      ${r.top.length ? `<div class="yr-line">\uD83C\uDFF7 Biggest: ${r.top.map(c => `<span><b>${escH(c.label)}</b> ${escH(fPHPs(c.amt))}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+  h += `<div style="font-size:10px; color:var(--text3); margin-top:2px; line-height:1.5;">Built entirely from months you have closed \u2014 nothing here is a projection. A month you have not closed is not in it, and correcting a month\u2019s income with \u270e moves these figures with it.</div>`;
+  return h;
+}
+
 function ledgerReopenMonth(ym) {
   const hist = loadMonthHistory();
   if (!hist[ym]) return;
@@ -11840,7 +12036,17 @@ function ledgerEditSave(id) {
 
   const changed = date !== e.date || amtR !== e.amt || cat !== e.cat || note !== e.note || acct !== (e.acct || '');
   const wasYM   = ymOf(e.date);
+  const wasAmt  = e.amt, wasAcct = e.acct || '', wasMoved = !!e.movedFrom;
   e.date = date; e.amt = amtR; e.cat = cat; e.note = note; e.acct = acct;
+  // If this row took money out of a balance when it was logged, the balance
+  // has to follow the edit — otherwise the account quietly disagrees with the
+  // entry that moved it. Old move undone, new one applied at the new size.
+  if (wasMoved && !isTransfer(e) && (amtR !== wasAmt || acct !== wasAcct)) {
+    if (wasAcct) acctApplyDelta(wasAcct, wasAmt);
+    if (acct && acctApplyDelta(acct, -amtR)) e.movedFrom = true;
+    else e.movedFrom = false;          // no tracked account left to hold it
+    acctFlushBalances();
+  }
   if (changed) e.edited = true;
   ledgerEditId = 0;
   ledgerViewYM = ymOf(e.date);           // follow the row if it moved months
@@ -12349,14 +12555,14 @@ function ledgerGroupHTML(grp, ym) {
       <span class="ldg-cat">${escH(head.glbl || head.note || 'Split payment')}<span class="ldg-note">\u2702 split ${parts.length} way${parts.length === 1 ? '' : 's'}${away ? ' \u00b7 ' + away + ' more in another month' : ''}</span></span>
       ${acctChipHTML(head.acct)}
       <span class="ldg-src split" title="${escH(LEDGER_SRC_LABEL[head.src] || head.src)} \u00b7 split across categories${edited ? ' \u00b7 edited since' : ''}">${LEDGER_SRC_ICON[head.src] || '\u2022'}${edited ? '<sup class="ldg-ed">\u270e</sup>' : ''}</span>
-      <span class="ldg-amt">${fPHP(total)}</span>
+      <span class="ldg-amt${total < -0.0001 ? ' refund' : ''}">${fPHPs(total)}</span>
       <button class="ldg-del" onclick="ledgerDeleteGroup(${grp})" title="Delete the whole split">\u2715</button>
     </div>
     <div class="ldg-grp-parts">${parts.map(e =>
       e.id === ledgerEditId ? ledgerEditRowHTML(e) : `<div class="ldg-part">
         <span class="ldg-part-bar"></span>
         <span class="ldg-cat">${escH(e.cat)}</span>
-        <span class="ldg-amt">${fPHP(e.amt)}</span>
+        <span class="ldg-amt${isRefund(e) ? ' refund' : ''}"${isRefund(e) ? ' title="Refund \u2014 nets off what this category cost"' : ''}>${isRefund(e) ? '\u21a9 ' : ''}${fPHPs(e.amt)}</span>
         <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this part">\u270e</button>
         <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Remove just this part">\u2715</button>
       </div>`).join('')}</div>
@@ -12642,9 +12848,9 @@ function renderLedger() {
         <span class="ldg-date">${escH(e.date.slice(5))}</span>
         <span class="ldg-cat">${escH(e.cat)}${e.note ? `<span class="ldg-note">${escH(e.note)}</span>` : ''}</span>
         ${acctChipHTML(e.acct)}
-        <span class="ldg-src ${escH(e.src)}" title="${escH(LEDGER_SRC_LABEL[e.src] || e.src)}${e.edited ? ' · edited since' : ''}">${LEDGER_SRC_ICON[e.src] || '•'}${e.edited ? '<sup class="ldg-ed">✎</sup>' : ''}</span>
+        <span class="ldg-src ${escH(e.src)}" title="${escH(LEDGER_SRC_LABEL[e.src] || e.src)}${e.edited ? ' · edited since' : ''}${e.movedFrom ? ' · taken out of ' + escH(acctLabel(e.acct)) : ''}">${LEDGER_SRC_ICON[e.src] || '•'}${e.edited ? '<sup class="ldg-ed">✎</sup>' : ''}</span>
         <span class="ldg-amt${isRefund(e) ? ' refund' : ''}"${isRefund(e) ? ' title="Refund — nets off what this category cost"' : ''}>${isRefund(e) ? '↩ ' : ''}${fPHPs(e.amt)}</span>
-        <button class="ldg-edit-btn" onclick="splitOpen(${e.id})" title="Split this across categories">✂</button>
+        ${isRefund(e) ? '' : `<button class="ldg-edit-btn" onclick="splitOpen(${e.id})" title="Split this across categories">✂</button>`}
         <button class="ldg-edit-btn" onclick="ledgerEditStart(${e.id})" title="Edit this entry">✎</button>
         <button class="ldg-del" onclick="ledgerDelete(${e.id})" title="Delete this entry">✕</button>
       </div>`;
@@ -12679,10 +12885,15 @@ function renderLedger() {
           <span class="ldg-note">${fPHP(parseFloat(s.planned) || 0)} budgeted${sr !== null ? ' · saved ' + sr + '%' + (est ? '<span class="ldg-est" title="Income was read from the Net Summary when this month was closed, not from ' + escH(ymLabel(k)) + ' — tap ✎ to set what you actually earned">≈</span>' : '') : ''}</span></span>
         <button class="ldg-edit-btn" onclick="event.stopPropagation(); ledgerSetIncome('${escJS(k)}')" title="Set the income this month is measured against">✎</button>
         <span class="ldg-amt" style="color:${c};">${fPHP(parseFloat(s.actual) || 0)}</span>
-        <span style="font-size:10.5px; font-family:'DM Mono',monospace; color:${c}; min-width:64px; text-align:right;">${d > 0.005 ? '+' : ''}${fPHP(d)}</span>
+        <span style="font-size:10.5px; font-family:'DM Mono',monospace; color:${c}; min-width:64px; text-align:right;">${d > 0.005 ? '+' : ''}${fPHPs(d)}</span>
       </div>`;
     }).join('') + `</div>`;
   }
+
+  // What those closed months add up to. Reads only what closing already
+  // froze, so it costs nothing to keep and cannot disagree with the rows
+  // above it.
+  try { h += yearReviewHTML(); } catch (e) {}
 
   body.innerHTML = h;
   // The quick-add form lives outside #ledgerBody so typing is never
@@ -14206,6 +14417,7 @@ renderCatCaps();
 (function () {
   const al = document.getElementById('bclAutolog');
   if (al) al.value = ledgerPrefs.autolog;
+  try { updateBillPayUI(); } catch (e) {}
 })();
 renderLedger();
 renderPL('shopee');
@@ -14332,8 +14544,56 @@ function billMaybeLog(key, noPrompt) {
   const entry = ledgerAdd({
     date: todayLocalStr(), amt: item.amt, cat: item.label,
     src: 'bill', bill: key, note: 'ticked off the bill checklist',
+    // Tag the account only when the move is switched on — an entry that names
+    // an account it never actually left would misreport per-account spend.
+    acct: ((ledgerPrefs.payBal || 'never') !== 'never' && billPayFromAcct()) ? billPayFromAcct().key : '',
   });
-  showToast('\uD83D\uDCCB Logged ' + fPHP(entry.amt) + ' — ' + entry.cat);
+  billApplyBalance(entry, noPrompt);
+  showToast('\uD83D\uDCCB Logged ' + fPHP(entry.amt) + ' — ' + entry.cat
+    + (entry.movedFrom ? ' \u00b7 taken out of ' + acctLabel(entry.acct) : ''));
+}
+
+// ── the balance a ticked bill is paid from ────────────────────
+// SPENDING deliberately does not move a balance: the app cannot know whether
+// the money really left, which is why sinking funds and ordinary rows stay
+// manual and only transfers move anything. Ticking a bill PAID is the one
+// case where you have just said it did — so it may be told to take itself
+// out of an account. The move is recorded on the entry as `movedFrom`,
+// exactly the way a transfer records it, so un-ticking, deleting or editing
+// puts the balance back instead of quietly inventing money.
+function billPayFromAcct() {
+  const a = acctFind(String(ledgerPrefs.payAcct || ''));
+  return (a && a.tracked && a.si !== null) ? a : null;
+}
+
+function billApplyBalance(entry, noPrompt) {
+  if (!entry || (ledgerPrefs.payBal || 'never') === 'never') return;
+  const a = billPayFromAcct();
+  if (!a) return;
+  if (ledgerPrefs.payBal !== 'always') {
+    if (noPrompt) return;                       // the chat's own card already asked once
+    if (!confirm('Also take ' + fPHP(entry.amt) + ' out of ' + a.label + '?\n\n'
+      + a.label + ' is at ' + fPHP(a.bal) + ' and would go to ' + fPHP(a.bal - entry.amt) + '.\n\n'
+      + 'Cancel — keep the record and leave the balance alone.')) return;
+  }
+  if (!acctApplyDelta(a.key, -entry.amt)) return;
+  entry.acct = a.key;
+  entry.movedFrom = true;
+  acctFlushBalances();
+  // The entry was already committed by ledgerAdd; these two fields are set
+  // after the fact, so the row has to be written and drawn again or it shows
+  // no account until something else happens to re-render.
+  ledgerCommit();
+}
+
+// Put back what an entry took out of a balance. Only ever true for a bill
+// entry that was told to move one — an ordinary spend row has nothing to
+// reverse, so this is a no-op on everything else.
+function entryUnmoveBalance(e) {
+  if (!e || isTransfer(e) || !e.movedFrom || !e.acct) return false;
+  if (!acctApplyDelta(e.acct, e.amt)) return false;
+  acctFlushBalances();
+  return true;
 }
 
 function billMaybeUnlog(key, noPrompt) {
@@ -14341,15 +14601,64 @@ function billMaybeUnlog(key, noPrompt) {
   const rows = billEntriesFor(key);
   if (!rows.length) return;
   const sum = rows.reduce((s, e) => s + e.amt, 0);
+  const moved = rows.filter(e => e.movedFrom && e.acct);
   const okd = confirm('Also remove the ledger entr' + (rows.length === 1 ? 'y' : 'ies') + ' this bill wrote?\n\n'
     + rows.length + ' × ' + fPHP(sum) + ' under “' + rows[0].cat + '”\n\n'
+    + (moved.length ? acctLabel(moved[0].acct) + ' goes back to its balance before it.\n\n' : '')
     + 'Cancel keeps the record and only un-ticks the bill.');
   if (!okd) return;
+  moved.forEach(entryUnmoveBalance);
   const ids = rows.map(e => e.id);
   ledger = ledger.filter(e => ids.indexOf(e.id) === -1);
   ledgerCommit();
-  showToast('\uD83D\uDDD1 Removed ' + fPHP(sum) + ' from the ledger');
+  showToast('\uD83D\uDDD1 Removed ' + fPHP(sum) + ' from the ledger'
+    + (moved.length ? ' \u00b7 ' + acctLabel(moved[0].acct) + ' restored' : ''));
 }
+
+// ═══════════════════════════════════════════════════════════════
+// DAY / MONTH ROLLOVER WATCHDOG
+// billChecks.period is fixed at page load, and an installed PWA is often
+// never reloaded — so an app left open across midnight on the 1st went on
+// showing last month's ✓ chips while billPaidCredit (correctly) credited
+// nothing, and the interest accrual, the due-soon nudge and the ledger's
+// month all stayed on yesterday. Nothing here recomputes anything the app
+// doesn't already recompute on load; it just notices the date moved.
+// ═══════════════════════════════════════════════════════════════
+let _watchDay    = todayLocalStr();
+let _watchPeriod = bclPeriod();
+
+function checkDayRollover() {
+  let day;
+  try { day = todayLocalStr(); } catch (e) { return; }
+  if (day === _watchDay) return;
+  const wasPeriod  = _watchPeriod;
+  _watchDay    = day;
+  _watchPeriod = bclPeriod();
+  const monthTurned = _watchPeriod !== wasPeriod;
+
+  // Daily-credited savings buckets owe a day's growth.
+  try { runDailyAccrual(false); } catch (e) {}
+
+  if (monthTurned) {
+    // Only follow the ledger view if it was sitting on the month that just
+    // ended — a month opened deliberately stays open.
+    if (ledgerViewYM === wasPeriod) ledgerViewYM = _watchPeriod;
+  }
+  // renderBillChecklist does the period reset and the save itself.
+  try { renderBillChecklist(); } catch (e) {}
+  try { renderDueSoon(); } catch (e) {}
+  try { refreshPaidUI(); } catch (e) {}      // ends in recalcAll → Net Summary
+  try { renderLedger(); } catch (e) {}
+  if (monthTurned) {
+    showToast('\uD83D\uDCC5 ' + ymLabel(_watchPeriod) + ' — checklist reset, Net Summary back to the full plan');
+  }
+}
+
+// A phone wakes on visibility, a desktop on focus, and a screen left open on
+// neither — so all three.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayRollover(); });
+window.addEventListener('focus', checkDayRollover);
+setInterval(checkDayRollover, 60000);
 
 // Builds the current month's checklist rows. Extracted from
 // renderBillChecklist so the chat command bar can resolve a bill by
@@ -17848,10 +18157,17 @@ function chatFinanceContext(labelsOnly) {
       already_paid:       (() => {
         try {
           const p = billPaidCredit(chatElVal('dateStart'), chatElVal('dateEnd'));
+          // recalcAll clamps each bucket to its own obligation before it
+          // credits anything back. Sending the raw figures here would let the
+          // chat quote a credit the screen never applied — the same class of
+          // mismatch as the 28b cap fix.
+          const nec  = Math.min(p.nec,    chatDomNum('necTotal'));
+          const sub  = Math.min(p.subs,   subsSum);
+          const pl   = Math.min(p.shopee, shopee) + Math.min(p.tiktok, tiktok) + Math.min(p.maya, maya);
           return {
-            total: money(p.total), bills_ticked: p.n,
-            necessities: money(p.nec), subscriptions: money(p.subs),
-            paylater: money(p.shopee + p.tiktok + p.maya),
+            total: money(nec + sub + pl), bills_ticked: p.n,
+            necessities: money(nec), subscriptions: money(sub),
+            paylater: money(pl),
             note: 'Bills already settled this month. The figures above are the FULL plan and still include these; '
                 + 'net_summary has already credited this back. Subtract it from a plan figure when asked what is STILL owed, '
                 + 'and never subtract it from net_summary a second time.',
