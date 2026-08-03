@@ -1514,6 +1514,29 @@
   .inc-off { opacity: 0.45; }
   .inc-off .nec-amt-input, .inc-off .big-input, .inc-off .pl-input,
   .inc-off .inst-balance-val { text-decoration: line-through; }
+
+  /* ── ALREADY-PAID TOGGLE ────────────────────────────────────
+     Distinct from the ✓ include toggle above. Include/exclude asks
+     "is this bill part of my plan at all?"; this one asks "have I
+     settled it yet this month?". It writes to the SAME state the
+     Bill Payment Checklist ticks (va_bill_checklist), so a bill
+     marked paid here shows paid there and vice versa. */
+  .paid-toggle {
+    font-family: 'DM Mono', monospace; font-size: 9px; line-height: 1;
+    padding: 3px 7px; border-radius: 20px; cursor: pointer; flex-shrink: 0;
+    border: 1px dashed var(--border2); background: transparent;
+    color: var(--text3); white-space: nowrap; transition: all 0.15s;
+  }
+  .paid-toggle:hover { border-color: var(--green); color: var(--green-text); }
+  .paid-toggle.on {
+    border-style: solid; border-color: var(--green);
+    background: var(--green-dim); color: var(--green-text);
+  }
+  .paid-row .nec-amt-input, .paid-row .pl-input { text-decoration: line-through; opacity: 0.6; }
+  .paid-note {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--green-text); margin-top: 6px; text-align: right;
+  }
   .nec-inst-select {
     background: var(--surface2); border: 1px solid var(--border);
     color: var(--text); font-family: 'Outfit', sans-serif;
@@ -2072,7 +2095,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3040,6 +3063,7 @@
             <span style="color:var(--text3);">Total</span>
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="shopeeTotal">₱0.00</span>
           </div>
+          <div class="paid-note" id="shopeePaidNote" style="display:none;"></div>
         </div>
         <!-- TikTok -->
         <div class="paylater-card">
@@ -3070,6 +3094,7 @@
             <span style="color:var(--text3);">Total</span>
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="tiktokTotal">₱0.00</span>
           </div>
+          <div class="paid-note" id="tiktokPaidNote" style="display:none;"></div>
         </div>
         <!-- Maya -->
         <div class="paylater-card">
@@ -3100,6 +3125,7 @@
             <span style="color:var(--text3);">Total</span>
             <span class="c-red" style="font-family:'DM Mono',monospace; font-weight:500;" id="mayaTotal">₱0.00</span>
           </div>
+          <div class="paid-note" id="mayaPaidNote" style="display:none;"></div>
         </div>
       </div>
 
@@ -3178,6 +3204,7 @@
         <span style="font-size:13px; color:var(--text2);">Total necessities</span>
         <span class="c-red" style="font-family:'DM Mono',monospace; font-size:18px; font-weight:500;" id="necTotal">₱0.00</span>
       </div>
+      <div class="paid-note" id="necPaidNote" style="display:none;"></div>
     </div>
   </div>
 
@@ -3412,6 +3439,7 @@
         <div class="nb-row" id="nb-insts-row" style="display:none;"><span class="nb-label">− Installments</span><span class="c-red" id="nb-insts">₱0.00</span></div>
         <div class="nb-row" id="nb-sink-row" style="display:none;"><span class="nb-label" title="This month&#39;s share of your sinking funds. The money is committed even though the bill is months away — leaving it in the balance would let you spend it twice.">− Sinking funds (this month)</span><span class="c-red" id="nb-sink">₱0.00</span></div>
         <div class="nb-row" id="nb-debt-owe-row" style="display:none;"><span class="nb-label">− You owe others</span><span class="c-red" id="nb-debt-owe">₱0.00</span></div>
+        <div class="nb-row" id="nb-paid-row" style="display:none;"><span class="nb-label c-green" title="Bills you have already settled this month, ticked either here or on the Bill Payment Checklist. The lines above still show the full plan — this adds back what is no longer outstanding, so the balance stops subtracting money that has already left.">+ Already paid <span id="nb-paid-n" style="color:var(--text3);font-size:11px;"></span></span><span class="c-green" id="nb-paid">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;">
           <span class="nb-label" style="color:var(--text);">= Net balance</span>
@@ -3923,7 +3951,7 @@
     <div class="section-title">Bill Payment Checklist</div>
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-        <div style="font-size:12px; color:var(--text3); line-height:1.5;">Pulled from your Necessities, Subscriptions &amp; PayLater · resets on the 1st of each month.</div>
+        <div style="font-size:12px; color:var(--text3); line-height:1.5;">Pulled from your Necessities, Subscriptions &amp; PayLater · resets on the 1st of each month.<br>A ticked bill is credited back in the Net Summary as <span style="color:var(--green-text);">+ Already paid</span> — the same tick as the <span style="font-family:'DM Mono',monospace;">paid?</span> chips on the Expenses tab.</div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <select id="bclAutolog" onchange="setBillAutolog(this.value)" title="Ticking a bill can record it in the Spending Ledger as money that actually left"
             style="background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;">
@@ -5631,8 +5659,37 @@ function recalcAll() {
   if (debtLentRow) { debtLentRow.style.display = debtLentSum > 0 ? 'flex' : 'none'; document.getElementById('nb-debt-lent').textContent = fPHP(debtLentSum); }
   if (debtOweRow)  { debtOweRow.style.display  = debtOweSum  > 0 ? 'flex' : 'none'; document.getElementById('nb-debt-owe').textContent  = fPHP(debtOweSum);  }
 
+  // ─── ALREADY PAID ────────────────────────────────────────────
+  // Bills ticked off for this month. The obligation lines above are left
+  // at their full planned value on purpose — every other screen derives
+  // obligations independently, and moving them here would make the donut,
+  // the Emergency Fund burn and the ledger budget disagree with each other.
+  // Instead the settled portion is credited back on its own row. Each
+  // bucket is clamped to its own obligation so a credit can never exceed
+  // what was being subtracted.
+  const paidC = billPaidCredit(startStr2, endStr2);
+  paidC.nec    = Math.min(paidC.nec,    necSum);
+  paidC.subs   = Math.min(paidC.subs,   subsSum);
+  paidC.shopee = Math.min(paidC.shopee, shopeeSum);
+  paidC.tiktok = Math.min(paidC.tiktok, tiktokSum);
+  paidC.maya   = Math.min(paidC.maya,   mayaSum);
+  paidC.total  = paidC.nec + paidC.subs + paidC.shopee + paidC.tiktok + paidC.maya;
+
+  setPaidNote('necPaidNote',    paidC.nec,    necSum);
+  setPaidNote('shopeePaidNote', paidC.shopee, shopeeSum);
+  setPaidNote('tiktokPaidNote', paidC.tiktok, tiktokSum);
+  setPaidNote('mayaPaidNote',   paidC.maya,   mayaSum);
+
+  const paidRow = document.getElementById('nb-paid-row');
+  if (paidRow) {
+    paidRow.style.display = paidC.total > 0.005 ? 'flex' : 'none';
+    document.getElementById('nb-paid').textContent = fPHP(paidC.total);
+    const nEl = document.getElementById('nb-paid-n');
+    if (nEl) nEl.textContent = paidC.n ? '(' + paidC.n + (paidC.n === 1 ? ' bill' : ' bills') + ')' : '';
+  }
+
   // net summary
-  const total = savings + netPHP + bonusPHP + corpContrib + debtLentSum - necSum - shopeeSum - tiktokSum - mayaSum - subsSum - instsSum - debtOweSum - sinkRes;
+  const total = savings + netPHP + bonusPHP + corpContrib + debtLentSum - necSum - shopeeSum - tiktokSum - mayaSum - subsSum - instsSum - debtOweSum - sinkRes + paidC.total;
   document.getElementById('nb1').textContent = fPHP(savings);
   document.getElementById('nb2').textContent = fPHP(netPHP);
   document.getElementById('nb3').textContent = fPHP(necSum);
@@ -5710,7 +5767,10 @@ function updateUndoBtn() {
 // va_plan_data is deliberately NOT here: the Plan tab has its own ⟲ button
 // and its own stack (planUndoStack), and having two systems restore the same
 // key would make each one's history silently wrong.
-const UNDO_KEYS = ['va_payroll_data', 'va_expense_log', 'va_ledger_prefs', 'va_receivables'];
+// va_bill_checklist joined this list in 03c: ticking a bill now moves the
+// Net Summary AND can write a ledger entry, so undoing the entry without
+// undoing the tick would leave the two disagreeing about the same payment.
+const UNDO_KEYS = ['va_payroll_data', 'va_expense_log', 'va_ledger_prefs', 'va_receivables', 'va_bill_checklist'];
 
 function undoSnapshotNow() {
   const k = {};
@@ -5750,6 +5810,7 @@ function undoRestoreBundle(k) {
   try { loadLedgerPrefs(); } catch (e) {}
   try { loadLedger(); }      catch (e) {}
   try { loadReceivables(); } catch (e) {}
+  try { loadBillChecks(); }  catch (e) {}
   // restoreState re-reads va_payroll_data into the DOM and ends in recalcAll,
   // which redraws the ledger; the two panels with no recalcAll path are done
   // here.
@@ -5757,9 +5818,14 @@ function undoRestoreBundle(k) {
   try { payroll = k['va_payroll_data'] ? JSON.parse(k['va_payroll_data']) : null; } catch (e) {}
   if (payroll) restoreState(payroll);
   else { try { recalcAll(); } catch (e) {} }
-  try { renderCatCaps(); }     catch (e) {}
-  try { renderReceivables(); } catch (e) {}
-  try { renderLedger(); }      catch (e) {}
+  try { renderCatCaps(); }       catch (e) {}
+  try { renderReceivables(); }   catch (e) {}
+  try { renderLedger(); }        catch (e) {}
+  try { renderBillChecklist(); } catch (e) {}
+  try { renderDueSoon(); }       catch (e) {}
+  // The paid chips live on the Expenses rows, which restoreState does not
+  // rebuild — refresh them so an undone tick is visible where it was made.
+  try { refreshPaidUI(); }       catch (e) {}
 }
 
 function saveData() {
@@ -6448,6 +6514,9 @@ function renderNec() {
   // Get date range from Monthly mode (used for multiplier)
   const startStr = document.getElementById('dateStart').value;
   const endStr   = document.getElementById('dateEnd').value;
+  // Built once for the whole table — bclBuildItems walks every row, so
+  // calling it per row would be quadratic.
+  const paidKeys = necBillKeys();
 
   necData.forEach((row, i) => {
     const mult = necRowMult(row, startStr, endStr);
@@ -6467,13 +6536,18 @@ function renderNec() {
     const fromOpts = shortM.map((m, mi) => `<option value="${mi}"${mi === +row.instFrom ? ' selected' : ''}>${m}</option>`).join('');
     const toOpts   = shortM.map((m, mi) => `<option value="${mi}"${mi === +row.instTo   ? ' selected' : ''}>${m}</option>`).join('');
 
+    const paidKey  = paidKeys[i] || null;
+    const isPaid   = !!(paidKey && billChecks && billChecks.checks && billChecks.checks[paidKey]);
+
     const tr = document.createElement('tr');
     if (!isInc(row)) tr.classList.add('inc-off');
+    if (isPaid) tr.classList.add('paid-row');
     if (row.inst && mult === 0) tr.style.opacity = '0.45';
     tr.innerHTML = `
       <td><input class="nec-cat-input" value="${escH(row.cat)}" placeholder="Category" oninput="necData[${i}].cat=this.value; bclSoon(); saveData()"></td>
       <td style="text-align:right">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;">
+          ${paidChip(paidKey)}
           ${incBtn(row, `toggleNecInc(${i})`)}
           <span style="font-size:12px;color:var(--text3);">₱</span>
           <input class="nec-amt-input nec-amt" type="number" value="${row.amt}" placeholder="0.00" min="0" step="0.01"
@@ -6599,6 +6673,139 @@ function isPLBillingInRange(month, billingDay, startStr, endStr) {
     if (candidate >= start && candidate <= end) return true;
   }
   return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ALREADY-PAID CREDIT
+// ═══════════════════════════════════════════════════════════════
+// "I paid this one early" is a DIFFERENT question from the ✓ include
+// toggle. Excluding a row says the bill is not part of the plan at all;
+// marking it paid says the plan is right but the money has already left.
+//
+// DESIGN DECISION — no new field and no new storage key. The paid state
+// IS the Bill Payment Checklist (va_bill_checklist), which already keys
+// every necessity / subscription / PayLater bill, already resets on the
+// 1st, and already offers to write the payment to the Spending Ledger.
+// A second `paid` flag on each row would be a parallel truth, and the
+// checklist would go on saying "2 / 8 paid" while the Expenses tab said
+// something else — exactly the class of mismatch the 28b cap fix and the
+// 30b split-month fix were both about.
+//
+// The Net Summary keeps showing the FULL obligation on each line and
+// credits the settled portion back on its own row, so every other screen
+// that re-derives obligations (the donut, Emergency Fund burn, the ledger
+// budget lines, the 3-month forecast, free-to-spend) keeps quoting the
+// same peso it always did. Only the remaining-balance figure moves.
+
+// Does THIS MONTH's occurrence of a necessities row actually land inside
+// the chosen date range? Only then is its obligation part of necSum, and
+// only then may a paid tick credit anything back.
+function necCurMonthCounts(row, startStr, endStr) {
+  if (!row || !isInc(row)) return false;
+  if (necRowMult(row, startStr, endStr) <= 0) return false;
+  const now = new Date(), yr = now.getFullYear(), mo = now.getMonth();
+  if (row.inst && !monthInInstRange(mo, row.instFrom, row.instTo)) return false;
+  if (!startStr || !endStr) return true;          // no range → the single count IS this month
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return false;
+  const day = parseInt(row.day) || 0;
+  if (day >= 1 && day <= 31) {
+    const dim = new Date(yr, mo + 1, 0).getDate();
+    const c   = new Date(yr, mo, Math.min(day, dim));
+    return c >= start && c <= end;
+  }
+  // No pay day set — the row counts once for the whole window, so the
+  // credit applies as long as the window actually touches this month.
+  return new Date(yr, mo + 1, 0) >= start && new Date(yr, mo, 1) <= end;
+}
+
+// Same question for a PayLater provider. isPLBillingInRange scans every
+// year the range spans; here only the CURRENT year's billing date counts,
+// because the checklist only ever tracks the current month's bill.
+function plCurBillingInRange(type, startStr, endStr) {
+  if (!startStr || !endStr) return true;
+  const start = new Date(startStr + 'T00:00:00');
+  const end   = new Date(endStr   + 'T00:00:00');
+  if (isNaN(start) || isNaN(end) || end < start) return false;
+  const now = new Date(), yr = now.getFullYear(), mo = now.getMonth();
+  const dim = new Date(yr, mo + 1, 0).getDate();
+  const c   = new Date(yr, mo, Math.min(PL_BILLING_DAY[type] || 1, dim));
+  return c >= start && c <= end;
+}
+
+// Total already settled, split by bucket so each section can show its own
+// "₱X paid · ₱Y left" line. Amounts come from bclBuildItems, the same
+// figures the checklist prints, so the two can never drift apart.
+function billPaidCredit(startStr, endStr) {
+  const out = { total: 0, nec: 0, subs: 0, shopee: 0, tiktok: 0, maya: 0, n: 0 };
+  try {
+    if (!billChecks || billChecks.period !== bclPeriod()) return out;  // stale month → nothing paid yet
+    bclBuildItems().forEach(it => {
+      if (!billChecks.checks[it.key]) return;
+      const amt = it.amt || 0;
+      if (!(amt > 0)) return;
+      let bucket = null;
+      if (it.src === 'nec') {
+        if (!necCurMonthCounts(necData[it.idx], startStr, endStr)) return;
+        bucket = 'nec';
+      } else if (it.src === 'sub') {
+        bucket = 'subs';                       // subscriptions are flat monthly, never range-scoped
+      } else if (it.src === 'pay') {
+        const type = it.key.slice(3);          // pl_shopee → shopee
+        if (!plCurBillingInRange(type, startStr, endStr)) return;
+        bucket = type;
+      }
+      if (!bucket || out[bucket] === undefined) return;
+      out[bucket] += amt;
+      out.total   += amt;
+      out.n++;
+    });
+  } catch (e) {}
+  return out;
+}
+
+// "✓ ₱X already paid · ₱Y still to pay" under a section total. Hidden
+// entirely when nothing in that section has been ticked, so the tab looks
+// exactly as it did before the moment you start using this.
+function setPaidNote(id, paid, planned) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!(paid > 0.005)) { el.style.display = 'none'; el.textContent = ''; return; }
+  const left = Math.max(0, planned - paid);
+  el.style.display = '';
+  el.textContent = '✓ ' + fPHP(paid) + ' already paid · ' + fPHP(left) + ' still to pay';
+}
+
+// Maps a necessities row index to the checklist key it ticks, so the inline
+// "paid?" chip writes to the same key the checklist row does — including the
+// _2 / _3 suffixes bclBuildItems adds to same-name, same-day duplicates.
+function necBillKeys() {
+  const map = {};
+  try {
+    bclBuildItems().forEach(it => { if (it.src === 'nec' && it.idx !== undefined) map[it.idx] = it.key; });
+  } catch (e) {}
+  return map;
+}
+
+// The chip itself. Null key (row has no amount, no category, excluded, or an
+// installment that is dormant this month) → nothing to pay, so no chip.
+function paidChip(key, extraStyle) {
+  if (!key) return '';
+  const on = !!(billChecks && billChecks.checks && billChecks.checks[key]);
+  return `<button type="button" class="paid-toggle${on ? ' on' : ''}"`
+    + ` style="${extraStyle || ''}"`
+    + ` title="${on ? 'Marked paid for this month — tap to undo. It is credited back in the Net Summary.'
+                    : 'Already paid this one? Tap to tick it off — it stops counting toward what you still owe this month.'}"`
+    + ` onclick="event.stopPropagation(); toggleBillCheck('${escJS(key)}')">${on ? '✓ paid' : 'paid?'}</button>`;
+}
+
+// Re-draws the rows that carry a paid chip. Called after every checklist
+// tick, from wherever it was ticked — the Expenses rows, the checklist on
+// the Plan tab, or the chat's "pay <bill>" command.
+function refreshPaidUI() {
+  try { renderNec(); } catch (e) {}                                  // ends in recalcAll()
+  try { ['shopee', 'tiktok', 'maya'].forEach(t => renderPL(t)); } catch (e) {}
 }
 
 function addNec() {
@@ -6782,8 +6989,15 @@ function renderPL(type) {
     const badge   = hasRange
       ? `<div class="pl-badge-wrap" style="flex-basis:100%;order:9;margin:3px 0 1px 28px;"><span class="pl-badge" style="display:inline-block;font-size:9px;padding:1px 8px;border-radius:20px;font-family:'DM Mono',monospace;white-space:nowrap;background:${inRange?'var(--green-dim)':'var(--surface3)'};color:${inRange?'var(--green-text)':'var(--text3)'};border:1px solid ${inRange?'var(--green)':'var(--border)'};">${inRange?'✓ in range':'⊘ skipped'}</span></div>`
       : '';
+    // Only THIS month's bill can be ticked paid — the checklist tracks one
+    // month at a time, and "I paid early" means early within the month, not
+    // settling a bill that has not been issued yet.
+    const isCurM   = row.month === new Date().getMonth();
+    const paidKey  = (isCurM && isInc(row) && (parseFloat(row.amt) || 0) > 0) ? 'pl_' + type : null;
+    const isPaid   = !!(paidKey && billChecks && billChecks.checks && billChecks.checks[paidKey]);
+
     const div = document.createElement('div');
-    div.className = 'pl-row' + (isInc(row) ? '' : ' inc-off');
+    div.className = 'pl-row' + (isInc(row) ? '' : ' inc-off') + (isPaid ? ' paid-row' : '');
     div.style.opacity = dimmed ? '0.45' : '';
     div.innerHTML = `
       ${incBtn(row, `togglePLInc('${type}', ${i})`)}
@@ -6791,6 +7005,7 @@ function renderPL(type) {
       <input class="pl-input pl-amt-${type}" type="number" value="${row.amt}" placeholder="₱ 0.00" min="0" step="0.01"
         oninput="plData['${type}'][${i}].amt=this.value; recalcSoon(); bclSoon(); saveData()">
       <button class="del-btn" onclick="plData['${type}'].splice(${i},1); renderPL('${type}'); recalcAll(); saveData()">✕</button>
+      ${paidChip(paidKey)}
       ${badge}
     `;
     c.appendChild(div);
@@ -13936,6 +14151,8 @@ function loadBillChecks() {
 }
 
 function saveBillChecks() {
+  // Arm BEFORE writing, so the snapshot captures the state as it was.
+  try { armUndo(); } catch (e) {}
   try { localStorage.setItem('va_bill_checklist', JSON.stringify(billChecks)); } catch(e) {}
 }
 
@@ -13951,6 +14168,11 @@ function toggleBillCheck(key, noPrompt) {
   // Ticking a bill and logging what it cost were two separate acts of
   // bookkeeping, so the ledger never knew about the money it knew best.
   try { nowChecked ? billMaybeLog(key, noPrompt) : billMaybeUnlog(key, noPrompt); } catch (e) {}
+  // A ticked bill is no longer outstanding, so the Necessities / PayLater
+  // rows and the Net Summary have to follow. renderNec ends in recalcAll,
+  // which is what recomputes the credit — do this AFTER the log so a newly
+  // written ledger entry is already in place when the ledger re-renders.
+  refreshPaidUI();
 }
 
 // Entries this key wrote, in the month the checklist is currently tracking.
@@ -14005,7 +14227,9 @@ function bclBuildItems() {
     if (!isInc(row)) return;                 // unmarked — hidden from checklist
     if (row.inst && !monthInInstRange(bclMonth, row.instFrom, row.instTo)) return; // installment not active this month
     if (necRowBase(row) > 0 && (row.cat || '').trim())
-      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec', day: parseInt(row.day) || 0 });
+      // idx = the necData row this came from, so the inline "paid?" chip on
+      // the Expenses tab can find the exact key this row ticks.
+      items.push({ key: `nec_${row.cat.trim()}_${row.day || ''}`, label: row.cat.trim(), amt: necRowBase(row), src: 'nec', day: parseInt(row.day) || 0, idx: i });
   });
   // Two necessities with the same name AND pay day used to share one key, so
   // ticking one ticked both. Suffix the repeats (_2, _3…) — the first keeps
@@ -17484,6 +17708,19 @@ function chatFinanceContext(labelsOnly) {
       paylater_maya:      money(maya),
       paylater_total:     money(shopee + tiktok + maya),
       sinking_reserve:    money((() => { try { return sinkTotalPerMonth(ymNow()); } catch (e) { return 0; } })()),
+      already_paid:       (() => {
+        try {
+          const p = billPaidCredit(chatElVal('dateStart'), chatElVal('dateEnd'));
+          return {
+            total: money(p.total), bills_ticked: p.n,
+            necessities: money(p.nec), subscriptions: money(p.subs),
+            paylater: money(p.shopee + p.tiktok + p.maya),
+            note: 'Bills already settled this month. The figures above are the FULL plan and still include these; '
+                + 'net_summary has already credited this back. Subtract it from a plan figure when asked what is STILL owed, '
+                + 'and never subtract it from net_summary a second time.',
+          };
+        } catch (e) { return null; }
+      })(),
     },
     free_to_spend: {
       per_month:  (freeMo == null) ? null : money(Math.max(0, freeMo)),
@@ -17705,6 +17942,7 @@ function chatAISystemPrompt(parserHint) {
     'To CORRECT something, prefer editentry over deleting and re-adding: an edit keeps the entry\'s date order and its provenance (whether it came from a receipt, the chat or a bill tick), and a delete throws both away. Undo now covers the ledger, but only one step back, so never delete anything the user did not name.',
     'owed_to_you is what OTHER people still owe from splits the user paid for. Their own share of each of those splits is already in the spending ledger, so an outstanding amount here is money coming IN, never an expense and never something to log. Use settle when they say someone paid them back.',
     'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
+    'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
     'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete.',
     'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
