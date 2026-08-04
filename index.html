@@ -1470,6 +1470,7 @@
   .bcl-source.nec { background: var(--surface3); color: var(--text3); border: 1px solid var(--border); }
   .bcl-source.sub { background: var(--amber-dim); color: var(--amber-text); border: 1px solid var(--amber); }
   .bcl-source.pay { background: var(--red-dim); color: var(--red-text); border: 1px solid var(--red); }
+  .bcl-source.inst { background: var(--surface3); color: var(--amber-text); border: 1px solid var(--amber); }
   .bcl-amt { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text2); flex-shrink: 0; }
 
   /* ═══════════════════════════════════════════════════════════
@@ -1537,6 +1538,13 @@
     font-family: 'DM Mono', monospace; font-size: 10px;
     color: var(--green-text); margin-top: 6px; text-align: right;
   }
+  /* Net Worth: pots that have not said where they live (build 2026-08-04a) */
+  .due-row.due-late .due-check { color: var(--red-text); }
+  .due-row.due-late { background: var(--red-dim); }
+  .nw-warn { margin-top: 10px; padding: 9px 11px; border-radius: var(--radius-sm);
+             background: var(--amber-dim); border: 1px solid var(--amber);
+             color: var(--amber-text); font-size: 11.5px; line-height: 1.55; }
+
   /* Year in review (build 2026-08-03e) — a card per year of closed months */
   .yr-card {
     background: var(--surface2); border: 1px solid var(--border);
@@ -2120,7 +2128,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-03e</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3977,7 +3985,7 @@
     <div class="section-title">Bill Payment Checklist</div>
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-        <div style="font-size:12px; color:var(--text3); line-height:1.5;">Pulled from your Necessities, Subscriptions &amp; PayLater · resets on the 1st of each month.<br>A ticked bill is credited back in the Net Summary as <span style="color:var(--green-text);">+ Already paid</span> — the same tick as the <span style="font-family:'DM Mono',monospace;">paid?</span> chips on the Expenses tab.</div>
+        <div style="font-size:12px; color:var(--text3); line-height:1.5;">Pulled from your Necessities, Subscriptions, Installments &amp; PayLater · resets on the 1st of each month.<br>A ticked bill is credited back in the Net Summary as <span style="color:var(--green-text);">+ Already paid</span> — the same tick as the <span style="font-family:'DM Mono',monospace;">paid?</span> chips on the Expenses tab.</div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <select id="bclAutolog" onchange="setBillAutolog(this.value)" title="Ticking a bill can record it in the Spending Ledger as money that actually left"
             style="background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;">
@@ -4008,6 +4016,9 @@
       <div style="font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5;">
         0% installment plans for your phone, appliance, or gadget. Track remaining months so nothing catches you off guard. Monthly total feeds into Net Summary.
       </div>
+      <div id="instsPaidHint" style="display:none; font-size:11.5px; color:var(--text3); margin:-6px 0 12px; line-height:1.5;">
+        Tick <span style="font-family:'DM Mono',monospace;">paid?</span> when one goes out — it is credited back in the Net Summary and takes a month off the counter. Un-ticking puts the month back.
+      </div>
       <div id="instsContainer"></div>
       <button class="add-btn" onclick="addInst()">+ Add installment</button>
       <div style="margin-top:12px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
@@ -4020,6 +4031,7 @@
           <span style="font-family:'DM Mono',monospace; color:var(--amber-text);" id="instsTotal">₱0.00</span>
         </div>
       </div>
+      <div class="paid-note" id="instsPaidNote" style="display:none;"></div>
     </div>
   </div>
 
@@ -5705,13 +5717,17 @@ function recalcAll() {
   const paidC = billPaidCredit(startStr2, endStr2);
   paidC.nec    = Math.min(paidC.nec,    necSum);
   paidC.subs   = Math.min(paidC.subs,   subsSum);
+  // billPaidCredit has already dropped any installment whose counter reached
+  // zero, so this clamp is the ordinary per-bucket guard, nothing more.
+  paidC.insts  = Math.min(paidC.insts,  instsSum);
   paidC.shopee = Math.min(paidC.shopee, shopeeSum);
   paidC.tiktok = Math.min(paidC.tiktok, tiktokSum);
   paidC.maya   = Math.min(paidC.maya,   mayaSum);
-  paidC.total  = paidC.nec + paidC.subs + paidC.shopee + paidC.tiktok + paidC.maya;
+  paidC.total  = paidC.nec + paidC.subs + paidC.insts + paidC.shopee + paidC.tiktok + paidC.maya;
 
   setPaidNote('necPaidNote',    paidC.nec,    necSum);
   setPaidNote('subsPaidNote',   paidC.subs,   subsSum);
+  setPaidNote('instsPaidNote',  paidC.insts,  instsSum);
   setPaidNote('shopeePaidNote', paidC.shopee, shopeeSum);
   setPaidNote('tiktokPaidNote', paidC.tiktok, tiktokSum);
   setPaidNote('mayaPaidNote',   paidC.maya,   mayaSum);
@@ -5857,6 +5873,10 @@ function undoRestoreBundle(k) {
   try { renderCatCaps(); }       catch (e) {}
   try { renderReceivables(); }   catch (e) {}
   try { renderLedger(); }        catch (e) {}
+  // An undone tick has to take its installment countdown with it — see the
+  // invariant on instReconcileCounts. Runs before the redraws so they show the
+  // reconciled figure.
+  try { if (instReconcileCounts()) { recalcAll(); } } catch (e) {}
   try { renderBillChecklist(); } catch (e) {}
   try { renderDueSoon(); }       catch (e) {}
   // The paid chips live on the Expenses rows, which restoreState does not
@@ -6774,7 +6794,7 @@ function plCurBillingInRange(type, startStr, endStr) {
 // "₱X paid · ₱Y left" line. Amounts come from bclBuildItems, the same
 // figures the checklist prints, so the two can never drift apart.
 function billPaidCredit(startStr, endStr) {
-  const out = { total: 0, nec: 0, subs: 0, shopee: 0, tiktok: 0, maya: 0, n: 0 };
+  const out = { total: 0, nec: 0, subs: 0, insts: 0, shopee: 0, tiktok: 0, maya: 0, n: 0 };
   try {
     if (!billChecks || billChecks.period !== bclPeriod()) return out;  // stale month → nothing paid yet
     bclBuildItems().forEach(it => {
@@ -6787,6 +6807,19 @@ function billPaidCredit(startStr, endStr) {
         bucket = 'nec';
       } else if (it.src === 'sub') {
         bucket = 'subs';                       // subscriptions are flat monthly, never range-scoped
+      } else if (it.src === 'inst') {
+        // Not range-scoped — getInstsMonthlySum charges a full month whatever
+        // the date range says, so a range-scoped credit would disagree with the
+        // obligation it is credited against.
+        // But the FINAL payment zeroes the counter, and getInstsMonthlySum
+        // stops charging for a finished plan in the same breath: crediting it
+        // back on top would hand the same peso over twice. The bucket clamp in
+        // recalcAll cannot catch that on its own, because other installments
+        // still leave room inside the bucket. So a tick only credits while its
+        // own plan is still charging — the same shape as necCurMonthCounts.
+        const instRow = (installments || []).find(x => ('inst_' + x.id) === it.key);
+        if (!instRow || (parseInt(instRow.remaining) || 0) <= 0) return;
+        bucket = 'insts';
       } else if (it.src === 'pay') {
         const type = it.key.slice(3);          // pl_shopee → shopee
         if (!plCurBillingInRange(type, startStr, endStr)) return;
@@ -6834,6 +6867,24 @@ function subPaidKey(sub) {
   return 'sub_' + sub.id;
 }
 
+// The checklist key an installment ticks. Installments were the one monthly
+// obligation with no paid state at all: subtracted in the Net Summary, present
+// in the ledger budget and the 3-month forecast, but absent from the checklist,
+// the due-soon nudge, the cash flow calendar and the already-paid credit.
+// Null when there is nothing to pay — excluded, unnamed, no amount, or finished
+// — EXCEPT when it is already ticked this month: the final payment drops
+// `remaining` to 0, and a row that disappeared the instant you ticked it could
+// never be un-ticked.
+function instPaidKey(inst) {
+  if (!inst || !isInc(inst)) return null;
+  if (!((parseFloat(inst.monthlyAmt) || 0) > 0) || !String(inst.name || '').trim()) return null;
+  const key = 'inst_' + inst.id;
+  const rem = parseInt(inst.remaining) || 0;
+  const ticked = !!(billChecks && billChecks.period === bclPeriod()
+                    && billChecks.checks && billChecks.checks[key]);
+  return (rem > 0 || ticked) ? key : null;
+}
+
 // The chip itself. Null key (row has no amount, no category, excluded, or an
 // installment that is dormant this month) → nothing to pay, so no chip.
 function paidChip(key, extraStyle) {
@@ -6856,6 +6907,9 @@ function refreshPaidUI() {
   // two buckets, but until now the panel showed nothing — the Net Summary
   // moved by ₱549 and the only place that said why was the checklist.
   try { renderSubs(); } catch (e) {}
+  // Installments carry a chip and a countdown now, so they have to follow a
+  // tick made anywhere else — the checklist, the nudge, or the chat.
+  try { renderInsts(); } catch (e) {}
 }
 
 function addNec() {
@@ -9139,6 +9193,49 @@ function sinkActive() {
     isInc(f) && (f.label || '').trim() && sinkNum(f.amt) > 0);
 }
 
+// ── WHERE THE POT PHYSICALLY SITS ────────────────────────────
+// A pot is a LABEL on money, not a second pile of it. "Set aside" increments
+// `saved` and deliberately moves no balance — the app cannot know whether the
+// money really left, the same rule that keeps ordinary spending from touching
+// an account. But netWorthNow() was adding every pot to the savings balances
+// it had already counted, so if the money you earmarked is still sitting in
+// the GCash row above, the same peso was counted twice and the net-worth line
+// drifted upward by the total of all pots.
+// So each fund can name where its money lives:
+//   • a tracked account  → already inside that balance; NOT added again
+//   • 'elsewhere'        → somewhere the app does not count; added
+//   • '' (not said yet)  → added, exactly as before, because that is the only
+//                          safe reading of a question nobody has answered
+// A key pointing at an account that has since been deleted falls back to ''.
+const SINK_HELD_ELSEWHERE = 'elsewhere';
+
+function sinkHeldAcct(f) {
+  try {
+    const key = String((f && f.held) || '');
+    if (!key || key === SINK_HELD_ELSEWHERE) return null;
+    const a = (typeof acctFind === 'function') ? acctFind(key) : null;
+    return (a && a.tracked) ? a : null;
+  } catch (e) { return null; }
+}
+
+// Pots still being added on top of your balances because nobody has said
+// where they live. Drives the warning on the Net Worth card — a fund that has
+// answered 'elsewhere' is settled and never appears here.
+function sinkUnplacedPots() {
+  const out = [];
+  try {
+    (sinkingFunds || []).forEach(f => {
+      if (!isInc(f)) return;
+      const saved = Math.max(0, sinkNum(f.saved));
+      if (saved <= 0.005) return;
+      if (String(f.held || '') === SINK_HELD_ELSEWHERE) return;
+      if (sinkHeldAcct(f)) return;
+      out.push({ label: String(f.label || 'Fund'), saved: saved });
+    });
+  } catch (e) {}
+  return out;
+}
+
 // What this fund needs set aside in `ym`. The due month is counted, so a
 // fund due this month needs the whole remainder now, not half of it.
 function sinkPerMonth(f, ym) {
@@ -9194,6 +9291,17 @@ function removeSinkingFund(id) {
   renderSinkingFunds(); savePlanData(); renderLedger(); recalcSoon();
 }
 
+// Naming the account a pot lives in changes what Net Worth may add, so the
+// card is redrawn with it — the two must never disagree about the same peso.
+function sinkSetHeld(id, val) {
+  const f = (sinkingFunds || []).find(x => x.id === id);
+  if (!f) return;
+  f.held = String(val || '');
+  savePlanData();
+  renderSinkingFunds();
+  try { renderNetWorth(); } catch (e) {}
+}
+
 function toggleSinkInc(id) {
   const f = (sinkingFunds || []).find(x => x.id === id);
   if (!f) return;
@@ -9242,6 +9350,24 @@ function renderSinkingFunds() {
     const cadOpts = SINK_CADENCES.map(([v, lbl]) =>
       `<option value="${v}"${(parseInt(f.every,10)||12) === v ? ' selected' : ''}>${lbl}</option>`).join('');
 
+    // Where this pot's money physically sits. Until it is answered the pot is
+    // added to net worth on top of your savings balances — which is right only
+    // if the money really is somewhere else.
+    const heldCur  = String(f.held || '');
+    const heldAcct = sinkHeldAcct(f);
+    const heldOpts = ['<option value=""' + (heldCur === '' ? ' selected' : '') + '>\u2014 not said yet \u2014</option>',
+      '<option value="' + SINK_HELD_ELSEWHERE + '"' + (heldCur === SINK_HELD_ELSEWHERE ? ' selected' : '')
+        + '>Somewhere this app doesn\u2019t track</option>']
+      .concat(accountsList().filter(a => a.tracked).map(a =>
+        `<option value="${escH(a.key)}"${heldCur === a.key ? ' selected' : ''}>${escH(a.label)}</option>`)).join('');
+    const heldNote = heldAcct
+      ? `Inside <strong style="color:var(--text2);">${escH(heldAcct.label)}</strong> \u2014 not counted again in Net Worth.`
+      : heldCur === SINK_HELD_ELSEWHERE
+        ? 'Counted as its own asset in Net Worth.'
+        : (saved > 0.005
+            ? '<span style="color:var(--amber-text);">Counted on top of your savings balances \u2014 say where it sits so it isn\u2019t counted twice.</span>'
+            : 'Say where it sits and Net Worth stops guessing.');
+
     const div = document.createElement('div');
     div.className = 'goal-block' + (isInc(f) ? '' : ' inc-off');
     div.innerHTML = `
@@ -9280,6 +9406,12 @@ function renderSinkingFunds() {
           <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer; width:100%;"
             onchange="sinkingFunds[${i}].every=+this.value; renderSinkingFunds(); savePlanData()">${cadOpts}</select>
         </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Money sits in</div>
+        <select class="nec-cat-input" style="height:42px; font-size:14px; cursor:pointer; width:100%;"
+          onchange="sinkSetHeld(${f.id}, this.value)">${heldOpts}</select>
+        <div style="font-size:10.5px; color:var(--text3); margin-top:5px; line-height:1.5;">${heldNote}</div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="flex:1; height:10px; background:var(--surface3); border-radius:5px; overflow:hidden;">
@@ -9823,7 +9955,7 @@ function updateSubsTotal() {
 
 // ─── INSTALLMENTS ─────────────────────────────────────────────
 function addInst() {
-  installments.push({ id: planId(), name: '', monthlyAmt: '', remaining: '' });
+  installments.push({ id: planId(), name: '', monthlyAmt: '', remaining: '', day: '' });
   renderInsts();
   savePlanData();
 }
@@ -9852,13 +9984,16 @@ function renderInsts() {
     const monthly   = parseFloat(inst.monthlyAmt) || 0;
     const remaining = parseInt(inst.remaining)    || 0;
     const totalRem  = monthly * remaining;
+    const instKey   = instPaidKey(inst);
+    const instPaid  = !!(instKey && billChecks && billChecks.checks && billChecks.checks[instKey]);
 
     const div = document.createElement('div');
-    div.className = 'inst-block' + (isInc(inst) ? '' : ' inc-off');
+    div.className = 'inst-block' + (isInc(inst) ? '' : ' inc-off') + (instPaid ? ' paid-row' : '');
     div.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
         <input class="nec-cat-input" value="${escH(inst.name)}" placeholder="e.g. iPhone 15 Pro, Samsung TV" style="flex:1;"
-          oninput="installments[${i}].name=this.value; savePlanData()">
+          oninput="installments[${i}].name=this.value; bclSoon(); savePlanData()">
+        ${paidChip(instKey)}
         <button class="del-btn" onclick="removeInst(${inst.id})">✕</button>
         ${incBtn(inst, `toggleInstInc(${inst.id})`)}
       </div>
@@ -9874,7 +10009,12 @@ function renderInsts() {
         <div style="min-width:110px;">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining months</div>
           <input class="nec-day-input" type="number" value="${inst.remaining}" min="0" step="1" placeholder="0" style="width:80px;"
-            oninput="installments[${i}].remaining=this.value; updateInstDisplay(${i}); updateInstsTotal(); recalcSoon(); savePlanData()">
+            oninput="installments[${i}].remaining=this.value; updateInstDisplay(${i}); updateInstsTotal(); bclSoon(); recalcSoon(); savePlanData()">
+        </div>
+        <div style="min-width:96px;">
+          <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Bill day</div>
+          <input class="nec-day-input" type="number" value="${escH(String(inst.day == null ? '' : inst.day))}" min="1" max="31" placeholder="—" style="width:80px;"
+            oninput="installments[${i}].day=this.value; bclSoon(); savePlanData(); try{renderDueSoon()}catch(e){}">
         </div>
         <div id="inst-balance-${i}" style="flex-shrink:0;${totalRem > 0 ? '' : ' display:none;'}">
           <div style="font-size:11px; color:var(--text3); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.6px;">Remaining balance</div>
@@ -9885,6 +10025,8 @@ function renderInsts() {
     c.appendChild(div);
   });
   updateInstsTotal();
+  const hint = document.getElementById('instsPaidHint');
+  if (hint) hint.style.display = installments.some(x => instPaidKey(x)) ? '' : 'none';
 }
 
 function getInstsMonthlySum() {
@@ -12932,9 +13074,20 @@ function netWorthNow() {
   let assets = 0, liabilities = 0;
   // Savings allocations you count — the same set the Net Summary uses.
   try { (savingsItems || []).forEach(it => { if (isInc(it)) assets += parseFloat(it.amt) || 0; }); } catch (e) {}
-  // Sinking pots are real money already set aside, so they are an asset even
-  // though the reserve is a monthly obligation.
-  try { (sinkingFunds || []).forEach(f => { if (isInc(f)) assets += Math.max(0, sinkNum(f.saved)); }); } catch (e) {}
+  // Sinking pots are real money already set aside — but only when that money
+  // is not still inside a balance counted on the line above. A pot held in a
+  // tracked account is already in that account's figure; adding it here would
+  // count the same peso twice. See sinkHeldAcct().
+  let earmarked = 0;
+  try {
+    (sinkingFunds || []).forEach(f => {
+      if (!isInc(f)) return;
+      const saved = Math.max(0, sinkNum(f.saved));
+      if (saved <= 0) return;
+      if (sinkHeldAcct(f)) { earmarked += saved; return; }   // already inside a counted balance
+      assets += saved;
+    });
+  } catch (e) {}
   // Money owed to you from splits you fronted is an asset until it arrives.
   try { assets += recvTotalOutstanding(); } catch (e) {}
   try { (personalDebts || []).forEach(d => { if (isInc(d) && d.type !== 'lent') liabilities += parseFloat(d.amt) || 0; }); } catch (e) {}
@@ -12943,6 +13096,9 @@ function netWorthNow() {
     assets: Math.round(assets * 100) / 100,
     liabilities: Math.round(liabilities * 100) / 100,
     net: Math.round((assets - liabilities) * 100) / 100,
+    // Pots that live inside an account already counted in `assets`. Not added
+    // to anything — reported so the card can say where that money went.
+    earmarked: Math.round(earmarked * 100) / 100,
   };
 }
 
@@ -12978,6 +13134,16 @@ function renderNetWorth() {
     <div class="divider"></div>
     <div class="nb-row" style="font-size:15px;"><span class="nb-label" style="color:var(--text);">= Net worth</span><span style="color:${col}; font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">${n.net < 0 ? '−' + fPHP(Math.abs(n.net)) : fPHP(n.net)}</span></div>
   </div>`;
+
+  // Where the earmarked money went, and what is still being double-counted.
+  if (n.earmarked > 0.005) {
+    h += `<div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">\uD83C\uDFFA ${fPHP(n.earmarked)} of the savings above is earmarked in sinking pots \u2014 counted once, inside the account holding it.</div>`;
+  }
+  const nwUnplaced = sinkUnplacedPots();
+  if (nwUnplaced.length) {
+    const uSum = nwUnplaced.reduce((t, u) => t + u.saved, 0);
+    h += `<div class="nw-warn">\u26A0\uFE0F ${fPHP(uSum)} across ${nwUnplaced.length} sinking pot${nwUnplaced.length === 1 ? '' : 's'} is being added on top of your savings balances. Setting money aside moves no balance, so if that money is still sitting in an account above, it is counted twice here. Set <b>Money sits in</b> on the fund to settle it.<div style="margin-top:4px; color:var(--text3);">${nwUnplaced.map(u => escH(u.label)).join(' \u00b7 ')}</div></div>`;
+  }
 
   if (delta !== null && Math.abs(delta) > 0.005) {
     const up = delta > 0;
@@ -13216,6 +13382,14 @@ function ledgerNextDueDate(day, today) {
   return d;
 }
 
+// THIS month's occurrence of `day`, clamped to short months. Distinct from
+// ledgerNextDueDate, which rolls a day that has already passed forward to next
+// month — right for "when is this next due", wrong for "did I miss it".
+function ledgerCurDueDate(day, today) {
+  const y = today.getFullYear(), m = today.getMonth();
+  return new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+}
+
 function dueSoonItems(days) {
   days = (days === undefined) ? DUE_SOON_DAYS : days;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -13226,10 +13400,19 @@ function dueSoonItems(days) {
     const day = parseInt(it.day) || 0;
     if (day < 1 || day > 31) return;             // no pay day set — nothing to warn about
     if (billChecks.checks[it.key]) return;       // already ticked this month
-    const due  = ledgerNextDueDate(day, today);
+    // OVERDUE BILLS USED TO VANISH. This read ledgerNextDueDate, so the moment
+    // a due day passed unticked the bill was recomputed as ~4 weeks away and
+    // fell outside the window — the one thing built to catch a missed payment
+    // went quiet at exactly the moment you missed it, for the rest of the
+    // month. The current-month occurrence is what "late" is measured against;
+    // a negative daysLeft is days late. The list still clears itself on the
+    // 1st, because bclBuildItems and billChecks are both current-month.
+    const due  = ledgerCurDueDate(day, today);
     const left = Math.round((due - today) / 86400000);
-    if (left <= days) out.push({ key: it.key, label: it.label, amt: it.amt, src: it.src, due: due, daysLeft: left });
+    if (left <= days) out.push({ key: it.key, label: it.label, amt: it.amt, src: it.src,
+                                 due: due, daysLeft: left, overdue: left < 0 });
   });
+  // Ascending by date puts the most overdue first, then today, then upcoming.
   return out.sort((a, b) => a.due - b.due);
 }
 
@@ -13241,12 +13424,17 @@ function renderDueSoon() {
   const items = dueSoonItems(DUE_SOON_DAYS);
   if (!items.length || dismissed === todayLocalStr()) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
-  const sum = items.reduce((s, i) => s + i.amt, 0);
+  const sum  = items.reduce((s, i) => s + i.amt, 0);
+  const late = items.filter(i => i.overdue);
+  const soon = items.length - late.length;
   const rows = items.map(i => {
-    const when = i.daysLeft === 0 ? 'today' : i.daysLeft === 1 ? 'tomorrow' : 'in ' + i.daysLeft + ' days';
-    const col  = i.daysLeft <= 1 ? 'var(--red-text)' : 'var(--amber-text)';
-    return `<button class="due-row" onclick="toggleBillCheck('${escJS(i.key)}')" title="Tick as paid">
-      <span class="due-check">○</span>
+    const lateBy = Math.abs(i.daysLeft);
+    const when = i.overdue
+      ? (lateBy === 1 ? 'yesterday · 1 day late' : lateBy + ' days late')
+      : i.daysLeft === 0 ? 'today' : i.daysLeft === 1 ? 'tomorrow' : 'in ' + i.daysLeft + ' days';
+    const col  = (i.overdue || i.daysLeft <= 1) ? 'var(--red-text)' : 'var(--amber-text)';
+    return `<button class="due-row${i.overdue ? ' due-late' : ''}" onclick="toggleBillCheck('${escJS(i.key)}')" title="Tick as paid">
+      <span class="due-check">${i.overdue ? '⚠' : '○'}</span>
       <span class="due-label">${escH(i.label)}</span>
       <span class="due-when" style="color:${col};">${MONTH_NAMES[i.due.getMonth()]} ${i.due.getDate()} · ${when}</span>
       <span class="due-amt">${fPHP(i.amt)}</span>
@@ -13256,11 +13444,13 @@ function renderDueSoon() {
   el.innerHTML = `<div class="due-wrap">
     <div class="due-head">
       <span style="font-size:13px;">⏰</span>
-      <span style="flex:1;"><b>${items.length} bill${items.length === 1 ? '' : 's'}</b> due in the next ${DUE_SOON_DAYS} days — ${fPHP(sum)}</span>
+      <span style="flex:1;">${late.length
+        ? `<b style="color:var(--red-text);">${late.length} overdue</b>${soon ? ` · ${soon} due in the next ${DUE_SOON_DAYS} days` : ''} — ${fPHP(sum)}`
+        : `<b>${items.length} bill${items.length === 1 ? '' : 's'}</b> due in the next ${DUE_SOON_DAYS} days — ${fPHP(sum)}`}</span>
       <button class="due-x" onclick="dismissDueSoon()" title="Hide until tomorrow">✕</button>
     </div>
     <div class="due-list">${rows}</div>
-    <div class="due-foot">Tap one to tick it off the bill checklist.</div>
+    <div class="due-foot">Tap one to tick it off the bill checklist.${late.length ? ' A late bill stays here until it is ticked or the month turns.' : ''}</div>
   </div>`;
   el.style.display = 'block';
 }
@@ -13952,6 +14142,20 @@ function getCashFlowEvents(year, month) {
     });
   }
 
+  // ── Bills: Installments with a bill day ────────────────
+  // Money that leaves every month like any other bill — it simply had nowhere
+  // to say when, until the day field landed.
+  if (typeof installments !== 'undefined') {
+    installments.forEach(inst => {
+      if (!isInc(inst)) return;
+      if ((parseInt(inst.remaining) || 0) <= 0) return;   // finished — nothing left to pay
+      const day = parseInt(inst.day) || 0;
+      const amt = parseFloat(inst.monthlyAmt) || 0;
+      if (day >= 1 && day <= 31 && amt > 0 && (inst.name || '').trim())
+        events.push({ day: Math.min(day, lastDay), type: 'bill', label: inst.name.trim(), amount: amt });
+    });
+  }
+
   // ── Sinking funds: the bill itself, in its due month ──────
   // Shown as a bill because it IS one — money genuinely leaves the account
   // that month. It is paid from the pot rather than that month's income, so
@@ -14514,11 +14718,75 @@ function toggleBillCheck(key, noPrompt) {
   // Ticking a bill and logging what it cost were two separate acts of
   // bookkeeping, so the ledger never knew about the money it knew best.
   try { nowChecked ? billMaybeLog(key, noPrompt) : billMaybeUnlog(key, noPrompt); } catch (e) {}
+  // An installment is the one bill whose PLAN moves when you pay it: one of
+  // the remaining months has just been used up. Do this before refreshPaidUI,
+  // which ends in recalcAll — the credit has to be computed against the new
+  // count, not the old one.
+  try { instCountdown(key, nowChecked); } catch (e) {}
   // A ticked bill is no longer outstanding, so the Necessities / PayLater
   // rows and the Net Summary have to follow. renderNec ends in recalcAll,
   // which is what recomputes the credit — do this AFTER the log so a newly
   // written ledger entry is already in place when the ledger re-renders.
   refreshPaidUI();
+}
+
+// ── INSTALLMENT COUNTDOWN ─────────────────────────────
+// `remaining` was only ever changed by typing into it, so a plan that finished
+// in June went on being subtracted from every screen until somebody remembered
+// to zero it. Ticking the bill is the moment the app learns a month was used.
+// `paidPeriod` records the month the decrement was applied in, so ticking
+// twice in one month cannot count down twice, and un-ticking puts the month
+// back — which is what makes this safe to attach to a one-tap chip.
+function instCountdown(key, nowChecked) {
+  if (!/^inst_/.test(String(key || ''))) return;
+  const id   = String(key).slice(5);
+  const inst = (installments || []).find(x => String(x.id) === id);
+  if (!inst) return;
+  const period = bclPeriod();
+  const rem    = parseInt(inst.remaining) || 0;
+  if (nowChecked) {
+    if (inst.paidPeriod === period) return;    // already counted down this month
+    if (rem <= 0) return;                      // nothing left to count down
+    inst.remaining  = rem - 1;
+    inst.paidPeriod = period;
+    savePlanData();
+    showToast('\uD83D\uDCC5 ' + (String(inst.name || 'Installment').trim() || 'Installment') + ' — '
+      + (inst.remaining === 0 ? 'final payment, this one is done'
+                              : inst.remaining + ' month' + (inst.remaining === 1 ? '' : 's') + ' left'));
+  } else {
+    if (inst.paidPeriod !== period) return;    // this month never counted down
+    inst.remaining  = rem + 1;
+    inst.paidPeriod = '';
+    savePlanData();
+  }
+}
+
+// THE INVARIANT: an installment ticked for THIS month has had exactly one
+// month counted off it, and an unticked one has had none.
+// Undo restores va_bill_checklist but deliberately NOT va_plan_data — the Plan
+// tab keeps its own stack, and two systems restoring one key would make both
+// histories wrong (02a). A tick now moves data in both, so after an undo the
+// tick and the counter can disagree; this puts them back in step. It only ever
+// moves a month that instCountdown itself stamped with `paidPeriod`, so it can
+// neither invent a payment nor touch a month that has already rolled over.
+function instReconcileCounts() {
+  const period = bclPeriod();
+  let changed = false;
+  (installments || []).forEach(inst => {
+    const key     = 'inst_' + inst.id;
+    const ticked  = !!(billChecks && billChecks.period === period
+                       && billChecks.checks && billChecks.checks[key]);
+    const counted = inst.paidPeriod === period;
+    if (ticked && !counted) {
+      const rem = parseInt(inst.remaining) || 0;
+      if (rem <= 0) return;
+      inst.remaining = rem - 1; inst.paidPeriod = period; changed = true;
+    } else if (!ticked && counted) {
+      inst.remaining = (parseInt(inst.remaining) || 0) + 1; inst.paidPeriod = ''; changed = true;
+    }
+  });
+  if (changed) { savePlanData(); try { renderInsts(); } catch (e) {} }
+  return changed;
 }
 
 // Entries this key wrote, in the month the checklist is currently tracking.
@@ -14689,6 +14957,14 @@ function bclBuildItems() {
     if ((parseFloat(sub.amt) || 0) > 0 && (sub.name || '').trim())
       items.push({ key: `sub_${sub.id}`, label: sub.name.trim(), amt: parseFloat(sub.amt)||0, src: 'sub', day: parseInt(sub.billingDay) || 0 });
   });
+  // Installments — keyed on their own id like subscriptions, so nothing needs
+  // disambiguating. instPaidKey decides whether this one is a bill this month.
+  installments.forEach(inst => {
+    const key = instPaidKey(inst);
+    if (!key) return;
+    items.push({ key: key, label: String(inst.name).trim(), amt: parseFloat(inst.monthlyAmt) || 0,
+                 src: 'inst', day: parseInt(inst.day) || 0 });
+  });
   const curMonth = new Date().getMonth();
   const shopeeAmt = plData.shopee.filter(r => r.month === curMonth && isInc(r)).reduce((s,r) => s + (parseFloat(r.amt)||0), 0);
   if (shopeeAmt > 0) items.push({ key: 'pl_shopee', label: 'SPayLater (Shopee)', amt: shopeeAmt, src: 'pay', day: PL_BILLING_DAY.shopee });
@@ -14725,7 +15001,7 @@ function renderBillChecklist() {
   }
   c.innerHTML = items.map(it => {
     const checked = !!billChecks.checks[it.key];
-    const srcLabel = it.src === 'nec' ? 'bill' : it.src === 'sub' ? 'sub' : 'pay';
+    const srcLabel = it.src === 'nec' ? 'bill' : it.src === 'sub' ? 'sub' : it.src === 'inst' ? 'plan' : 'pay';
     return `<div class="bcl-row${checked ? ' bcl-done' : ''}" onclick="toggleBillCheck('${escJS(it.key)}')">
       <span class="bcl-check">${checked ? '✓' : ''}</span>
       <span class="bcl-label">${escH(it.label)}</span>
@@ -18111,6 +18387,11 @@ function chatFinanceContext(labelsOnly) {
           reserve_this_month: money(sinkPerMonth(f, nowYM)),
           funded_pct: target > 0 ? Math.round((saved / target) * 1000) / 10 : null,
           counted: isInc(f),
+          // Where the pot sits, and therefore whether net_worth adds it on top
+          // of the savings balances or treats it as already inside one.
+          held_in: sinkHeldAcct(f) ? sinkHeldAcct(f).label
+                 : (String(f.held || '') === SINK_HELD_ELSEWHERE ? 'untracked account' : null),
+          counted_in_net_worth: !sinkHeldAcct(f),
         };
       }),
     };
@@ -18163,10 +18444,12 @@ function chatFinanceContext(labelsOnly) {
           // mismatch as the 28b cap fix.
           const nec  = Math.min(p.nec,    chatDomNum('necTotal'));
           const sub  = Math.min(p.subs,   subsSum);
+          const ins  = Math.min(p.insts,  instsSum);
           const pl   = Math.min(p.shopee, shopee) + Math.min(p.tiktok, tiktok) + Math.min(p.maya, maya);
           return {
-            total: money(nec + sub + pl), bills_ticked: p.n,
+            total: money(nec + sub + ins + pl), bills_ticked: p.n,
             necessities: money(nec), subscriptions: money(sub),
+            installments: money(ins),
             paylater: money(pl),
             note: 'Bills already settled this month. The figures above are the FULL plan and still include these; '
                 + 'net_summary has already credited this back. Subtract it from a plan figure when asked what is STILL owed, '
@@ -18183,7 +18466,7 @@ function chatFinanceContext(labelsOnly) {
     forecast_installments_next_3_months: forecast,
     necessities_list:   necList,
     subscriptions_list: subscriptions.map(s => ({ name: s.name || 'Subscription', amt: money(parseFloat(s.amt) || 0), billing_day: s.billingDay ? parseInt(s.billingDay) : null, counted: isInc(s) })),
-    installments_list:  installments.map(x => ({ name: x.name || 'Installment', monthly: money(parseFloat(x.monthlyAmt) || 0), remaining: parseInt(x.remaining) || 0, counted: isInc(x) })),
+    installments_list:  installments.map(x => ({ name: x.name || 'Installment', monthly: money(parseFloat(x.monthlyAmt) || 0), remaining: parseInt(x.remaining) || 0, due_day: x.day ? parseInt(x.day) : null, counted: isInc(x), paid_this_month: !!(billChecks && billChecks.period === bclPeriod() && billChecks.checks && billChecks.checks['inst_' + x.id]) })),
     wishlist:           wishlistItems.map(w => ({ name: w.name || 'Item', price: money(parseFloat(w.price) || 0), mode: w.mode === 'inst' ? 'installment' : 'save-up' })),
     debts: { they_owe_me: money(debts.lent), i_owe: money(debts.owe), list: debtList },
     owed_to_you: owed,
@@ -18194,7 +18477,9 @@ function chatFinanceContext(labelsOnly) {
         return {
           now: money(n.net), assets: money(n.assets), liabilities: money(n.liabilities),
           history: keys.slice(-12).map(k => ({ month: k, net: money(pts[k]) })),
-          note: 'Savings + sinking pots + money owed to you, minus personal debts and payoff-planner balances. PayLater is excluded — it is a monthly bill, not a tracked balance.',
+          earmarked_inside_savings: money(n.earmarked),
+          note: 'Savings + sinking pots + money owed to you, minus personal debts and payoff-planner balances. PayLater is excluded — it is a monthly bill, not a tracked balance. '
+              + 'A sinking pot held in a tracked account is NOT added on top of that balance — it is already inside it, and earmarked_inside_savings is how much of `assets` that accounts for.',
         };
       } catch (e) { return null; }
     })(),
@@ -18395,6 +18680,7 @@ function chatAISystemPrompt(parserHint) {
     'To CORRECT something, prefer editentry over deleting and re-adding: an edit keeps the entry\'s date order and its provenance (whether it came from a receipt, the chat or a bill tick), and a delete throws both away. Undo now covers the ledger, but only one step back, so never delete anything the user did not name.',
     'owed_to_you is what OTHER people still owe from splits the user paid for. Their own share of each of those splits is already in the spending ledger, so an outstanding amount here is money coming IN, never an expense and never something to log. Use settle when they say someone paid them back.',
     'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
+    'Ticking an installment off also takes one month off its remaining count, and un-ticking puts it back — installments_list.remaining is therefore live, not something the user has to maintain by hand.',
     'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
     'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete. A NEGATIVE amount is a REFUND \u2014 money that came back on a purchase in that same category. It is already netted off every total, cap remainder and average you are shown, so never add it back, never subtract it a second time, and never call it income or a transfer.',
     'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
