@@ -1545,6 +1545,13 @@
              background: var(--amber-dim); border: 1px solid var(--amber);
              color: var(--amber-text); font-size: 11.5px; line-height: 1.55; }
 
+  /* Sinking fund whose bill has landed (build 2026-08-04b) — the payout is a
+     tap now, so it has to be visible until it is made. */
+  .sink-due { margin-top: 10px; padding: 9px 11px; border-radius: var(--radius-sm);
+              background: var(--amber-dim); border: 1px solid var(--amber);
+              color: var(--amber-text); font-size: 11.5px; line-height: 1.5;
+              display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
   /* Year in review (build 2026-08-03e) — a card per year of closed months */
   .yr-card {
     background: var(--surface2); border: 1px solid var(--border);
@@ -2128,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04c</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -6811,14 +6818,13 @@ function billPaidCredit(startStr, endStr) {
         // Not range-scoped — getInstsMonthlySum charges a full month whatever
         // the date range says, so a range-scoped credit would disagree with the
         // obligation it is credited against.
-        // But the FINAL payment zeroes the counter, and getInstsMonthlySum
-        // stops charging for a finished plan in the same breath: crediting it
-        // back on top would hand the same peso over twice. The bucket clamp in
-        // recalcAll cannot catch that on its own, because other installments
-        // still leave room inside the bucket. So a tick only credits while its
-        // own plan is still charging — the same shape as necCurMonthCounts.
+        // The guard is the same question asked the same way: credit only while
+        // this plan is actually charging THIS month. Both sides now read
+        // instRemThisMonth, so the final payment is charged and credited like
+        // any other bill instead of quietly leaving the obligation lines —
+        // which is what used to move the donut and the forecast on a tick.
         const instRow = (installments || []).find(x => ('inst_' + x.id) === it.key);
-        if (!instRow || (parseInt(instRow.remaining) || 0) <= 0) return;
+        if (!instRow || instRemThisMonth(instRow) <= 0) return;
         bucket = 'insts';
       } else if (it.src === 'pay') {
         const type = it.key.slice(3);          // pl_shopee → shopee
@@ -9252,24 +9258,70 @@ function sinkTotalPerMonth(ym) {
   return Math.round(sinkActive().reduce((s, f) => s + sinkPerMonth(f, ym), 0) * 100) / 100;
 }
 
-// Once the due month has passed the bill has been paid out of the pot, so
-// the pot drops by the target and the next due date moves on by the cadence.
-// Idempotent: it only ever advances past months, so running it twice in one
-// day changes nothing.
-function sinkRollAll() {
-  const now = ymNow();
-  let changed = false;
-  (sinkingFunds || []).forEach(f => {
-    let guard = 0;
-    while (f.dueYM && ymDiff(now, f.dueYM) < 0 && guard++ < 60) {
-      const every = parseInt(f.every, 10) || 12;
-      f.saved = Math.max(0, sinkNum(f.saved) - sinkNum(f.amt));
-      f.dueYM = ymShift(f.dueYM, every);
-      changed  = true;
-    }
-  });
-  if (changed) savePlanData();
-  return changed;
+// ── PAYING THE BILL THE POT WAS FOR ──────────────────────────
+// This used to be sinkRollAll(), which ran inside loadPlanData on EVERY app
+// start: once the due month had passed it subtracted the whole bill from the
+// pot, moved the due date on and saved — no tap, no confirm, no toast, no
+// record. It was the only money event in the app that happened by itself.
+// Three things were wrong with that:
+//   • Setting money aside is a deliberate tap, precisely because the app
+//     cannot know whether the money really moved. Taking it out again is the
+//     same question and got no such treatment.
+//   • Net worth dropped by the bill on app open with nothing on screen
+//     saying why, and nothing anywhere recording that it was ever paid.
+//   • An underfunded pot was clamped at 0, so the shortfall — the one number
+//     worth knowing about a sinking fund — was swallowed silently.
+// Now the due month simply makes the payout available; you tap it, and what
+// it cost (and what it was short by) is written onto the fund.
+//
+// How many payouts this fund owes: 0 until the due month arrives, then one
+// per elapsed cycle, so a fund left alone for two years offers both.
+function sinkPendingCycles(f) {
+  if (!f || !f.dueYM) return 0;
+  const gap = ymDiff(ymNow(), f.dueYM);          // months until due; ≤0 = due or overdue
+  if (gap > 0) return 0;
+  const every = Math.max(1, parseInt(f.every, 10) || 12);
+  return Math.min(60, 1 + Math.floor((-gap) / every));
+}
+
+function sinkPendingTotal() {
+  return (sinkingFunds || []).reduce((n, f) => n + (isInc(f) ? sinkPendingCycles(f) : 0), 0);
+}
+
+// One cycle per tap. The pot pays what it can and the rest is recorded as a
+// shortfall rather than rounded away, because "we were ₱2,000 short" is the
+// thing you want to know when you set next year's amount.
+// Deliberately writes NO ledger entry: the monthly reserve is already this
+// fund's budget line, so a ₱12,000 actual against a ₱1,000 line would read as
+// a tenfold overspend and would feed drift, caps and the burn rate. The pot
+// is the record.
+function sinkPayout(id) {
+  const f = (sinkingFunds || []).find(x => x.id === id);
+  if (!f) return;
+  if (sinkPendingCycles(f) < 1) { showToast('Not due yet — nothing to pay out', true); return; }
+  const label  = String(f.label || 'this fund').trim() || 'this fund';
+  const bill   = sinkNum(f.amt);
+  const pot    = Math.max(0, sinkNum(f.saved));
+  const fromPot = Math.min(pot, bill);
+  const short   = Math.round((bill - fromPot) * 100) / 100;
+  const dueWas  = f.dueYM;
+  const every   = Math.max(1, parseInt(f.every, 10) || 12);
+  if (!confirm('Pay ' + label + ' out of its pot?\n\n'
+      + 'Bill: ' + fPHP(bill) + '\n'
+      + 'From the pot: ' + fPHP(fromPot)
+      + (short > 0.005 ? '\nShort by: ' + fPHP(short) + ' — that part came from somewhere else' : '')
+      + '\n\nThe pot drops and the next one is due ' + ymLabel(ymShift(dueWas, every)) + '.\n'
+      + 'This is not logged as spending: the monthly reserve was already its budget line.')) return;
+  f.saved   = Math.round(Math.max(0, pot - fromPot) * 100) / 100;
+  f.dueYM   = ymShift(dueWas, every);
+  f.lastPaid = { ym: dueWas, bill: bill, fromPot: fromPot, short: short, on: todayLocalStr() };
+  savePlanData();
+  renderSinkingFunds();
+  try { renderNetWorth(); } catch (e) {}
+  try { renderLedger(); }   catch (e) {}
+  recalcSoon();
+  showToast('\uD83C\uDFFA ' + label + ' paid — ' + fPHP(fromPot) + ' out of the pot'
+    + (short > 0.005 ? ' \u00b7 ' + fPHP(short) + ' short' : ''));
 }
 
 function addSinkingFund() {
@@ -9343,10 +9395,21 @@ function renderSinkingFunds() {
     const done   = target > 0 && saved >= target - 0.005;
     const barColor = done ? 'var(--green)' : gap < 0 ? 'var(--red)'
                    : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
+    // A pot whose bill has landed is waiting on a tap, not on the calendar.
+    const pending = sinkPendingCycles(f);
     const when = gap < 0  ? '⚠️ was due ' + ymLabel(f.dueYM)
                : gap === 0 ? 'due this month'
                : gap === 1 ? 'due next month'
                : 'due ' + ymLabel(f.dueYM) + ' · ' + gap + ' months away';
+    // What the last payout actually cost, kept on the fund so the money that
+    // left the pot is never simply gone. A shortfall is stated, not rounded off.
+    const lp = f.lastPaid && sinkNum(f.lastPaid.bill) > 0 ? f.lastPaid : null;
+    const paidNote = lp
+      ? `<div style="font-size:10.5px; color:var(--text3); margin-top:6px; line-height:1.5;">✓ Paid ${escH(fPHP(sinkNum(lp.bill)))} for ${escH(ymLabel(lp.ym))} — ${escH(fPHP(sinkNum(lp.fromPot)))} came out of the pot`
+        + (sinkNum(lp.short) > 0.005
+            ? `<span style="color:var(--amber-text);"> · ${escH(fPHP(sinkNum(lp.short)))} of it had to come from somewhere else</span>` : '')
+        + `</div>`
+      : '';
     const cadOpts = SINK_CADENCES.map(([v, lbl]) =>
       `<option value="${v}"${(parseInt(f.every,10)||12) === v ? ' selected' : ''}>${lbl}</option>`).join('');
 
@@ -9420,6 +9483,16 @@ function renderSinkingFunds() {
         <span style="font-family:'DM Mono',monospace; font-size:13px; color:${barColor}; min-width:42px; text-align:right; font-weight:500;">${target > 0 ? pct.toFixed(0) + '%' : '—'}</span>
       </div>
       <div id="sink-info-${i}" style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.6;">${sinkInfoHtml(f, now)}</div>
+      ${paidNote}
+      ${pending > 0 ? `<div class="sink-due">
+        <div style="flex:1; min-width:150px;">🏺 <b>${escH(f.label.trim() || 'This bill')}</b> is due${pending > 1 ? ` — ${pending} payments' worth has come around` : ''}.
+          <div style="color:var(--text3); margin-top:3px;">${saved >= target - 0.005
+            ? 'The pot covers it.'
+            : `<span style="color:var(--amber-text);">The pot is ${escH(fPHP(Math.max(0, target - saved)))} short — the rest comes from somewhere else.</span>`}</div>
+        </div>
+        <button class="add-btn" style="margin:0; padding:7px 12px; font-size:12px; width:auto; flex-shrink:0;"
+          onclick="sinkPayout(${f.id})">✓ Paid it — ${fPHP(target)}</button>
+      </div>` : ''}
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         <button class="add-btn" style="margin:0; padding:7px 12px; font-size:12px; width:auto;"
           onclick="sinkContribute(${f.id})"${per > 0 ? '' : ' disabled style="margin:0; padding:7px 12px; font-size:12px; width:auto; opacity:0.45;"'}>
@@ -10029,11 +10102,37 @@ function renderInsts() {
   if (hint) hint.style.display = installments.some(x => instPaidKey(x)) ? '' : 'none';
 }
 
+// ── MONTHS LEFT AS OF THE START OF THIS MONTH ─────────────────
+// `remaining` is a live counter now: instCountdown takes a month off it the
+// moment the bill is ticked. Every consumer, though, still reads it the way
+// it was written — "months left, counting THIS month as payment #1" — and
+// that stopped being true the instant the counter moved. For the rest of the
+// month a raw read is one payment short of what the month actually plans for,
+// which showed up in four places at once:
+//   • the 3-month forecast lost the LAST payment of the plan
+//   • the paid month's own ledger budget line vanished on the final payment,
+//     so the entry the tick had just written read as unbudgeted spending —
+//     and closing the month froze it that way
+//   • the cash flow calendar dropped an event that had already happened
+//   • the donut, Emergency Fund burn and Savings Rate tile all moved, which
+//     is exactly the 03c rule ("a tick moves the credit row, never the
+//     obligation lines") being broken in every re-derivation site.
+// So obligations ask for the count as it stood on the 1st, and the tick is
+// credited back by billPaidCredit like every other bill. `remaining` itself
+// stays raw wherever the question really is "how many are left" — the row's
+// input, the Total remaining balance, the CSV.
+function instRemThisMonth(inst) {
+  const rem = parseInt(inst && inst.remaining) || 0;
+  let counted = false;
+  try { counted = !!(inst && inst.paidPeriod && inst.paidPeriod === bclPeriod()); } catch (e) {}
+  return rem + (counted ? 1 : 0);
+}
+
 function getInstsMonthlySum() {
   return installments.reduce((s, inst) => {
     if (!isInc(inst)) return s;
     const mo = parseFloat(inst.monthlyAmt) || 0;
-    const re = parseInt(inst.remaining)    || 0;
+    const re = instRemThisMonth(inst);
     return s + (re > 0 ? mo : 0);
   }, 0);
 }
@@ -10044,7 +10143,10 @@ function updateInstsTotal() {
     if (!isInc(inst)) return;
     const mo = parseFloat(inst.monthlyAmt) || 0;
     const re = parseInt(inst.remaining)    || 0;
-    if (re > 0) monthly += mo;
+    // The monthly line has to agree with getInstsMonthlySum, which charges for
+    // the month a tick has already paid; the balance below is what is still
+    // owed, so it reads the raw counter.
+    if (instRemThisMonth(inst) > 0) monthly += mo;
     totalRem += mo * re;
   });
   const em = document.getElementById('instsMonthly');
@@ -11020,12 +11122,35 @@ function acctRemoveCustom(key) {
 // Move a tracked account's balance. Untracked accounts have no balance to
 // move, so money going there simply leaves the tracked world — which is the
 // honest answer, not a silent no-op, and the transfer says so.
+// One account can be more than one savings row — two GCash allocations, a
+// pot and a buffer. The whole delta used to land on the FIRST of them, so
+// paying an ₱8,000 bill out of a ₱10,000 GCash held as ₱1,000 + ₱9,000 drove
+// the first row to −₱7,000: the account total stayed right, but the row on
+// screen read as a negative balance and daily interest would have accrued on
+// it. Drain the rows in order instead, never pushing one below zero, and only
+// let the account itself go negative (on the first row) when it genuinely has
+// less than the bill. A positive delta — a reversal — goes back on the first
+// row, which is where a single-row account has always kept it.
 function acctApplyDelta(key, delta) {
   const a = acctFind(key);
   if (!a || !a.tracked || a.si === null) return false;
-  const it = savingsItems[a.si];
-  if (!it) return false;
-  it.amt = Math.round(((parseFloat(it.amt) || 0) + delta) * 100) / 100;
+  const rows = (a.rows || []).filter(i => savingsItems[i] && isInc(savingsItems[i]));
+  if (!rows.length) return false;
+  let left = Math.round((parseFloat(delta) || 0) * 100) / 100;
+  if (left < 0) {
+    for (let n = 0; n < rows.length && left < -0.005; n++) {
+      const it  = savingsItems[rows[n]];
+      const cur = parseFloat(it.amt) || 0;
+      if (cur <= 0) continue;
+      const take = Math.min(cur, -left);
+      it.amt = Math.round((cur - take) * 100) / 100;
+      left   = Math.round((left + take) * 100) / 100;
+    }
+  }
+  if (Math.abs(left) > 0.005) {
+    const it = savingsItems[rows[0]];
+    it.amt = Math.round(((parseFloat(it.amt) || 0) + left) * 100) / 100;
+  }
   return true;
 }
 function acctFlushBalances() {
@@ -11234,8 +11359,14 @@ function splitOpen(srcId) {
     // save, which is a dead end dressed up as a feature. Split the purchase
     // it reverses instead, then correct the part that was returned.
     if (isRefund(e)) { showToast('A refund cannot be split — split the purchase it reverses instead', true); return; }
+    // A ticked bill can have taken its amount out of an account balance. That
+    // fact lived only on the source row, so splitting it dropped the move: the
+    // parts came back with movedFrom false and the money that left the account
+    // could never be put back — un-ticking the bill deleted the record and
+    // left the balance short. Carry the move (and what it moved) across.
     ldgSplit = { srcId: srcId, target: e.amt, date: e.date, note: e.note || '', acct: e.acct || '',
                  src: e.src, bill: e.bill || '', grp: e.grp || 0,
+                 moved: !!e.movedFrom && !isTransfer(e), movedAmt: e.amt,
                  parts: [{ cat: e.cat, amt: e.amt }, { cat: '', amt: '' }] };
   } else {
     const g = i => document.getElementById(i);
@@ -11245,7 +11376,7 @@ function splitOpen(srcId) {
       date: (g('ldgDate') && g('ldgDate').value) || todayLocalStr(),
       note: String(g('ldgNote') ? g('ldgNote').value : '').trim().slice(0, 120),
       acct: g('ldgAcct') ? g('ldgAcct').value : (ledgerPrefs.lastAcct || ''),
-      src: 'manual', bill: '', grp: 0,
+      src: 'manual', bill: '', grp: 0, moved: false, movedAmt: 0,
       parts: [{ cat: (g('ldgCat') ? g('ldgCat').value : '') || '', amt: '' }, { cat: '', amt: '' }],
     };
   }
@@ -11380,11 +11511,27 @@ function splitSave() {
   const grp = ldgSplit.grp || ledgerSeq++;
   if (ldgSplit.srcId) ledger = ledger.filter(e => e.id !== ldgSplit.srcId);
 
-  parts.forEach((p, i) => ledgerAdd({
+  // THE BILL KEY GOES ON EVERY PART, not just the first. It used to sit on
+  // part 0 alone, so un-ticking the bill found one row of the payment, deleted
+  // that, and left the rest behind as orphans while telling you it had removed
+  // the whole thing. billMaybeLog's double-log guard only asks whether ANY row
+  // carries the key, so nothing else changes.
+  // The balance move rides on every part too: each reverses its own slice, so
+  // the slices add back up to exactly what left the account.
+  const moved = !!(ldgSplit.moved && ldgSplit.acct);
+  parts.forEach(p => ledgerAdd({
     date: ldgSplit.date, amt: p.amt, cat: p.cat, src: ldgSplit.src || 'manual',
     note: ldgSplit.note, acct: ldgSplit.acct, grp: grp,
-    bill: i === 0 ? (ldgSplit.bill || '') : '',
+    bill: ldgSplit.bill || '', movedFrom: moved,
   }, true));
+
+  // Re-splitting can change the total (the target follows the parts), and the
+  // account was debited for the OLD one. Settle the difference the same way an
+  // edited amount does, so the balance and the rows never disagree.
+  if (moved) {
+    const diff = Math.round((sum - (ldgSplit.movedAmt || 0)) * 100) / 100;
+    if (Math.abs(diff) > 0.005 && acctApplyDelta(ldgSplit.acct, -diff)) acctFlushBalances();
+  }
 
   ledgerViewYM = ymOf(ldgSplit.date);
   const fromForm = !ldgSplit.srcId;
@@ -11415,8 +11562,15 @@ function ledgerDeleteGroup(grp) {
   // screen only shows this one — so say what is actually about to go.
   const ym   = ledgerViewYM || ymNow();
   const away = rows.filter(e => ymOf(e.date) !== ym).length;
+  // Parts of a split can carry a balance move exactly like a standalone row,
+  // and this deleted them without reversing it — the one exit from the ledger
+  // that invented money. ledgerDelete has done this since 03e; this is the
+  // same reversal, applied to every part at once.
+  const moved = rows.filter(e => !isTransfer(e) && e.movedFrom && e.acct);
   if (!confirm('Delete all ' + rows.length + ' rows of this split (' + fPHP(total) + ')?'
-    + (away ? '\n\n' + away + ' of them ' + (away === 1 ? 'is' : 'are') + ' in another month.' : ''))) return;
+    + (away ? '\n\n' + away + ' of them ' + (away === 1 ? 'is' : 'are') + ' in another month.' : '')
+    + (moved.length ? '\n\n' + acctLabel(moved[0].acct) + ' goes back to its balance before it.' : ''))) return;
+  moved.forEach(entryUnmoveBalance);
   ledger = ledger.filter(e => e.grp !== grp);
   ledgerCommit();
   showToast('🗑 Split removed — ' + rows.length + ' rows');
@@ -11671,7 +11825,10 @@ function ledgerBudgetLines(ym) {
     if (!isInc(x)) return;
     const name = (x.name || '').trim();
     const amt  = parseFloat(x.monthlyAmt) || 0;
-    const rem  = parseInt(x.remaining) || 0;
+    // Month-start count, not the live one: ticking the FINAL payment used to
+    // erase this month's own budget line while the tick's ledger entry stayed,
+    // so the month read as unbudgeted spending — and closing it froze that.
+    const rem  = instRemThisMonth(x);
     // "remaining" counts the current month as payment #1. Past months are
     // assumed to have been billing, so only future months get the cut-off.
     if (name && amt > 0 && (off < 0 || rem > off)) raw.push({ label: name, budget: amt, src: 'inst' });
@@ -13486,7 +13643,10 @@ function forecastMonthCommitted(offset, instOnly = false) { // offset 0 = curren
   installments.forEach(inst => {
     if (!isInc(inst)) return;
     const moAmt = parseFloat(inst.monthlyAmt) || 0;
-    const rem   = parseInt(inst.remaining)    || 0;
+    // As of the START of this month — a plan ticked today has had a month
+    // taken off the counter, and reading it raw dropped its final payment off
+    // the end of the forecast. See instRemThisMonth.
+    const rem   = instRemThisMonth(inst);
     // "remaining" counts the current month as payment #1, so an installment
     // with N months left still bills in offsets 0 … N-1.
     if (moAmt > 0 && rem > offset) total += moAmt;
@@ -14148,7 +14308,9 @@ function getCashFlowEvents(year, month) {
   if (typeof installments !== 'undefined') {
     installments.forEach(inst => {
       if (!isInc(inst)) return;
-      if ((parseInt(inst.remaining) || 0) <= 0) return;   // finished — nothing left to pay
+      // Month-start count — a payment ticked earlier today has already left
+      // the account, so the event belongs on the calendar it was paid on.
+      if (instRemThisMonth(inst) <= 0) return;            // finished — nothing left to pay
       const day = parseInt(inst.day) || 0;
       const amt = parseFloat(inst.monthlyAmt) || 0;
       if (day >= 1 && day <= 31 && amt > 0 && (inst.name || '').trim())
@@ -14502,7 +14664,9 @@ function loadPlanData() {
     if (Array.isArray(d.sinkingFunds))    sinkingFunds    = d.sinkingFunds;
     if (typeof d.planSeq === 'number')    planSeq         = Math.max(planSeq, d.planSeq);
     reseedIdSeqs();
-    sinkRollAll();
+    // sinkRollAll() used to drain every overdue pot right here, on every app
+    // start, with nothing to show for it. A payout is a tap now — see
+    // sinkPayout(). Funds sit visibly overdue until you make it.
     const pb = document.getElementById('payoffBudget');
     if (pb && typeof d.payoffBudget === 'string') pb.value = d.payoffBudget;
     const cs = document.getElementById('cfStartBal');
@@ -14918,7 +15082,14 @@ function checkDayRollover() {
   try { refreshPaidUI(); } catch (e) {}      // ends in recalcAll → Net Summary
   try { renderLedger(); } catch (e) {}
   if (monthTurned) {
-    showToast('\uD83D\uDCC5 ' + ymLabel(_watchPeriod) + ' — checklist reset, Net Summary back to the full plan');
+    // A new month can be the month a sinking fund's bill lands in, and an
+    // installed PWA may not be reloaded for weeks — so the payout prompt has
+    // to appear on the turn rather than on the next cold start.
+    try { renderSinkingFunds(); } catch (e) {}
+    let pend = 0;
+    try { pend = sinkPendingTotal(); } catch (e) {}
+    showToast('\uD83D\uDCC5 ' + ymLabel(_watchPeriod) + ' — checklist reset, Net Summary back to the full plan'
+      + (pend > 0 ? ' \u00b7 ' + pend + ' sinking fund bill' + (pend === 1 ? '' : 's') + ' due' : ''));
   }
 }
 
@@ -18197,6 +18368,7 @@ function ledgerAIContext(money) {
         reserving_per_month: money(sinkPerMonth(f, ym)),
         due: f.dueYM || null,
         months_away: ymDiff(ymNow(), f.dueYM || ymNow()),
+        payout_due: sinkPendingCycles(f) > 0,
       })),
       // Budget vs long-run reality, per line — the thing the plan alone can
       // never tell you.
@@ -18392,6 +18564,12 @@ function chatFinanceContext(labelsOnly) {
           held_in: sinkHeldAcct(f) ? sinkHeldAcct(f).label
                  : (String(f.held || '') === SINK_HELD_ELSEWHERE ? 'untracked account' : null),
           counted_in_net_worth: !sinkHeldAcct(f),
+          // The bill has landed and is waiting on a tap. Until then the pot
+          // is still full and still counted — nothing has been paid.
+          payout_due: sinkPendingCycles(f) > 0,
+          last_paid: f.lastPaid ? { for_month: f.lastPaid.ym, bill: money(sinkNum(f.lastPaid.bill)),
+                                    from_pot: money(sinkNum(f.lastPaid.fromPot)),
+                                    short_by: money(sinkNum(f.lastPaid.short)) } : null,
         };
       }),
     };
@@ -18679,7 +18857,8 @@ function chatAISystemPrompt(parserHint) {
     'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
     'To CORRECT something, prefer editentry over deleting and re-adding: an edit keeps the entry\'s date order and its provenance (whether it came from a receipt, the chat or a bill tick), and a delete throws both away. Undo now covers the ledger, but only one step back, so never delete anything the user did not name.',
     'owed_to_you is what OTHER people still owe from splits the user paid for. Their own share of each of those splits is already in the spending ledger, so an outstanding amount here is money coming IN, never an expense and never something to log. Use settle when they say someone paid them back.',
-    'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
+    'A sinking fund with payout_due true has reached its due month and is waiting for the user to tap \u201cPaid it\u201d on the Plan tab — nothing has left the pot yet, so the money is still counted. Say so if they ask what is outstanding. '
+      + 'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
     'Ticking an installment off also takes one month off its remaining count, and un-ticking puts it back — installments_list.remaining is therefore live, not something the user has to maintain by hand.',
     'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
     'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete. A NEGATIVE amount is a REFUND \u2014 money that came back on a purchase in that same category. It is already netted off every total, cap remainder and average you are shown, so never add it back, never subtract it a second time, and never call it income or a transfer.',
