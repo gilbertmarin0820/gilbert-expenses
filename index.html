@@ -2135,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04c</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04d</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3858,6 +3858,7 @@
         <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:6px;">💳 Committed expenses <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(from Expenses, in this range)</span></div>
         <div class="nb-row"><span class="nb-label">Necessities &amp; expenses</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifNecTotal">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">PayLater debts</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifPlTotal">₱0.00</span></div>
+        <div class="paid-note" id="whatifPaidNote" style="display:none;"></div>
         <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">Pulled from your <strong>Necessities &amp; Expenses</strong> and <strong>PayLater</strong> on the Expenses tab, counted only for the dates above — same range logic as that tab (pay-day counters and installment / billing dates respected). Deducted from the total below; your real net summary is untouched.</div>
       </div>
 
@@ -3898,6 +3899,7 @@
         <div class="nb-row" id="whatifGrandBonusRow" style="display:none;"><span class="nb-label">Bonus</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandBonus">₱0.00</span></div>
         <div class="nb-row" id="whatifGrandNecRow" style="display:none;"><span class="nb-label">Necessities &amp; expenses</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandNec">₱0.00</span></div>
         <div class="nb-row" id="whatifGrandPlRow" style="display:none;"><span class="nb-label">PayLater debts</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandPl">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandPaidRow" style="display:none;"><span class="nb-label" title="Bills in this range you have already ticked as paid. The two lines above still show the full plan for the range; this adds back what has already left your account, so the projection stops subtracting it twice.">+ Already paid <span id="whatifGrandPaidN" style="color:var(--text3);font-size:11px;"></span></span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandPaid">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Planned purchases</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandBuy">₱0.00</span></div>
         <div class="divider"></div>
         <div class="nb-row" style="font-size:15px;"><span class="nb-label" style="color:var(--text);">= Projected total</span><span class="c-green" id="whatifGrandTotal" style="font-size:16px; font-weight:500; font-family:'DM Mono',monospace;">₱0.00</span></div>
@@ -4742,7 +4744,7 @@ function calcWhatif() {
     refreshWhatifBuyRows();               // keep in-range counts current with the dates
     const buyTotal = whatifBuySum();
     const bonus    = whatifBonusAmt();
-    const { nec, pl } = whatifCommitments();
+    const { nec, pl, paid } = whatifCommitments();
     // Live USD→₱ preview for the bonus input (mirrors the Expenses-tab bonus).
     set('whatifBonusPHP', fxRate > 0 ? fPHP(bonus) : '₱—');
     set('whatifBonusRateNote', fxRate > 0 ? '$1 = ' + fPHP(fxRate) : 'rate not loaded');
@@ -4750,23 +4752,29 @@ function calcWhatif() {
     set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
     set('whatifNecTotal', nec > 0 ? '−' + fPHP(nec) : fPHP(0));
     set('whatifPlTotal',  pl  > 0 ? '−' + fPHP(pl)  : fPHP(0));
+    // Same "✓ ₱X already paid · ₱Y still to pay" line the Expenses tab
+    // sections carry, over both committed lines together.
+    setPaidNote('whatifPaidNote', paid.total, nec + pl);
     const grand = document.getElementById('whatifGrand');
     if (!grand) return;
     const showGrand = netKnown || savTotal > 0 || buyTotal > 0 || bonus > 0 || nec > 0 || pl > 0;
     grand.style.display = showGrand ? 'block' : 'none';
     if (showGrand) {
-      const total = (netKnown ? netPHP : 0) + savTotal + bonus - buyTotal - nec - pl;
+      const total = (netKnown ? netPHP : 0) + savTotal + bonus + paid.total - buyTotal - nec - pl;
       set('whatifGrandNet', netKnown ? fPHP(netPHP) : '₱0.00');
       set('whatifGrandSav', '+ ' + fPHP(savTotal));
       set('whatifGrandBonus', '+ ' + fPHP(bonus));
       set('whatifGrandNec', '− ' + fPHP(nec));
       set('whatifGrandPl',  '− ' + fPHP(pl));
       set('whatifGrandBuy', '− ' + fPHP(buyTotal));
+      set('whatifGrandPaid', '+ ' + fPHP(paid.total));
+      set('whatifGrandPaidN', paid.n ? '(' + paid.n + (paid.n === 1 ? ' bill' : ' bills') + ')' : '');
       // Hide the optional rows when they're zero, to keep the stack tidy.
       const showRow = (id, on) => { const r = document.getElementById(id); if (r) r.style.display = on ? 'flex' : 'none'; };
       showRow('whatifGrandBonusRow', bonus > 0.005);
       showRow('whatifGrandNecRow',   nec   > 0.005);
       showRow('whatifGrandPlRow',    pl    > 0.005);
+      showRow('whatifGrandPaidRow',  paid.total > 0.005);
       set('whatifGrandTotal', total < 0 ? '−' + fPHP(Math.abs(total)) : fPHP(total));
       const totalEl = document.getElementById('whatifGrandTotal');
       if (totalEl) totalEl.style.color = total < 0 ? 'var(--red-text)' : 'var(--green-text)';
@@ -4910,15 +4918,44 @@ function whatifCommitments() {
   }
 
   // PayLater debts — only entries whose billing date lands inside the range
-  // (Shopee 5th, TikTok 1st, Maya 15th — mirrors recalcAll()).
-  let pl = 0;
+  // (Shopee 5th, TikTok 1st, Maya 21st — mirrors recalcAll()).
+  let shopee = 0, tiktok = 0, maya = 0;
   if (typeof plData === 'object' && plData) {
-    (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.shopee, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
-    (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.tiktok, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
-    (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.maya, fromStr, toStr)) pl += parseFloat(row.amt) || 0; });
+    (plData.shopee || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.shopee, fromStr, toStr)) shopee += parseFloat(row.amt) || 0; });
+    (plData.tiktok || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.tiktok, fromStr, toStr)) tiktok += parseFloat(row.amt) || 0; });
+    (plData.maya   || []).forEach(row => { if (isInc(row) && isPLBillingInRange(row.month, PL_BILLING_DAY.maya,   fromStr, toStr)) maya   += parseFloat(row.amt) || 0; });
   }
+  const pl = shopee + tiktok + maya;
 
-  return { nec, pl };
+  // ─── ALREADY PAID ────────────────────────────────────────────
+  // A bill ticked on the checklist (or with the "paid?" chip on the
+  // Expenses tab) has already left the account — and "Current savings"
+  // above is read live from that same account, so it is already smaller
+  // by that amount. Subtracting the full obligation on top of that
+  // charged the same peso twice and the projection read low.
+  //
+  // Credited back on its own row for exactly the reason recalcAll does it
+  // that way (03c): the two lines above stay the FULL plan for the range,
+  // so this card keeps agreeing with the Expenses tab, and only the
+  // projected total moves. billPaidCredit is the same function the Net
+  // Summary uses, scoped to the What-If dates, so the two can never quote
+  // different credits for the same window.
+  //
+  // Only the buckets What-If actually subtracts are credited — no subs,
+  // no installments, no sinking reserve, none of which this simulator
+  // deducts in the first place. Each bucket is clamped to its own
+  // deduction so a credit can never exceed what was taken off.
+  const paid = { nec: 0, pl: 0, total: 0, n: 0 };
+  try {
+    const p = billPaidCredit(fromStr, toStr);
+    paid.nec = Math.min(p.nec, nec);
+    paid.pl  = Math.min(p.shopee, shopee) + Math.min(p.tiktok, tiktok) + Math.min(p.maya, maya);
+    paid.total = paid.nec + paid.pl;
+    const c = p.counts || {};
+    paid.n = (c.nec || 0) + (c.shopee || 0) + (c.tiktok || 0) + (c.maya || 0);
+  } catch (e) {}
+
+  return { nec, pl, shopee, tiktok, maya, paid };
 }
 
 // The What-If bonus. Entered in USD (like the Expenses-tab bonus); the
@@ -6772,11 +6809,20 @@ function necCurMonthCounts(row, startStr, endStr) {
   const start = new Date(startStr + 'T00:00:00');
   const end   = new Date(endStr   + 'T00:00:00');
   if (isNaN(start) || isNaN(end) || end < start) return false;
+  const touchesThisMonth = new Date(yr, mo + 1, 0) >= start && new Date(yr, mo, 1) <= end;
   const day = parseInt(row.day) || 0;
   if (day >= 1 && day <= 31) {
     const dim = new Date(yr, mo + 1, 0).getDate();
     const c   = new Date(yr, mo, Math.min(day, dim));
-    return c >= start && c <= end;
+    if (c >= start && c <= end) return true;
+    // necRowMult ends in `countPayDay(...) || 1` — a monthly bill is charged
+    // ONCE even when its pay day falls outside the window (a range of "today
+    // → end of month" opened after the 10th still subtracts the bill due on
+    // the 10th). Asking only "is the pay day inside the range" therefore
+    // refused the credit on a bill the same range was charging: tick it and
+    // nothing moved. Where the fallback is what put the charge there, the
+    // charge IS this month's occurrence, so it is creditable.
+    return countPayDay(day, startStr, endStr) === 0 && touchesThisMonth;
   }
   // No pay day set — the row counts once for the whole window, so the
   // credit applies as long as the window actually touches this month.
@@ -6801,7 +6847,13 @@ function plCurBillingInRange(type, startStr, endStr) {
 // "₱X paid · ₱Y left" line. Amounts come from bclBuildItems, the same
 // figures the checklist prints, so the two can never drift apart.
 function billPaidCredit(startStr, endStr) {
-  const out = { total: 0, nec: 0, subs: 0, insts: 0, shopee: 0, tiktok: 0, maya: 0, n: 0 };
+  const out = { total: 0, nec: 0, subs: 0, insts: 0, shopee: 0, tiktok: 0, maya: 0, n: 0,
+                // Per-bucket bill counts. The Net Summary only ever needs the
+                // grand `n`, but a consumer that credits back SOME of the
+                // buckets (the What-If, which subtracts necessities and
+                // PayLater and nothing else) must not print the count of
+                // bills it did not credit.
+                counts: { nec: 0, subs: 0, insts: 0, shopee: 0, tiktok: 0, maya: 0 } };
   try {
     if (!billChecks || billChecks.period !== bclPeriod()) return out;  // stale month → nothing paid yet
     bclBuildItems().forEach(it => {
@@ -6834,6 +6886,7 @@ function billPaidCredit(startStr, endStr) {
       if (!bucket || out[bucket] === undefined) return;
       out[bucket] += amt;
       out.total   += amt;
+      out.counts[bucket]++;
       out.n++;
     });
   } catch (e) {}
@@ -18489,6 +18542,8 @@ function chatFinanceContext(labelsOnly) {
       bonus_php:            money(whatifBonusAmt()),
       necessities_in_range: money(c.nec),
       paylater_in_range:    money(c.pl),
+      already_paid_in_range: { total: money(c.paid.total), bills_ticked: c.paid.n,
+                               necessities: money(c.paid.nec), paylater: money(c.paid.pl) },
       planned_purchases:    money(whatifBuySum()),
       projected_total:      money(chatDomNum('whatifGrandTotal')),
     };
@@ -18861,6 +18916,7 @@ function chatAISystemPrompt(parserHint) {
       + 'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
     'Ticking an installment off also takes one month off its remaining count, and un-ticking puts it back — installments_list.remaining is therefore live, not something the user has to maintain by hand.',
     'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
+    'what_if.already_paid_in_range follows the same rule as monthly_committed.already_paid: necessities_in_range and paylater_in_range are the FULL plan for those dates, and projected_total has already credited the ticked bills back, so never subtract them from it again.',
     'spending_ledger.accounts is where the money sits — balance is the savings allocation for that account, spent_this_month is what the ledger says left it. A TRANSFER between the user\'s own accounts is not spending and is excluded from every spending figure, so never add recent_transfers into a month total or describe one as an expense. Entries sharing a split_of value are ONE payment broken across categories — describe them as one purchase split, never as separate ones. If entries_without_an_account is high, say the account picture is partial rather than presenting it as complete. A NEGATIVE amount is a REFUND \u2014 money that came back on a purchase in that same category. It is already netted off every total, cap remainder and average you are shown, so never add it back, never subtract it a second time, and never call it income or a transfer.',
     'spending_ledger.caps are limits the user set by hand, not bills: for "what can I spend today" quote per_day_left for the category they mean. When a cap has bill_on_same_line set, a bill of the same name shares that budget line and has been paid out of the spending first — cap/spent/left already account for it, so quote them as they are and mention the bill only if the user asks why the figure differs from the line total. spending_ledger.drift compares each budget line against its long-run average, and runway.avg_monthly_actual is their real monthly burn — use it rather than the planned obligations when they ask how long their savings would last.',
     'The data below includes today\'s date and the next payday — use those for anything time-based instead of assuming a date. '
