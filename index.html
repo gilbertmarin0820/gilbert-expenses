@@ -2135,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-04d</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-05a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3858,8 +3858,12 @@
         <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:6px;">💳 Committed expenses <span style="text-transform:none; letter-spacing:0; color:var(--text3);">(from Expenses, in this range)</span></div>
         <div class="nb-row"><span class="nb-label">Necessities &amp; expenses</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifNecTotal">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">PayLater debts</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifPlTotal">₱0.00</span></div>
+        <div class="nb-row" id="whatifSubsRow" style="display:none;"><span class="nb-label">Subscriptions</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifSubsTotal">₱0.00</span></div>
+        <div class="nb-row" id="whatifInstsRow" style="display:none;"><span class="nb-label">Installments</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifInstsTotal">₱0.00</span></div>
+        <div class="nb-row" id="whatifSinkRow" style="display:none;"><span class="nb-label">Sinking fund reserve</span><span class="c-red" style="font-family:'DM Mono',monospace;" id="whatifSinkTotal">₱0.00</span></div>
         <div class="paid-note" id="whatifPaidNote" style="display:none;"></div>
-        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">Pulled from your <strong>Necessities &amp; Expenses</strong> and <strong>PayLater</strong> on the Expenses tab, counted only for the dates above — same range logic as that tab (pay-day counters and installment / billing dates respected). Deducted from the total below; your real net summary is untouched.</div>
+        <div id="whatifMonthsNote" style="display:none; font-size:11px; color:var(--text3); margin-top:6px; text-align:right;"></div>
+        <div style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5;">The same five things your <strong>Net Summary</strong> subtracts — necessities, PayLater, subscriptions, installments and this month's sinking-fund reserve — counted only for the dates above (pay-day counters, billing dates and installment windows respected). Deducted from the total below; your real net summary is untouched.</div>
       </div>
 
       <!-- BONUS (What-If only) -->
@@ -3899,6 +3903,9 @@
         <div class="nb-row" id="whatifGrandBonusRow" style="display:none;"><span class="nb-label">Bonus</span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandBonus">₱0.00</span></div>
         <div class="nb-row" id="whatifGrandNecRow" style="display:none;"><span class="nb-label">Necessities &amp; expenses</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandNec">₱0.00</span></div>
         <div class="nb-row" id="whatifGrandPlRow" style="display:none;"><span class="nb-label">PayLater debts</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandPl">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandSubsRow" style="display:none;"><span class="nb-label">Subscriptions</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandSubs">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandInstsRow" style="display:none;"><span class="nb-label">Installments</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandInsts">₱0.00</span></div>
+        <div class="nb-row" id="whatifGrandSinkRow" style="display:none;"><span class="nb-label">Sinking fund reserve</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandSink">₱0.00</span></div>
         <div class="nb-row" id="whatifGrandPaidRow" style="display:none;"><span class="nb-label" title="Bills in this range you have already ticked as paid. The two lines above still show the full plan for the range; this adds back what has already left your account, so the projection stops subtracting it twice.">+ Already paid <span id="whatifGrandPaidN" style="color:var(--text3);font-size:11px;"></span></span><span style="font-family:'DM Mono',monospace; color:var(--green-text);" id="whatifGrandPaid">₱0.00</span></div>
         <div class="nb-row"><span class="nb-label">Planned purchases</span><span style="font-family:'DM Mono',monospace; color:var(--red-text);" id="whatifGrandBuy">₱0.00</span></div>
         <div class="divider"></div>
@@ -4002,7 +4009,7 @@
             <option value="always">Ticking a bill → always log it</option>
             <option value="never">Ticking a bill → never log it</option>
           </select>
-          <select id="bclPayBal" onchange="setBillPayBal(this.value)" title="A ticked bill is money you have just said actually left. This can take it out of an account balance too, so you don't have to remember to."
+          <select id="bclPayBal" onchange="setBillPayBal(this.value)" title="A ticked bill is money you have just said actually left, and a settled split is money you have just said arrived. This moves the account balance either way, so you don't have to remember to."
             style="background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius-sm); font-size:11.5px; padding:5px 8px; font-family:'Outfit',sans-serif; cursor:pointer;">
             <option value="never">…and leave balances alone</option>
             <option value="ask">…and ask to deduct it</option>
@@ -4744,7 +4751,7 @@ function calcWhatif() {
     refreshWhatifBuyRows();               // keep in-range counts current with the dates
     const buyTotal = whatifBuySum();
     const bonus    = whatifBonusAmt();
-    const { nec, pl, paid } = whatifCommitments();
+    const { nec, pl, subs, insts, sink, months, paid } = whatifCommitments();
     // Live USD→₱ preview for the bonus input (mirrors the Expenses-tab bonus).
     set('whatifBonusPHP', fxRate > 0 ? fPHP(bonus) : '₱—');
     set('whatifBonusRateNote', fxRate > 0 ? '$1 = ' + fPHP(fxRate) : 'rate not loaded');
@@ -4752,20 +4759,39 @@ function calcWhatif() {
     set('whatifBuyTotal', buyTotal > 0 ? '−' + fPHP(buyTotal) : fPHP(0));
     set('whatifNecTotal', nec > 0 ? '−' + fPHP(nec) : fPHP(0));
     set('whatifPlTotal',  pl  > 0 ? '−' + fPHP(pl)  : fPHP(0));
+    set('whatifSubsTotal',  subs  > 0 ? '−' + fPHP(subs)  : fPHP(0));
+    set('whatifInstsTotal', insts > 0 ? '−' + fPHP(insts) : fPHP(0));
+    set('whatifSinkTotal',  sink  > 0 ? '−' + fPHP(sink)  : fPHP(0));
+    // Only shown when there is one — a user with no subscriptions, no
+    // installments and no sinking funds sees the card exactly as before.
+    const showLine = (id, on) => { const r = document.getElementById(id); if (r) r.style.display = on ? 'flex' : 'none'; };
+    showLine('whatifSubsRow',  subs  > 0.005);
+    showLine('whatifInstsRow', insts > 0.005);
+    showLine('whatifSinkRow',  sink  > 0.005);
+    const mNote = document.getElementById('whatifMonthsNote');
+    if (mNote) {
+      const flat = subs > 0.005 || insts > 0.005 || sink > 0.005;
+      mNote.style.display = (flat && months > 1) ? '' : 'none';
+      mNote.textContent = 'Monthly items counted across ' + months + ' months of the range.';
+    }
+    const committed = nec + pl + subs + insts + sink;
     // Same "✓ ₱X already paid · ₱Y still to pay" line the Expenses tab
-    // sections carry, over both committed lines together.
-    setPaidNote('whatifPaidNote', paid.total, nec + pl);
+    // sections carry, over every committed line together.
+    setPaidNote('whatifPaidNote', paid.total, committed);
     const grand = document.getElementById('whatifGrand');
     if (!grand) return;
-    const showGrand = netKnown || savTotal > 0 || buyTotal > 0 || bonus > 0 || nec > 0 || pl > 0;
+    const showGrand = netKnown || savTotal > 0 || buyTotal > 0 || bonus > 0 || committed > 0;
     grand.style.display = showGrand ? 'block' : 'none';
     if (showGrand) {
-      const total = (netKnown ? netPHP : 0) + savTotal + bonus + paid.total - buyTotal - nec - pl;
+      const total = (netKnown ? netPHP : 0) + savTotal + bonus + paid.total - buyTotal - committed;
       set('whatifGrandNet', netKnown ? fPHP(netPHP) : '₱0.00');
       set('whatifGrandSav', '+ ' + fPHP(savTotal));
       set('whatifGrandBonus', '+ ' + fPHP(bonus));
       set('whatifGrandNec', '− ' + fPHP(nec));
       set('whatifGrandPl',  '− ' + fPHP(pl));
+      set('whatifGrandSubs',  '− ' + fPHP(subs));
+      set('whatifGrandInsts', '− ' + fPHP(insts));
+      set('whatifGrandSink',  '− ' + fPHP(sink));
       set('whatifGrandBuy', '− ' + fPHP(buyTotal));
       set('whatifGrandPaid', '+ ' + fPHP(paid.total));
       set('whatifGrandPaidN', paid.n ? '(' + paid.n + (paid.n === 1 ? ' bill' : ' bills') + ')' : '');
@@ -4774,6 +4800,9 @@ function calcWhatif() {
       showRow('whatifGrandBonusRow', bonus > 0.005);
       showRow('whatifGrandNecRow',   nec   > 0.005);
       showRow('whatifGrandPlRow',    pl    > 0.005);
+      showRow('whatifGrandSubsRow',  subs  > 0.005);
+      showRow('whatifGrandInstsRow', insts > 0.005);
+      showRow('whatifGrandSinkRow',  sink  > 0.005);
       showRow('whatifGrandPaidRow',  paid.total > 0.005);
       set('whatifGrandTotal', total < 0 ? '−' + fPHP(Math.abs(total)) : fPHP(total));
       const totalEl = document.getElementById('whatifGrandTotal');
@@ -4927,6 +4956,56 @@ function whatifCommitments() {
   }
   const pl = shopee + tiktok + maya;
 
+  // How many whole calendar months the window touches. Used for the flat
+  // monthly obligations below, which have no per-occurrence maths of their own.
+  const rm = whatifRangeMonths();
+  const months = rm ? (rm.to - rm.from + 1) : 1;
+
+  // How many times a day-of-month obligation lands inside the window. Same
+  // shape as necRowMult: a monthly bill is charged at least once even when its
+  // day sits outside the window, because the window is a slice of a month that
+  // still has that bill in it.
+  const hits = (day) => {
+    const d = parseInt(day) || 0;
+    if (!(d >= 1 && d <= 31) || !fromStr || !toStr) return months;
+    return countPayDay(d, fromStr, toStr) || 1;
+  };
+
+  // ─── THE OTHER THREE OBLIGATION BUCKETS ──────────────────────
+  // Until 2026-08-04e this card pulled necessities and PayLater and stopped
+  // there, while the Net Summary subtracts five things. Subscriptions,
+  // installments and the sinking-fund reserve were simply missing, so every
+  // projection read high by their total — a ₱549 subscription sat in the Net
+  // Summary and was invisible here. They are counted the same way that tab
+  // counts them, just spread across the months the window actually covers.
+  let subsSum = 0;
+  if (Array.isArray(subscriptions)) {
+    subscriptions.forEach(sub => {
+      if (!isInc(sub)) return;
+      subsSum += (parseFloat(sub.amt) || 0) * hits(sub.billingDay);
+    });
+  }
+
+  // An installment can run out inside the window, so it is charged for the
+  // months it still has left, never for more — the same question
+  // getInstsMonthlySum asks about this month, asked about each month.
+  let instsSum = 0;
+  if (Array.isArray(installments)) {
+    installments.forEach(inst => {
+      if (!isInc(inst)) return;
+      const left = instRemThisMonth(inst);
+      if (left <= 0) return;
+      instsSum += (parseFloat(inst.monthlyAmt) || 0) * Math.min(hits(inst.day), left);
+    });
+  }
+
+  // This month's reserve, held flat across the window. sinkPerMonth re-derives
+  // the figure from the gap to the due date, so asking it about a future month
+  // would quietly assume nothing had been saved in between and inflate the
+  // reserve; what you are setting aside per month now is the honest number.
+  let sinkSum = 0;
+  try { sinkSum = Math.round(sinkTotalPerMonth(ymNow()) * months * 100) / 100; } catch (e) { sinkSum = 0; }
+
   // ─── ALREADY PAID ────────────────────────────────────────────
   // A bill ticked on the checklist (or with the "paid?" chip on the
   // Expenses tab) has already left the account — and "Current savings"
@@ -4935,27 +5014,31 @@ function whatifCommitments() {
   // charged the same peso twice and the projection read low.
   //
   // Credited back on its own row for exactly the reason recalcAll does it
-  // that way (03c): the two lines above stay the FULL plan for the range,
-  // so this card keeps agreeing with the Expenses tab, and only the
-  // projected total moves. billPaidCredit is the same function the Net
-  // Summary uses, scoped to the What-If dates, so the two can never quote
-  // different credits for the same window.
+  // that way (03c): the lines above stay the FULL plan for the range, so
+  // this card keeps agreeing with the Expenses tab, and only the projected
+  // total moves. billPaidCredit is the same function the Net Summary uses,
+  // scoped to the What-If dates, so the two can never quote different
+  // credits for the same window.
   //
-  // Only the buckets What-If actually subtracts are credited — no subs,
-  // no installments, no sinking reserve, none of which this simulator
-  // deducts in the first place. Each bucket is clamped to its own
-  // deduction so a credit can never exceed what was taken off.
-  const paid = { nec: 0, pl: 0, total: 0, n: 0 };
+  // The sinking reserve has no paid state (a fund is paid out by tapping
+  // its own card, which is not a checklist tick), so it is deducted but
+  // never credited. Each other bucket is clamped to its own deduction so a
+  // credit can never exceed what was taken off.
+  const paid = { nec: 0, pl: 0, subs: 0, insts: 0, total: 0, n: 0 };
   try {
     const p = billPaidCredit(fromStr, toStr);
-    paid.nec = Math.min(p.nec, nec);
-    paid.pl  = Math.min(p.shopee, shopee) + Math.min(p.tiktok, tiktok) + Math.min(p.maya, maya);
-    paid.total = paid.nec + paid.pl;
+    paid.nec   = Math.min(p.nec,   nec);
+    paid.subs  = Math.min(p.subs,  subsSum);
+    paid.insts = Math.min(p.insts, instsSum);
+    paid.pl    = Math.min(p.shopee, shopee) + Math.min(p.tiktok, tiktok) + Math.min(p.maya, maya);
+    paid.total = paid.nec + paid.pl + paid.subs + paid.insts;
     const c = p.counts || {};
-    paid.n = (c.nec || 0) + (c.shopee || 0) + (c.tiktok || 0) + (c.maya || 0);
+    paid.n = (c.nec || 0) + (c.shopee || 0) + (c.tiktok || 0) + (c.maya || 0)
+           + (c.subs || 0) + (c.insts || 0);
   } catch (e) {}
 
-  return { nec, pl, shopee, tiktok, maya, paid };
+  return { nec, pl, shopee, tiktok, maya, subs: subsSum, insts: instsSum, sink: sinkSum,
+           months: months, paid: paid };
 }
 
 // The What-If bonus. Entered in USD (like the Expenses-tab bonus); the
@@ -6800,20 +6883,25 @@ function isPLBillingInRange(month, billingDay, startStr, endStr) {
 // Does THIS MONTH's occurrence of a necessities row actually land inside
 // the chosen date range? Only then is its obligation part of necSum, and
 // only then may a paid tick credit anything back.
-function necCurMonthCounts(row, startStr, endStr) {
-  if (!row || !isInc(row)) return false;
-  if (necRowMult(row, startStr, endStr) <= 0) return false;
-  const now = new Date(), yr = now.getFullYear(), mo = now.getMonth();
-  if (row.inst && !monthInInstRange(mo, row.instFrom, row.instTo)) return false;
+// Does THIS MONTH's occurrence of a day-of-month bill land inside the chosen
+// range — or is the range one that charges the bill anyway? The checklist
+// only ever tracks the CURRENT month, so this is the question every bucket
+// has to ask before a tick may credit anything back, whatever kind of bill
+// it is. Necessities asked it from the start; subscriptions and installments
+// did not, and credited unconditionally — so a window sitting in a future
+// month had this month's ticks credited against it and read short by the
+// whole of them ("₱0.00 still to pay" for a month nothing was paid for).
+function curMonthDayCounts(day, startStr, endStr) {
   if (!startStr || !endStr) return true;          // no range → the single count IS this month
   const start = new Date(startStr + 'T00:00:00');
   const end   = new Date(endStr   + 'T00:00:00');
   if (isNaN(start) || isNaN(end) || end < start) return false;
+  const now = new Date(), yr = now.getFullYear(), mo = now.getMonth();
   const touchesThisMonth = new Date(yr, mo + 1, 0) >= start && new Date(yr, mo, 1) <= end;
-  const day = parseInt(row.day) || 0;
-  if (day >= 1 && day <= 31) {
+  const d = parseInt(day) || 0;
+  if (d >= 1 && d <= 31) {
     const dim = new Date(yr, mo + 1, 0).getDate();
-    const c   = new Date(yr, mo, Math.min(day, dim));
+    const c   = new Date(yr, mo, Math.min(d, dim));
     if (c >= start && c <= end) return true;
     // necRowMult ends in `countPayDay(...) || 1` — a monthly bill is charged
     // ONCE even when its pay day falls outside the window (a range of "today
@@ -6822,11 +6910,19 @@ function necCurMonthCounts(row, startStr, endStr) {
     // refused the credit on a bill the same range was charging: tick it and
     // nothing moved. Where the fallback is what put the charge there, the
     // charge IS this month's occurrence, so it is creditable.
-    return countPayDay(day, startStr, endStr) === 0 && touchesThisMonth;
+    return countPayDay(d, startStr, endStr) === 0 && touchesThisMonth;
   }
   // No pay day set — the row counts once for the whole window, so the
   // credit applies as long as the window actually touches this month.
-  return new Date(yr, mo + 1, 0) >= start && new Date(yr, mo, 1) <= end;
+  return touchesThisMonth;
+}
+
+function necCurMonthCounts(row, startStr, endStr) {
+  if (!row || !isInc(row)) return false;
+  if (necRowMult(row, startStr, endStr) <= 0) return false;
+  const mo = new Date().getMonth();
+  if (row.inst && !monthInInstRange(mo, row.instFrom, row.instTo)) return false;
+  return curMonthDayCounts(row.day, startStr, endStr);
 }
 
 // Same question for a PayLater provider. isPLBillingInRange scans every
@@ -6865,7 +6961,12 @@ function billPaidCredit(startStr, endStr) {
         if (!necCurMonthCounts(necData[it.idx], startStr, endStr)) return;
         bucket = 'nec';
       } else if (it.src === 'sub') {
-        bucket = 'subs';                       // subscriptions are flat monthly, never range-scoped
+        // A subscription is charged as a flat month, but it is still THIS
+        // month's charge — and this month's tick is the only one the
+        // checklist holds. Without the range question a window in another
+        // month was handed a credit for a bill that window never charged.
+        if (!curMonthDayCounts(it.day, startStr, endStr)) return;
+        bucket = 'subs';
       } else if (it.src === 'inst') {
         // Not range-scoped — getInstsMonthlySum charges a full month whatever
         // the date range says, so a range-scoped credit would disagree with the
@@ -6877,6 +6978,10 @@ function billPaidCredit(startStr, endStr) {
         // which is what used to move the donut and the forecast on a tick.
         const instRow = (installments || []).find(x => ('inst_' + x.id) === it.key);
         if (!instRow || instRemThisMonth(instRow) <= 0) return;
+        // …and the same range question the other three buckets ask. The
+        // charge being flat-monthly says nothing about WHICH month, and a
+        // tick only ever settles the current one.
+        if (!curMonthDayCounts(it.day, startStr, endStr)) return;
         bucket = 'insts';
       } else if (it.src === 'pay') {
         const type = it.key.slice(3);          // pl_shopee → shopee
@@ -9124,9 +9229,20 @@ function maxIdIn(arr) {
 function reseedIdSeqs() {
   // Each group is guarded separately so one failure can't skip the others.
   try {
+    // sinkingFunds take their ids from planSeq like everything else on this
+    // tab but were left out of the guard, and loadPlanData assigns the array
+    // raw with no id normalisation — so a restored or hand-edited
+    // va_plan_data could hand a new fund an id an existing fund already had.
+    // sinkPayout, sinkSetHeld and renderSinkFundInfo all look up by id, and
+    // removeSinkingFund would have deleted both.
     planSeq = Math.max(planSeq,
       maxIdIn(savingsGoals) + 1, maxIdIn(wishlistItems) + 1, maxIdIn(subscriptions) + 1,
-      maxIdIn(installments) + 1, maxIdIn(personalDebts) + 1, maxIdIn(payoffDebts) + 1);
+      maxIdIn(installments) + 1, maxIdIn(personalDebts) + 1, maxIdIn(payoffDebts) + 1,
+      maxIdIn(sinkingFunds) + 1);
+    // A fund arriving without an id at all (an older payload, a partial
+    // write) would otherwise answer to `undefined` alongside every other
+    // id-less row. Stamp one on before anything looks it up.
+    (sinkingFunds || []).forEach(f => { if (f && !f.id) f.id = planSeq++; });
   } catch (e) {}
   try { ccPersonSeq = Math.max(ccPersonSeq, maxIdIn(ccPeople) + 1); } catch (e) {}
   try { hsPersonSeq = Math.max(hsPersonSeq, maxIdIn(hsPeople) + 1); } catch (e) {}
@@ -9359,22 +9475,85 @@ function sinkPayout(id) {
   const short   = Math.round((bill - fromPot) * 100) / 100;
   const dueWas  = f.dueYM;
   const every   = Math.max(1, parseInt(f.every, 10) || 12);
+  // ── AND THE BALANCE IT CAME OUT OF ───────────────────────────
+  // Until now this dropped `saved` and touched nothing else, so the 04a
+  // "Money sits in" answer silently decided whether paying an annual bill
+  // moved your net worth AT ALL: a pot held somewhere untracked was its own
+  // asset and vanished correctly, while a pot held in GCash was already
+  // inside that balance — so the premium left in real life and every figure
+  // in the app stayed exactly where it was.
+  // `held` is the user's own explicit answer to where this money sits, so it
+  // is also the answer to which balance the bill comes out of. No new setting
+  // decides it: naming an account means the app is tracking that money, and
+  // 'elsewhere' means it never was. Only what actually came OUT OF THE POT
+  // moves — the shortfall came from somewhere else by definition.
+  const heldA = sinkHeldAcct(f);
+  const moveAmt = heldA ? fromPot : 0;
   if (!confirm('Pay ' + label + ' out of its pot?\n\n'
       + 'Bill: ' + fPHP(bill) + '\n'
       + 'From the pot: ' + fPHP(fromPot)
       + (short > 0.005 ? '\nShort by: ' + fPHP(short) + ' — that part came from somewhere else' : '')
+      + (moveAmt > 0.005
+          ? '\n\n' + heldA.label + ' is where you said this pot sits, so it goes from '
+            + fPHP(heldA.bal) + ' to ' + fPHP(heldA.bal - moveAmt) + '.'
+          : '')
       + '\n\nThe pot drops and the next one is due ' + ymLabel(ymShift(dueWas, every)) + '.\n'
       + 'This is not logged as spending: the monthly reserve was already its budget line.')) return;
+  // The move is recorded ON the fund, the same way a bill's move rides on the
+  // ledger entry it wrote — that is what makes ↩ Undo below able to put the
+  // balance back rather than guess at it.
+  let movedFrom = '', movedAmt = 0;
+  if (moveAmt > 0.005 && acctApplyDelta(heldA.key, -moveAmt)) {
+    movedFrom = heldA.key; movedAmt = moveAmt;
+    acctFlushBalances();
+  }
   f.saved   = Math.round(Math.max(0, pot - fromPot) * 100) / 100;
   f.dueYM   = ymShift(dueWas, every);
-  f.lastPaid = { ym: dueWas, bill: bill, fromPot: fromPot, short: short, on: todayLocalStr() };
+  f.lastPaid = { ym: dueWas, bill: bill, fromPot: fromPot, short: short, on: todayLocalStr(),
+                 movedFrom: movedFrom, movedAmt: movedAmt };
   savePlanData();
   renderSinkingFunds();
   try { renderNetWorth(); } catch (e) {}
   try { renderLedger(); }   catch (e) {}
   recalcSoon();
   showToast('\uD83C\uDFFA ' + label + ' paid — ' + fPHP(fromPot) + ' out of the pot'
+    + (movedAmt > 0 ? ' \u00b7 taken out of ' + acctLabel(movedFrom) : '')
     + (short > 0.005 ? ' \u00b7 ' + fPHP(short) + ' short' : ''));
+}
+
+// ── PUTTING A PAYOUT BACK ─────────────────────────────────────
+// A payout now moves a real balance, so it needs a way back that does not
+// depend on remembering three figures. Offered only while the fund is still
+// standing exactly where the payout left it — if the due date has been edited
+// since, or another cycle has been paid, the button is gone rather than
+// guessing which state it should restore.
+function sinkPayoutUndoable(f) {
+  const lp = f && f.lastPaid;
+  if (!lp || !(sinkNum(lp.bill) > 0) || lp.undone) return false;
+  const every = Math.max(1, parseInt(f.every, 10) || 12);
+  return String(f.dueYM || '') === ymShift(String(lp.ym || ''), every);
+}
+
+function sinkUndoPayout(id) {
+  const f = (sinkingFunds || []).find(x => x.id === id);
+  if (!f || !sinkPayoutUndoable(f)) { showToast('Nothing to put back on this one', true); return; }
+  const lp = f.lastPaid;
+  const back = Math.max(0, sinkNum(lp.fromPot));
+  const acct = String(lp.movedFrom || '');
+  const amt  = Math.max(0, sinkNum(lp.movedAmt));
+  if (!confirm('Undo this payout?\n\n'
+      + fPHP(back) + ' goes back into the pot and it is due ' + ymLabel(lp.ym) + ' again.'
+      + (amt > 0.005 ? '\n' + acctLabel(acct) + ' gets its ' + fPHP(amt) + ' back too.' : ''))) return;
+  if (amt > 0.005 && acct && acctApplyDelta(acct, amt)) acctFlushBalances();
+  f.saved = Math.round((Math.max(0, sinkNum(f.saved)) + back) * 100) / 100;
+  f.dueYM = String(lp.ym || f.dueYM);
+  delete f.lastPaid;
+  savePlanData();
+  renderSinkingFunds();
+  try { renderNetWorth(); } catch (e) {}
+  try { renderLedger(); }   catch (e) {}
+  recalcSoon();
+  showToast('\u21A9 Payout undone \u00b7 ' + fPHP(back) + ' back in the pot');
 }
 
 function addSinkingFund() {
@@ -9459,8 +9638,13 @@ function renderSinkingFunds() {
     const lp = f.lastPaid && sinkNum(f.lastPaid.bill) > 0 ? f.lastPaid : null;
     const paidNote = lp
       ? `<div style="font-size:10.5px; color:var(--text3); margin-top:6px; line-height:1.5;">✓ Paid ${escH(fPHP(sinkNum(lp.bill)))} for ${escH(ymLabel(lp.ym))} — ${escH(fPHP(sinkNum(lp.fromPot)))} came out of the pot`
+        + (sinkNum(lp.movedAmt) > 0.005
+            ? ` · ${escH(fPHP(sinkNum(lp.movedAmt)))} taken out of <strong style="color:var(--text2);">${escH(acctLabel(String(lp.movedFrom || '')))}</strong>` : '')
         + (sinkNum(lp.short) > 0.005
             ? `<span style="color:var(--amber-text);"> · ${escH(fPHP(sinkNum(lp.short)))} of it had to come from somewhere else</span>` : '')
+        + (sinkPayoutUndoable(f)
+            ? ` <button type="button" onclick="sinkUndoPayout(${f.id})" title="Put the money back in the pot${sinkNum(lp.movedAmt) > 0.005 ? ' and back on the balance' : ''}"
+                 style="background:none; border:none; color:var(--blue); font:inherit; cursor:pointer; padding:0 2px; text-decoration:underline;">↩ undo</button>` : '')
         + `</div>`
       : '';
     const cadOpts = SINK_CADENCES.map(([v, lbl]) =>
@@ -9477,7 +9661,7 @@ function renderSinkingFunds() {
       .concat(accountsList().filter(a => a.tracked).map(a =>
         `<option value="${escH(a.key)}"${heldCur === a.key ? ' selected' : ''}>${escH(a.label)}</option>`)).join('');
     const heldNote = heldAcct
-      ? `Inside <strong style="color:var(--text2);">${escH(heldAcct.label)}</strong> \u2014 not counted again in Net Worth.`
+      ? `Inside <strong style="color:var(--text2);">${escH(heldAcct.label)}</strong> \u2014 not counted again in Net Worth, and the bill comes out of that balance when you pay it.`
       : heldCur === SINK_HELD_ELSEWHERE
         ? 'Counted as its own asset in Net Worth.'
         : (saved > 0.005
@@ -9650,33 +9834,99 @@ function recvFindPerson(q) {
   return (best && best.score >= 55) ? best : null;
 }
 
+// ── MONEY COMING BACK IN ──────────────────────────────────────
+// Every money event in the app that MOVES a balance moved it outward: a
+// transfer, a ticked bill, a sinking payout. Being paid back moved nothing,
+// so marking Mika paid dropped what you are owed out of your assets and
+// credited it nowhere — net worth fell by ₱1,000 at the moment ₱1,000
+// arrived. Same contract as a ticked bill, in the other direction: it is
+// governed by the one balances setting, it lands in the account named there,
+// and the move is recorded ON the person (`moved`, a raw field inside
+// va_receivables — it persists free, like `held` and `lastPaid`) so
+// un-ticking them takes it straight back out.
+function recvApplyIn(people, noPrompt) {
+  const list = (people || []).filter(p => p && (parseFloat(p.amt) || 0) > 0.005 && !p.moved);
+  if (!list.length) return 0;
+  if ((ledgerPrefs.payBal || 'never') === 'never') return 0;
+  const a = billPayFromAcct();
+  if (!a) return 0;
+  const amt = Math.round(list.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0) * 100) / 100;
+  if (ledgerPrefs.payBal !== 'always') {
+    if (noPrompt) return 0;                     // the chat's own card already asked once
+    if (!confirm('Also put ' + fPHP(amt) + ' into ' + a.label + '?\n\n'
+      + a.label + ' is at ' + fPHP(a.bal) + ' and would go to ' + fPHP(a.bal + amt) + '.\n\n'
+      + 'Cancel — mark them paid and leave balances alone.')) return 0;
+  }
+  if (!acctApplyDelta(a.key, amt)) return 0;
+  list.forEach(p => { p.moved = a.key; });
+  acctFlushBalances();
+  return amt;
+}
+
+// Un-ticking somebody takes back exactly what ticking them put in, into the
+// same account — never today's account, if that setting has changed since.
+function recvUnapplyIn(p) {
+  if (!p || !p.moved) return 0;
+  const amt = Math.round((parseFloat(p.amt) || 0) * 100) / 100;
+  const acct = String(p.moved);
+  delete p.moved;
+  if (!(amt > 0.005) || !acctApplyDelta(acct, -amt)) return 0;
+  acctFlushBalances();
+  return amt;
+}
+
+function recvAfterSettle() {
+  saveReceivables();
+  renderReceivables();
+  // What you are owed is an asset, so settling moves the net worth line —
+  // it just never redrew it.
+  try { renderNetWorth(); } catch (e) {}
+}
+
 function recvTogglePaid(id, idx) {
   const r = receivables.find(x => x.id === id);
   if (!r || !r.people[idx]) return;
-  r.people[idx].paid = !r.people[idx].paid;
-  saveReceivables();
-  renderReceivables();
+  const p = r.people[idx];
+  const wasAcct = String(p.moved || '');
+  p.paid = !p.paid;
+  const moved = p.paid ? recvApplyIn([p], false) : recvUnapplyIn(p);
+  recvAfterSettle();
+  if (moved > 0.005) showToast(p.paid
+    ? '\uD83D\uDCB0 ' + fPHP(moved) + ' added to ' + acctLabel(String(p.moved || ''))
+    : '\u21A9 ' + fPHP(moved) + ' taken back out of ' + acctLabel(wasAcct));
 }
 
 function recvRemove(id) {
   const r = receivables.find(x => x.id === id);
   if (!r) return;
   const out = recvOutstanding(r);
-  if (out > 0.005 && !confirm('₱' + out.toLocaleString('en-PH', { minimumFractionDigits: 2 })
-      + ' is still outstanding on "' + (r.label || 'this split') + '". Remove it anyway?')) return;
+  // Anything already settled put money into a balance, and deleting the
+  // record does not mean it never arrived — so those stay put. Said out
+  // loud rather than left to be discovered.
+  const inAcct = (r.people || []).filter(p => p.moved)
+    .reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+  const msg = (out > 0.005
+      ? fPHP(out) + ' is still outstanding on "' + (r.label || 'this split') + '". Remove it anyway?'
+      : 'Remove "' + (r.label || 'this split') + '" from what you are owed?')
+    + (inAcct > 0.005 ? '\n\nThe ' + fPHP(inAcct) + ' already settled stays on your balance — it did arrive.' : '');
+  if ((out > 0.005 || inAcct > 0.005) && !confirm(msg)) return;
   receivables = receivables.filter(x => x.id !== id);
-  saveReceivables();
-  renderReceivables();
+  recvAfterSettle();
   showToast('Removed from what you are owed');
 }
 
 function recvMarkAll(id) {
   const r = receivables.find(x => x.id === id);
   if (!r) return;
+  // Everyone who is being settled BY THIS TAP — anyone already ticked has
+  // had their share moved (or deliberately not moved) once already, and one
+  // confirm covers the whole split rather than one per name.
+  const fresh = r.people.filter(x => !x.paid);
   r.people.forEach(x => { x.paid = true; });
-  saveReceivables();
-  renderReceivables();
-  showToast('✓ ' + (r.label || 'Split') + ' fully settled');
+  const moved = recvApplyIn(fresh, false);
+  recvAfterSettle();
+  showToast('✓ ' + (r.label || 'Split') + ' fully settled'
+    + (moved > 0.005 ? ' · ' + fPHP(moved) + ' into ' + acctLabel(String((fresh[0] || {}).moved || '')) : ''));
 }
 
 // Shared by both split tabs. `totals` is the {personId: ₱owed} map each
@@ -9697,15 +9947,39 @@ function splitLogMyShare(src, people, totals, meId, label, catInput) {
   if (myShare <= 0.005 && owed <= 0.005) { showToast('Nothing to log yet', true); return; }
 
   const cat = (catInput || '').trim() || (src === 'cc' ? 'CC Split' : 'Hangout');
+  const lbl = label || (src === 'cc' ? 'CC Split' : 'Hangout');
+  const today = todayLocalStr();
+
+  // ─── DOUBLE-TAP GUARD ────────────────────────────────────────
+  // There was none, and this button writes TWO records at once. A second
+  // tap — the toast is easy to miss on a phone, and the button stays live
+  // under your thumb — silently produced two ledger entries and two
+  // receivables for one dinner. The ledger half is the damaging one: a
+  // phantom entry inflates that category's average, which then feeds
+  // drift, the cap remainder and the burn rate.
+  // The check reads the stored records rather than a flag in memory, so it
+  // survives a reload and a sync, and it asks rather than refuses: logging
+  // two genuinely separate splits with the same people on the same day is
+  // a real thing to want.
+  const dupRecv = receivables.find(r => r.src === src && r.date === today
+    && (r.label || '') === lbl && Math.abs((r.total || 0) - (myShare + owed)) < 0.005);
+  const dupLedg = (myShare > 0.005) && (ledger || []).some(e => e.src === 'split'
+    && e.date === today && Math.abs((parseFloat(e.amt) || 0) - myShare) < 0.005
+    && String(e.note || '').indexOf(lbl) === 0);
+  if (dupRecv || dupLedg) {
+    if (!confirm('You already logged "' + lbl + '" today for ' + fPHP(myShare + owed)
+      + '.\n\nLog it a second time? Tap Cancel if you only meant to tap once.')) return;
+  }
+
   let entry = null;
   if (myShare > 0.005) {
-    entry = ledgerAdd({ date: todayLocalStr(), amt: myShare, cat: cat, src: 'split',
-                        note: (label || '') + (owed > 0.005 ? ' · fronted ' + fPHP(myShare + owed) : '') });
+    entry = ledgerAdd({ date: today, amt: myShare, cat: cat, src: 'split',
+                        note: lbl + (owed > 0.005 ? ' · fronted ' + fPHP(myShare + owed) : '') });
   }
 
   if (owed > 0.005) {
     receivables.push({
-      id: recvSeq++, date: todayLocalStr(), label: label || (src === 'cc' ? 'CC Split' : 'Hangout'),
+      id: recvSeq++, date: today, label: lbl,
       src: src, total: Math.round((myShare + owed) * 100) / 100, myShare: myShare,
       people: others, ledgerId: entry ? entry.id : null,
     });
@@ -9732,6 +10006,18 @@ function ccLogMyShare() {
 
 function hsSetMe(id) { hsMeId = (hsMeId === id) ? null : id; renderHSPeople(); updateHSSummary(); saveHS(); }
 function ccSetMe(id) { ccMeId = (ccMeId === id) ? null : id; renderCCPeople(); updateCCSummary(); saveCC(); }
+
+// Is the ledger entry this receivable was logged alongside still there?
+// `ledgerId` was stamped once at creation and never looked at again, so the
+// "· in the ledger" label went on asserting it after the entry was deleted or
+// split away — a line telling you something false about your own records. It
+// is now asked live, and a link that has gone says so rather than quietly
+// disappearing, because "I deleted my share by mistake" is worth noticing.
+function recvLedgerState(r) {
+  if (!r || !r.ledgerId) return '';
+  try { return (ledger || []).some(e => e.id === r.ledgerId) ? 'in' : 'gone'; }
+  catch (e) { return ''; }
+}
 
 function renderReceivables() {
   const box = document.getElementById('recvBody');
@@ -9762,7 +10048,9 @@ function renderReceivables() {
         <span class="recv-out">${out > 0.005 ? fPHP(out) + ' owed' : '✓ settled'}</span>
         <button class="ldg-del" onclick="recvRemove(${r.id})" title="Remove">\u2715</button>
       </div>
-      <div class="recv-sub">your share ${fPHP(r.myShare || 0)} of ${fPHP(r.total || 0)}${r.ledgerId ? ' · in the ledger' : ''}</div>
+      <div class="recv-sub">your share ${fPHP(r.myShare || 0)} of ${fPHP(r.total || 0)}${
+        recvLedgerState(r) === 'in' ? ' · in the ledger'
+        : recvLedgerState(r) === 'gone' ? ' · <span style="color:var(--text3);">its ledger entry is gone</span>' : ''}</div>
       <div class="recv-chips">${chips}</div>
       ${out > 0.005 ? `<button class="recv-all" onclick="recvMarkAll(${r.id})">Mark everyone paid</button>` : ''}
     </div>`;
@@ -10984,11 +11272,13 @@ function updateBillPayUI() {
   if (note) {
     let msg = '';
     if (on && ledgerPrefs.autolog === 'never')
-      msg = '⚠ Logging is off, so nothing is written and no balance can move — the entry is what makes the move reversible.';
+      msg = '⚠ Logging is off, so a ticked bill writes nothing and cannot move a balance — the entry is what makes that move reversible. '
+          + 'Settling a split still moves money in: it never had a ledger entry to ride on, so it rides on the person instead.';
     else if (on && !billPayFromAcct())
-      msg = '⚠ Pick an account with a tracked balance, or the tick records the payment and leaves balances alone.';
+      msg = '⚠ Pick an account with a tracked balance, or ticking and settling both just record what happened and leave balances alone.';
     else if (on)
-      msg = 'Ticking a bill takes it out of ' + escH(acctLabel(ledgerPrefs.payAcct)) + '. Un-ticking or deleting the entry puts it back.';
+      msg = 'Ticking a bill takes it out of ' + escH(acctLabel(ledgerPrefs.payAcct)) + '; un-ticking or deleting the entry puts it back. '
+          + 'Marking someone paid on a split puts their share back INTO it — un-ticking them takes it out again.';
     note.innerHTML = msg;
     note.style.display = msg ? '' : 'none';
   }
@@ -11572,11 +11862,24 @@ function splitSave() {
   // The balance move rides on every part too: each reverses its own slice, so
   // the slices add back up to exactly what left the account.
   const moved = !!(ldgSplit.moved && ldgSplit.acct);
-  parts.forEach(p => ledgerAdd({
+  const madeParts = parts.map(p => ledgerAdd({
     date: ldgSplit.date, amt: p.amt, cat: p.cat, src: ldgSplit.src || 'manual',
     note: ldgSplit.note, acct: ldgSplit.acct, grp: grp,
     bill: ldgSplit.bill || '', movedFrom: moved,
   }, true));
+
+  // A receivable pointing at the row we just consumed would be left pointing
+  // at nothing — the split is a refinement of the same payment, not its
+  // deletion, so the link follows it onto the first part instead of dying.
+  if (ldgSplit.srcId && madeParts.length) {
+    try {
+      let moveds = false;
+      (receivables || []).forEach(r => {
+        if (r.ledgerId === ldgSplit.srcId) { r.ledgerId = madeParts[0].id; moveds = true; }
+      });
+      if (moveds) { saveReceivables(); renderReceivables(); }
+    } catch (e) {}
+  }
 
   // Re-splitting can change the total (the target follows the parts), and the
   // account was debited for the OLD one. Settle the difference the same way an
@@ -13622,6 +13925,33 @@ function dueSoonItems(days) {
     if (left <= days) out.push({ key: it.key, label: it.label, amt: it.amt, src: it.src,
                                  due: due, daysLeft: left, overdue: left < 0 });
   });
+
+  // ─── SINKING FUND PAYOUTS ────────────────────────────────────
+  // The one bill this banner could not see. A fund whose due month has
+  // arrived showed up on its own Plan-tab card and in the month-turn toast
+  // and nowhere else — and an annual premium you have been saving for all
+  // year is exactly the bill worth nudging about.
+  // It is NOT pushed through bclBuildItems: that would give it a checklist
+  // key, and ticking that key would do nothing to the pot while claiming
+  // the bill was settled — a second, wrong answer to "is this paid?".
+  // Instead the row carries its fund id and opens the real payout, which is
+  // the only thing that moves the money. Its due date is the 1st of the due
+  // month, so an overdue payout reads as late rather than as upcoming.
+  try {
+    (sinkingFunds || []).forEach(f => {
+      if (!isInc(f)) return;
+      if (sinkPendingCycles(f) < 1) return;
+      const ym = String(f.dueYM || '');
+      const m  = /^(\d{4})-(\d{2})$/.exec(ym);
+      const due = m ? new Date(+m[1], +m[2] - 1, 1) : new Date(today);
+      const left = Math.round((due - today) / 86400000);
+      out.push({ key: '', kind: 'sink', fid: f.id,
+                 label: (f.label || 'Sinking fund') + ' — annual bill',
+                 amt: sinkNum(f.amt), src: 'sink',
+                 due: due, daysLeft: left, overdue: left < 0 });
+    });
+  } catch (e) {}
+
   // Ascending by date puts the most overdue first, then today, then upcoming.
   return out.sort((a, b) => a.due - b.due);
 }
@@ -13643,8 +13973,14 @@ function renderDueSoon() {
       ? (lateBy === 1 ? 'yesterday · 1 day late' : lateBy + ' days late')
       : i.daysLeft === 0 ? 'today' : i.daysLeft === 1 ? 'tomorrow' : 'in ' + i.daysLeft + ' days';
     const col  = (i.overdue || i.daysLeft <= 1) ? 'var(--red-text)' : 'var(--amber-text)';
-    return `<button class="due-row${i.overdue ? ' due-late' : ''}" onclick="toggleBillCheck('${escJS(i.key)}')" title="Tick as paid">
-      <span class="due-check">${i.overdue ? '⚠' : '○'}</span>
+    // A sinking fund is paid out from its own card, not by ticking a
+    // checklist key it does not have.
+    const act = i.kind === 'sink'
+      ? `switchPage('plan'); sinkPayout(${i.fid})`
+      : `toggleBillCheck('${escJS(i.key)}')`;
+    const tip = i.kind === 'sink' ? 'Pay it from the pot' : 'Tick as paid';
+    return `<button class="due-row${i.overdue ? ' due-late' : ''}" onclick="${act}" title="${tip}">
+      <span class="due-check">${i.kind === 'sink' ? '🏺' : i.overdue ? '⚠' : '○'}</span>
       <span class="due-label">${escH(i.label)}</span>
       <span class="due-when" style="color:${col};">${MONTH_NAMES[i.due.getMonth()]} ${i.due.getDate()} · ${when}</span>
       <span class="due-amt">${fPHP(i.amt)}</span>
@@ -13660,7 +13996,9 @@ function renderDueSoon() {
       <button class="due-x" onclick="dismissDueSoon()" title="Hide until tomorrow">✕</button>
     </div>
     <div class="due-list">${rows}</div>
-    <div class="due-foot">Tap one to tick it off the bill checklist.${late.length ? ' A late bill stays here until it is ticked or the month turns.' : ''}</div>
+    <div class="due-foot">Tap one to tick it off the bill checklist.${
+      items.some(i => i.kind === 'sink') ? ' A 🏺 row is a sinking fund whose bill has landed — tapping it opens the payout on the Plan tab.' : ''
+    }${late.length ? ' A late bill stays here until it is ticked or the month turns.' : ''}</div>
   </div>`;
   el.style.display = 'block';
 }
@@ -17744,14 +18082,22 @@ function chatApplyOne(intent) {
     const hit = recvFindPerson(intent.person);
     if (!hit) return 'Nobody named "' + intent.person + '" still owes you anything.';
     let n = 0;
+    const fresh = [];
     hit.rows.forEach(row => {
       const r = (receivables || []).find(x => x.id === row.id);
-      if (r && r.people[row.idx] && !r.people[row.idx].paid) { r.people[row.idx].paid = true; n++; }
+      if (r && r.people[row.idx] && !r.people[row.idx].paid) {
+        r.people[row.idx].paid = true; fresh.push(r.people[row.idx]); n++;
+      }
     });
-    saveReceivables();
-    renderReceivables();
+    // noPrompt, exactly like the chat's pay path: its own confirm card has
+    // already asked once, so an 'ask' setting declines the move rather than
+    // stacking a browser dialog on top of it.
+    const moved = recvApplyIn(fresh, true);
+    recvAfterSettle();
     return '✓ ' + hit.name + ' marked paid on ' + n + ' split' + (n === 1 ? '' : 's') + ' — '
-      + fPHP(hit.total) + ' settled. Still owed to you overall: ' + fPHP(recvTotalOutstanding()) + '.';
+      + fPHP(hit.total) + ' settled.'
+      + (moved > 0.005 ? ' ' + fPHP(moved) + ' added to ' + acctLabel(String((fresh[0] || {}).moved || '')) + '.' : '')
+      + ' Still owed to you overall: ' + fPHP(recvTotalOutstanding()) + '.';
   }
 
   if (a === 'add' || a === 'deduct' || a === 'set') {
@@ -18542,8 +18888,13 @@ function chatFinanceContext(labelsOnly) {
       bonus_php:            money(whatifBonusAmt()),
       necessities_in_range: money(c.nec),
       paylater_in_range:    money(c.pl),
+      subscriptions_in_range: money(c.subs),
+      installments_in_range:  money(c.insts),
+      sinking_reserve_in_range: money(c.sink),
+      months_covered:       c.months,
       already_paid_in_range: { total: money(c.paid.total), bills_ticked: c.paid.n,
-                               necessities: money(c.paid.nec), paylater: money(c.paid.pl) },
+                               necessities: money(c.paid.nec), paylater: money(c.paid.pl),
+                               subscriptions: money(c.paid.subs), installments: money(c.paid.insts) },
       planned_purchases:    money(whatifBuySum()),
       projected_total:      money(chatDomNum('whatifGrandTotal')),
     };
@@ -18912,7 +19263,7 @@ function chatAISystemPrompt(parserHint) {
     'spending_ledger below is the RECORD of what actually happened; everything else is the plan. When they ask how they are doing, compare the two and name the categories that are drifting (vs_3mo_avg_pct is the drift against the last 3 months with entries). Never present a budget figure as if it were actual spending, or the reverse.',
     'To CORRECT something, prefer editentry over deleting and re-adding: an edit keeps the entry\'s date order and its provenance (whether it came from a receipt, the chat or a bill tick), and a delete throws both away. Undo now covers the ledger, but only one step back, so never delete anything the user did not name.',
     'owed_to_you is what OTHER people still owe from splits the user paid for. Their own share of each of those splits is already in the spending ledger, so an outstanding amount here is money coming IN, never an expense and never something to log. Use settle when they say someone paid them back.',
-    'A sinking fund with payout_due true has reached its due month and is waiting for the user to tap \u201cPaid it\u201d on the Plan tab — nothing has left the pot yet, so the money is still counted. Say so if they ask what is outstanding. '
+    'A sinking fund with payout_due true has reached its due month and is waiting for the user to tap \u201cPaid it\u201d on the Plan tab — nothing has left the pot yet, so the money is still counted. Say so if they ask what is outstanding. When they do pay it and the fund names an account in held_in, that account\u2019s balance drops by whatever came out of the pot; a fund held somewhere untracked simply stops being counted. Either way net worth falls by the bill once, never twice. '
       + 'sinking_funds are once-a-year bills being saved for monthly. Quote reserve_this_month when they ask what a fund costs per month and remaining when they ask what is left to save. The reserve is already deducted in net_summary and monthly_committed.sinking_reserve; the bill itself is paid out of set_aside in its due month, so never add both together or describe the fund as an extra bill on top.',
     'Ticking an installment off also takes one month off its remaining count, and un-ticking puts it back — installments_list.remaining is therefore live, not something the user has to maintain by hand.',
     'monthly_committed.already_paid is what the user has ALREADY settled this month, ticked on the Bill Payment Checklist or with the paid? chip on the Expenses tab. Every other figure in monthly_committed is the full plan and still counts these bills. net_summary has already credited them back, so never subtract already_paid from it again. When asked what is still owed, subtract already_paid from the relevant plan figure and say which bills are ticked.',
@@ -19728,7 +20079,9 @@ function chatPreviewOne(intent) {
       line: 'Mark <b>' + escH(hit.name) + '</b> paid — <b>' + fPHP(hit.total) + '</b> across '
             + hit.rows.length + ' split' + (hit.rows.length === 1 ? '' : 's'),
       sub: hit.rows.map(r => r.label + ' ' + fPHP(r.amt)).join(' · ')
-           + ' · your own share stays in the ledger, nothing there changes',
+           + ' · your own share stays in the ledger, nothing there changes'
+           + ((ledgerPrefs.payBal || 'never') === 'always' && billPayFromAcct()
+               ? ' · ' + fPHP(hit.total) + ' goes into ' + billPayFromAcct().label : ''),
     };
   }
   if (a === 'move') {
