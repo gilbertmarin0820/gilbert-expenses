@@ -2135,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-05a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-05b</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -4461,6 +4461,23 @@ let fetching = false;
 
 // ─── QUICK BALANCE SYNC STATE (hoisted) ────────────────────────
 let quickBalances = {};
+// ── WHICH SINKING PAYOUTS ARE CURRENTLY APPLIED TO A BALANCE ──
+// A payout writes the fund into va_plan_data and the balance into
+// va_payroll_data — two keys with two SEPARATE undo stacks (see UNDO_KEYS),
+// so either Undo used to rewind one half and leave the other standing: the
+// header Undo put the ₱12,000 back on the balance while the fund still said
+// paid (and still offered its ↩ link, which then credited a second ₱12,000),
+// and the Plan ⟲ put the pot back while the balance stayed down.
+// This stamp lives INSIDE va_payroll_data, so it is restored by exactly the
+// same undo that restores the balance it describes. sinkReconcilePayouts()
+// compares it against what each fund's lastPaid claims and puts the two back
+// in step — the same invariant instReconcileCounts holds for installments.
+// Shape: { [fundId]: { ym, acct, amt } }.
+let sinkMoves = {};
+// False until a save containing the key has actually been read — see
+// sinkAdoptExistingMoves(), which is what stops a pre-05b payout from being
+// charged to the balance a second time.
+let _sinkMovesLoaded = false;
 
 // ─── BILL CHECKLIST STATE (hoisted) ────────────────────────────
 let billChecks = { period: '', checks: {} };
@@ -6004,6 +6021,10 @@ function undoRestoreBundle(k) {
   // invariant on instReconcileCounts. Runs before the redraws so they show the
   // reconciled figure.
   try { if (instReconcileCounts()) { recalcAll(); } } catch (e) {}
+  // Same problem, same answer, for a sinking payout: this undo has just put a
+  // balance back that the fund still says it paid out. See the invariant on
+  // sinkReconcilePayouts.
+  try { if (sinkReconcilePayouts()) { recalcAll(); try { renderSinkingFunds(); } catch (e) {} } } catch (e) {}
   try { renderBillChecklist(); } catch (e) {}
   try { renderDueSoon(); }       catch (e) {}
   // The paid chips live on the Expenses rows, which restoreState does not
@@ -6043,6 +6064,7 @@ function _saveDataDirect() {
       plMaya: plData.maya,
       savingsItems: savingsItems,
       quickBalances: quickBalances,
+      sinkMoves: sinkMoves,
     };
     localStorage.setItem('va_payroll_data', JSON.stringify(data));
   } catch(e) { console.warn('Save failed', e); }
@@ -6107,6 +6129,11 @@ function restoreState(data) {
   plData.maya   = Array.isArray(data.plMaya)    ? data.plMaya    : [];
   savingsItems  = Array.isArray(data.savingsItems) ? data.savingsItems : [];
   quickBalances = (data.quickBalances && typeof data.quickBalances === 'object') ? data.quickBalances : {};
+  // Any key added to the payload has to be added here too, or an undo silently
+  // drops it (the 29b hsNormalizeData lesson) — and dropping this one would
+  // leave a real balance move with nothing recording that it was applied.
+  sinkMoves = (data.sinkMoves && typeof data.sinkMoves === 'object') ? data.sinkMoves : {};
+  _sinkMovesLoaded = !!(data.sinkMoves && typeof data.sinkMoves === 'object');
   _isLoading = false;
   renderNec();
   renderPL('shopee');
@@ -6581,6 +6608,7 @@ function loadData() {
     if (Array.isArray(data.plMaya))   plData.maya   = data.plMaya;
     if (Array.isArray(data.savingsItems)) savingsItems = data.savingsItems;
     if (data.quickBalances && typeof data.quickBalances === 'object') quickBalances = data.quickBalances;
+    if (data.sinkMoves && typeof data.sinkMoves === 'object') { sinkMoves = data.sinkMoves; _sinkMovesLoaded = true; }
     // Call setMode last: now that all inputs are set, the saveData() it
     // triggers will correctly persist the restored state.
     if (data.payMode) { payMode = data.payMode; setMode(data.payMode); }
@@ -9389,7 +9417,15 @@ function sinkHeldAcct(f) {
     const key = String((f && f.held) || '');
     if (!key || key === SINK_HELD_ELSEWHERE) return null;
     const a = (typeof acctFind === 'function') ? acctFind(key) : null;
-    return (a && a.tracked) ? a : null;
+    // `tracked` alone was not the question. accountsList marks a savings-derived
+    // account tracked:true even when every one of its rows is EXCLUDED — the
+    // account exists, but its balance is 0 and `si` is null because nothing in
+    // it counts towards savings. A pot held there was skipped from net worth as
+    // "already inside a counted balance" when it was inside no counted balance
+    // at all: a ₱12,000 pot with ₱0 assets, no unplaced-pot warning, and a
+    // payout confirm promising a move acctApplyDelta then refused (it requires
+    // si !== null too). Ask for the balance, not for the label.
+    return (a && a.tracked && a.si !== null) ? a : null;
   } catch (e) { return null; }
 }
 
@@ -9467,6 +9503,10 @@ function sinkPendingTotal() {
 function sinkPayout(id) {
   const f = (sinkingFunds || []).find(x => x.id === id);
   if (!f) return;
+  // An excluded fund is out of the reserve, out of net worth and out of the
+  // due-soon nudge (sinkPendingTotal and dueSoonItems both ask this) — it must
+  // not still be able to drain a pot and move a real balance from its card.
+  if (!isInc(f)) { showToast('This fund is switched off — turn it back on first', true); return; }
   if (sinkPendingCycles(f) < 1) { showToast('Not due yet — nothing to pay out', true); return; }
   const label  = String(f.label || 'this fund').trim() || 'this fund';
   const bill   = sinkNum(f.amt);
@@ -9505,6 +9545,10 @@ function sinkPayout(id) {
   let movedFrom = '', movedAmt = 0;
   if (moveAmt > 0.005 && acctApplyDelta(heldA.key, -moveAmt)) {
     movedFrom = heldA.key; movedAmt = moveAmt;
+    // Stamped on the PAYROLL side before the flush that persists it, so the
+    // record of "this debit is currently applied" travels with the balance
+    // through an undo instead of with the fund. See sinkReconcilePayouts().
+    sinkMoves[f.id] = { ym: String(dueWas || ''), acct: movedFrom, amt: movedAmt };
     acctFlushBalances();
   }
   f.saved   = Math.round(Math.max(0, pot - fromPot) * 100) / 100;
@@ -9544,7 +9588,12 @@ function sinkUndoPayout(id) {
   if (!confirm('Undo this payout?\n\n'
       + fPHP(back) + ' goes back into the pot and it is due ' + ymLabel(lp.ym) + ' again.'
       + (amt > 0.005 ? '\n' + acctLabel(acct) + ' gets its ' + fPHP(amt) + ' back too.' : ''))) return;
-  if (amt > 0.005 && acct && acctApplyDelta(acct, amt)) acctFlushBalances();
+  if (amt > 0.005 && acct && acctApplyDelta(acct, amt)) {
+    delete sinkMoves[f.id];          // the debit is no longer applied
+    acctFlushBalances();
+  } else {
+    delete sinkMoves[f.id];
+  }
   f.saved = Math.round((Math.max(0, sinkNum(f.saved)) + back) * 100) / 100;
   f.dueYM = String(lp.ym || f.dueYM);
   delete f.lastPaid;
@@ -9554,6 +9603,81 @@ function sinkUndoPayout(id) {
   try { renderLedger(); }   catch (e) {}
   recalcSoon();
   showToast('\u21A9 Payout undone \u00b7 ' + fPHP(back) + ' back in the pot');
+}
+
+// ── KEEPING THE POT AND THE BALANCE IN STEP ───────────────────
+// THE INVARIANT: the balance move a fund's `lastPaid` describes is applied to
+// that account exactly once while the payout stands, and not at all once it
+// does not. The FUND is the truth — it is the record you can see on screen —
+// and the balance follows it.
+// This is needed because a payout writes two keys with two separate undo
+// stacks (see the note on sinkMoves), so either Undo rewinds one half:
+//   • header Undo → balance back up, fund still paid → re-apply the debit
+//   • Plan ⟲      → fund unpaid again, balance still down → credit it back
+// Without this, the header Undo left the money back on the balance AND the ↩
+// link on the card still armed, so a second tap credited the same peso twice.
+// Same shape as instReconcileCounts: it only ever moves an amount one of these
+// two functions itself recorded, so it can neither invent a payment nor touch
+// money it did not move.
+function sinkMoveExpected(f) {
+  const lp = f && f.lastPaid;
+  if (!lp || lp.undone) return null;
+  const amt  = Math.round(Math.max(0, sinkNum(lp.movedAmt)) * 100) / 100;
+  const acct = String(lp.movedFrom || '');
+  if (!(amt > 0.005) || !acct) return null;
+  return { ym: String(lp.ym || ''), acct: acct, amt: amt };
+}
+
+function sinkMoveSame(want, have) {
+  return !!want && !!have && want.ym === String(have.ym || '')
+    && want.acct === String(have.acct || '')
+    && Math.abs(want.amt - (parseFloat(have.amt) || 0)) < 0.005;
+}
+
+// Data saved before this build has no sinkMoves at all, and every payout
+// standing in it HAS been applied — that is what put the balance where it is.
+// Adopting them once is the only safe reading; reconciling against an empty
+// stamp instead would debit every one of them a second time.
+function sinkAdoptExistingMoves() {
+  if (_sinkMovesLoaded) return false;
+  let n = 0;
+  (sinkingFunds || []).forEach(f => {
+    const want = sinkMoveExpected(f);
+    if (want) { sinkMoves[f.id] = want; n++; }
+  });
+  _sinkMovesLoaded = true;
+  if (n) { try { saveData(); } catch (e) {} }
+  return n > 0;
+}
+
+function sinkReconcilePayouts() {
+  sinkAdoptExistingMoves();
+  let changed = false;
+  const live = {};
+  (sinkingFunds || []).forEach(f => {
+    live[String(f.id)] = true;
+    const want = sinkMoveExpected(f);
+    const have = sinkMoves[f.id];
+    if (sinkMoveSame(want, have)) return;             // already in step
+    if (have) {                                        // take the old one back off
+      const amt  = Math.round((parseFloat(have.amt) || 0) * 100) / 100;
+      const acct = String(have.acct || '');
+      if (amt > 0.005 && acct && acctApplyDelta(acct, amt)) changed = true;
+      delete sinkMoves[f.id];
+    }
+    if (want && acctApplyDelta(want.acct, -want.amt)) {
+      sinkMoves[f.id] = want; changed = true;
+    }
+  });
+  // A stamp whose fund is gone: the fund record was deleted, but deleting it
+  // never meant the bill was refunded, so the balance is left exactly as it
+  // is and only the orphaned stamp is dropped.
+  Object.keys(sinkMoves).forEach(k => { if (!live[k]) delete sinkMoves[k]; });
+  if (changed) {
+    acctFlushBalances();
+    try { renderNetWorth(); } catch (e) {}
+  }
+  return changed;
 }
 
 function addSinkingFund() {
@@ -9628,7 +9752,10 @@ function renderSinkingFunds() {
     const barColor = done ? 'var(--green)' : gap < 0 ? 'var(--red)'
                    : pct >= 60 ? 'var(--blue)' : pct >= 30 ? 'var(--amber)' : 'var(--red)';
     // A pot whose bill has landed is waiting on a tap, not on the calendar.
-    const pending = sinkPendingCycles(f);
+    // An excluded fund is out of the reserve, out of net worth and out of the
+    // due-soon nudge, so it does not get a "Paid it" button either — the card
+    // and sinkPayout now ask the same question the rest of the app asks.
+    const pending = isInc(f) ? sinkPendingCycles(f) : 0;
     const when = gap < 0  ? '⚠️ was due ' + ymLabel(f.dueYM)
                : gap === 0 ? 'due this month'
                : gap === 1 ? 'due next month'
@@ -14987,6 +15114,10 @@ function planUndo() {
     if (cs) cs.value = typeof d.cfStartBal === 'string' ? d.cfStartBal : '';
     const cu = document.getElementById('cfUseSavings');
     if (cu) cu.checked = !!d.cfUseSavings;
+    // The other half of the same invariant: this undo may have just put a pot
+    // back that a balance is still short of. Runs BEFORE the redraws so the
+    // cards below show the reconciled figures.
+    try { sinkReconcilePayouts(); } catch (e) {}
     // Re-render all Plan sections
     renderGoals();
     renderSinkingFunds();
