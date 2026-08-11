@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v34';
+const CACHE = 'gilbert-expenses-v35';
 
 const APP_SHELL = [
   './',
@@ -88,8 +88,18 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
+        // Offline. The static branch below was given a real 504 in 03d for
+        // exactly this reason and this branch was left as it was: with nothing
+        // cached — storage pressure evicted it, an install that never
+        // completed, a navigation to a path the shell does not cover — both
+        // matches miss and respondWith is handed `undefined`, which throws
+        // inside the fetch handler and surfaces as an opaque network error
+        // instead of a page. Always end on a Response.
         .catch(() =>
-          caches.match(req).then((hit) => hit || caches.match('./index.html'))
+          caches.match(req)
+            .then((hit) => hit || caches.match('./index.html'))
+            .then((hit) => hit || offlineResponse(req))
+            .catch(() => offlineResponse(req))
         )
     );
     return;

@@ -2135,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-05b</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-11a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -13730,7 +13730,20 @@ function netWorthNow() {
   } catch (e) {}
   // Money owed to you from splits you fronted is an asset until it arrives.
   try { assets += recvTotalOutstanding(); } catch (e) {}
-  try { (personalDebts || []).forEach(d => { if (isInc(d) && d.type !== 'lent') liabilities += parseFloat(d.amt) || 0; }); } catch (e) {}
+  // …and so is money you lent someone directly. A Personal Debts row of type
+  // 'lent' was counted NOWHERE here: an 'owe' row became a liability, a split
+  // receivable became an asset, and the one remaining kind fell through the
+  // gap — while the Net Summary shows it on its own "+ Owed to you" row and
+  // the donut plots it as income. The card's own label already promised it
+  // ("Assets (savings + pots + owed to you)"), so this makes the three screens
+  // agree rather than changing what any of them means.
+  try {
+    (personalDebts || []).forEach(d => {
+      if (!isInc(d)) return;
+      const a = parseFloat(d.amt) || 0;
+      if (d.type === 'lent') assets += a; else liabilities += a;
+    });
+  } catch (e) {}
   try { (payoffDebts || []).forEach(d => { liabilities += parseFloat(d.bal) || 0; }); } catch (e) {}
   return {
     assets: Math.round(assets * 100) / 100,
@@ -14169,6 +14182,24 @@ function forecastMonthCommitted(offset, instOnly = false) { // offset 0 = curren
     // with N months left still bills in offsets 0 … N-1.
     if (moAmt > 0 && rem > offset) total += moAmt;
   });
+
+  // ── PAYLATER ─────────────────────────────────────────────────
+  // This was the one obligation bucket missing here, and this function is the
+  // ONLY thing feeding wishMonthlyFree() — so every "N paydays away" figure on
+  // the Wishlist was computed against an income that still had the Shopee,
+  // TikTok and Maya bills sitting in it. The Net Summary, updateHealthStats'
+  // burn, ledgerBudgetLines and the What-If card all subtract them, so the
+  // wishlist was the single screen quoting a different free-to-spend. Same
+  // class as the 04e What-If gap: one re-derivation site short a bucket.
+  // Rows are keyed by month index exactly the way ledgerBudgetLines reads
+  // them, so the two agree line for line. Skipped under instOnly, which drives
+  // the installments-only 3-month forecast card.
+  if (!instOnly) {
+    ['shopee', 'tiktok', 'maya'].forEach(k => {
+      total += ((plData && plData[k]) || []).reduce((s, r) =>
+        s + ((isInc(r) && r.month === mo) ? (parseFloat(r.amt) || 0) : 0), 0);
+    });
+  }
 
   // The sinking-fund reserve for that month is money you have committed, so
   // free-to-spend and the wishlist paydays-away figures must see it. Skipped
@@ -17185,9 +17216,13 @@ function saveIntCalc() {
 
 function loadIntCalc() {
   // Sensible defaults: today → +30 days
+  // toISOString is UTC, which is why the app has todayLocalStr() at all: in
+  // Manila every hour before 8 AM it returns YESTERDAY, so the calculator
+  // opened on a start date one day behind the rest of the app.
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                 + '-' + String(d.getDate()).padStart(2, '0');
   const today = new Date();
-  const plus30 = new Date(today.getTime() + 30 * 86400000);
-  const iso = d => d.toISOString().slice(0, 10);
+  const plus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
   document.getElementById('intStart').value = iso(today);
   document.getElementById('intEnd').value   = iso(plus30);
 
