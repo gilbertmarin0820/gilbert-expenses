@@ -2135,7 +2135,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-11a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-17a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -13445,9 +13445,15 @@ function renderLedger() {
   // A cap that shares its name with a bill merges into one line, so the raw
   // line budget is part money you owe. Only the cap half is an allowance, and
   // only spend beyond the bill counts against it.
+  // .map(capSpendable) passed Array.map's INDEX as capSpendable's `ym`, so the
+  // first cap read ledgerViewYM by accident (0 is falsy) and every cap after it
+  // was priced against a garbage month: its rollover carry vanished and its
+  // bill/cap split came from ledgerBudgetLines(1). The headline then disagreed
+  // with the per-cap bars a few lines below — two authoritative figures on one
+  // screen, the 28b class. The month is passed explicitly now.
   const capParts = bva.lines
     .filter(l => (l.src || '').indexOf('cap') !== -1 && l.budget > 0)
-    .map(capSpendable)
+    .map(l => capSpendable(l, ym))
     .filter(p => p.budget > 0.005);
   if (capParts.length && isCur) {
     const capBudget = capParts.reduce((s, p) => s + p.budget, 0);
@@ -13710,10 +13716,29 @@ function saveNetWorth(pts) {
   } catch (e) {}
 }
 
+// The savings figure the rest of the app quotes. Allocations auto-sync into
+// #savingsInput (updateSavingsSummary), so with any allocation the two are the
+// same number and summing the rows is exact. With NO allocations the typed
+// balance is the only record there is — and netWorthNow used to sum an empty
+// list and call it zero, so a ₱50,000 balance read as ₱0 of assets while the
+// Net Summary, What-If and Emergency Fund all showed it. Worse, nwCapture then
+// froze that wrong point into va_networth for good once the month turned.
+function nwSavingsBalance() {
+  let total = 0, n = 0;
+  try {
+    (savingsItems || []).forEach(it => { if (isInc(it)) { total += parseFloat(it.amt) || 0; n++; } });
+  } catch (e) {}
+  if (n) return total;
+  const el = document.getElementById('savingsInput');
+  if (!el) return total;
+  const typed = parseFloat(String(el.value == null ? '' : el.value).replace(/[^0-9.\-]/g, ''));
+  return isFinite(typed) ? typed : total;
+}
+
 function netWorthNow() {
   let assets = 0, liabilities = 0;
-  // Savings allocations you count — the same set the Net Summary uses.
-  try { (savingsItems || []).forEach(it => { if (isInc(it)) assets += parseFloat(it.amt) || 0; }); } catch (e) {}
+  // Savings you count — the same figure the Net Summary shows.
+  try { assets += nwSavingsBalance(); } catch (e) {}
   // Sinking pots are real money already set aside — but only when that money
   // is not still inside a balance counted on the line above. A pot held in a
   // tracked account is already in that account's figure; adding it here would
@@ -14855,11 +14880,23 @@ function getCashFlowEvents(year, month) {
   // Money that leaves every month like any other bill — it simply had nowhere
   // to say when, until the day field landed.
   if (typeof installments !== 'undefined') {
+    // The calendar can be walked into any month, so "is there anything left"
+    // is not the question — "does this plan still reach THAT month" is. Asking
+    // only rem > 0 billed a plan on its final month again in every future
+    // month for ever, and the running balance below subtracted money that will
+    // never leave. ledgerBudgetLines has asked it this way since 04b; this
+    // consumer was missed. Past months are assumed to have been billing, same
+    // as there.
+    const instOff = (function () {
+      try { return ymOffsetFromNow(year + '-' + String(month + 1).padStart(2, '0')); }
+      catch (e) { return 0; }
+    })();
     installments.forEach(inst => {
       if (!isInc(inst)) return;
       // Month-start count — a payment ticked earlier today has already left
       // the account, so the event belongs on the calendar it was paid on.
-      if (instRemThisMonth(inst) <= 0) return;            // finished — nothing left to pay
+      const instRem = instRemThisMonth(inst);
+      if (!(instOff < 0 || instRem > instOff)) return;    // this month is past its last payment
       const day = parseInt(inst.day) || 0;
       const amt = parseFloat(inst.monthlyAmt) || 0;
       if (day >= 1 && day <= 31 && amt > 0 && (inst.name || '').trim())
@@ -15529,9 +15566,14 @@ function billMaybeLog(key, noPrompt) {
   const entry = ledgerAdd({
     date: todayLocalStr(), amt: item.amt, cat: item.label,
     src: 'bill', bill: key, note: 'ticked off the bill checklist',
-    // Tag the account only when the move is switched on — an entry that names
-    // an account it never actually left would misreport per-account spend.
-    acct: ((ledgerPrefs.payBal || 'never') !== 'never' && billPayFromAcct()) ? billPayFromAcct().key : '',
+    // NO account yet. This used to be stamped here, BEFORE billApplyBalance
+    // asks — so declining the 'ask' confirm left a row naming an account the
+    // money never left, and per-account spend over-reported against a balance
+    // that had not moved. billApplyBalance sets it at the moment the debit is
+    // actually applied, which is the same moment it sets movedFrom, so the tag
+    // and the move can never disagree. A declined move leaves the row
+    // untagged — the ✎ editor and "Guess from my habits" both still set one.
+    acct: '',
   });
   billApplyBalance(entry, noPrompt);
   showToast('\uD83D\uDCCB Logged ' + fPHP(entry.amt) + ' — ' + entry.cat

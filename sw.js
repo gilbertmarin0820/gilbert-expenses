@@ -15,7 +15,13 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v35';
+const CACHE = 'gilbert-expenses-v36';
+
+// How long a page load waits for the network before falling back to the cached
+// shell. Long enough that a normal mobile connection is never cut short, short
+// enough that a stalled one doesn't hold a blank screen. The request itself
+// carries on in the background and still refreshes the cache.
+const NAV_TIMEOUT_MS = 3000;
 
 const APP_SHELL = [
   './',
@@ -72,10 +78,16 @@ self.addEventListener('fetch', (event) => {
   // straight to the network — never cached, never intercepted.
   if (url.origin !== self.location.origin) return;
 
-  // ── App shell: NETWORK FIRST ──────────────────────────────────
+  // ── App shell: NETWORK FIRST, WITH A DEADLINE ────────────────
+  // Network-first had no timeout, so "online but useless" — a captive portal,
+  // a stalled mobile connection, a hotel wifi that accepts the socket and
+  // never answers — left the app on a blank screen until the browser gave up,
+  // minutes later, with a perfectly good copy sitting in the cache the whole
+  // time. Offline was always handled; this is the case in between. The fetch
+  // is NOT abandoned when the deadline passes: it keeps running and still
+  // refreshes the cache, so the next open has the new version.
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
-    event.respondWith(
-      fetch(req)
+    const net = fetch(req)
         .then((res) => {
           // ONLY a real page gets written over the cached shell. Without this
           // check a 404 or 502 from the host — a bad deploy, a paused Pages
@@ -87,21 +99,33 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE).then((cache) => cache.put(req, copy));
           }
           return res;
-        })
-        // Offline. The static branch below was given a real 504 in 03d for
-        // exactly this reason and this branch was left as it was: with nothing
-        // cached — storage pressure evicted it, an install that never
-        // completed, a navigation to a path the shell does not cover — both
-        // matches miss and respondWith is handed `undefined`, which throws
-        // inside the fetch handler and surfaces as an opaque network error
-        // instead of a page. Always end on a Response.
-        .catch(() =>
-          caches.match(req)
-            .then((hit) => hit || caches.match('./index.html'))
-            .then((hit) => hit || offlineResponse(req))
-            .catch(() => offlineResponse(req))
-        )
-    );
+        });
+
+    // Offline, or slower than the deadline. The static branch below was given
+    // a real 504 in 03d for exactly this reason and this branch was left as it
+    // was: with nothing cached — storage pressure evicted it, an install that
+    // never completed, a navigation to a path the shell does not cover — both
+    // matches miss and respondWith is handed `undefined`, which throws inside
+    // the fetch handler and surfaces as an opaque network error instead of a
+    // page. Always end on a Response. When nothing is cached there is nothing
+    // better to answer with, so it waits for the network after all rather than
+    // showing a 504 to somebody who is merely on a slow connection.
+    const fromCache = () =>
+      caches.match(req)
+        .then((hit) => hit || caches.match('./index.html'))
+        .then((hit) => hit || net.catch(() => null))
+        .then((hit) => hit || offlineResponse(req))
+        .catch(() => offlineResponse(req));
+
+    event.respondWith(new Promise((resolve) => {
+      let settled = false;
+      const done = (res) => { if (!settled) { settled = true; resolve(res); } };
+      const timer = setTimeout(() => { fromCache().then(done, () => done(offlineResponse(req))); }, NAV_TIMEOUT_MS);
+      net.then(
+        (res) => { clearTimeout(timer); done(res); },
+        ()    => { clearTimeout(timer); fromCache().then(done, () => done(offlineResponse(req))); }
+      );
+    }));
     return;
   }
 
