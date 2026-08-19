@@ -566,7 +566,13 @@
      history is empty) so the display and keypad below it never jump when
      the first result lands or the history is cleared. Chips never wrap and
      never shrink — they scroll sideways instead. */
-  .calc-tape-row  { display: flex; align-items: center; gap: 6px; height: 34px; margin-bottom: 8px; }
+  .calc-tape-row  {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+    /* Locked from all three directions: a flex parent must not squeeze it,
+       and a tall chip must not stretch it. */
+    height: 34px; min-height: 34px; max-height: 34px;
+    flex: 0 0 34px; box-sizing: border-box;
+  }
   .calc-tape-fade { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; }
   .calc-tape-fade::before,
   .calc-tape-fade::after {
@@ -603,6 +609,41 @@
     padding: 5px 8px; cursor: pointer; transition: opacity 0.15s;
   }
   .calc-tape-clear:disabled { opacity: 0.3; cursor: default; }
+
+  /* CALCULATOR DISPLAY — FIXED HEIGHT, NEVER RESIZES.
+     Both lines used to wrap (word-break:break-all on a min-height box), so
+     the whole calculator grew and shrank as you worked: a long expression
+     pushed the keypad down a row, and tapping a history chip with a long
+     result pushed it down two. The box is now a fixed height and each line
+     stays on ONE line — the expression scrolls to its tail, the screen
+     scales its own font down until the number fits (calcFitScreen). */
+  .calc-display {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 10px;
+    text-align: right; display: flex; flex-direction: column;
+    justify-content: flex-end; gap: 4px;
+    height: 84px; min-height: 84px; max-height: 84px;
+    box-sizing: border-box; overflow: hidden;
+  }
+  .calc-display-top {
+    display: flex; align-items: center; gap: 8px;
+    height: 18px; min-height: 18px; flex: 0 0 18px; overflow: hidden;
+  }
+  #calcExpr {
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3);
+    flex: 1 1 auto; min-width: 0; text-align: right; line-height: 18px;
+    white-space: nowrap; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  #calcScreen {
+    font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500;
+    color: var(--text); outline: none; cursor: text; caret-color: var(--teal);
+    flex: 0 0 auto; line-height: 1.25; white-space: nowrap;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  #calcExpr::-webkit-scrollbar,
+  #calcScreen::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
   /* MONTHLY TRACKER */
   .trkr-mode-row   { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -2135,7 +2176,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-17a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-19a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -3273,28 +3314,25 @@
           <button id="calcTapeClear" onclick="clearCalcTape()" title="Clear calculation history"
             class="calc-tape-clear">✕</button>
         </div>
-        <div id="calcDisplay" style="
-          background:var(--surface2); border:1px solid var(--border);
-          border-radius:var(--radius-sm); padding:12px 16px;
-          margin-bottom:10px; text-align:right; min-height:64px;
-          display:flex; flex-direction:column; justify-content:flex-end; gap:4px;">
-          <div style="display:flex; align-items:center; gap:8px; min-height:16px;">
-            <span id="calcMemInd" style="display:none; font-family:'DM Mono',monospace; font-size:11px; color:var(--amber-text); border:1px solid var(--amber); border-radius:4px; padding:0 5px; flex-shrink:0;" title="A value is stored in memory — MR recalls it">M</span>
-            <div id="calcExpr" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); flex:1; text-align:right; word-break:break-all;"></div>
+        <!-- Fixed-height display — see .calc-display in the stylesheet. Neither
+             line wraps, so nothing below this box ever moves. -->
+        <div id="calcDisplay" class="calc-display">
+          <div class="calc-display-top">
+            <span id="calcMemInd" style="display:none; font-family:'DM Mono',monospace; font-size:11px; line-height:16px; color:var(--amber-text); border:1px solid var(--amber); border-radius:4px; padding:0 5px; flex-shrink:0;" title="A value is stored in memory — MR recalls it">M</span>
+            <div id="calcExpr"></div>
           </div>
           <div id="calcScreen"
             contenteditable="true"
             inputmode="decimal"
             spellcheck="false"
             autocorrect="off"
-            style="font-family:'DM Mono',monospace; font-size:28px; font-weight:500; color:var(--text); word-break:break-all; outline:none; cursor:text; caret-color:var(--teal);"
           >0</div>
         </div>
         <div style="display:flex; justify-content:flex-end; margin:-2px 0 8px;">
           <button onclick="calcUseAsExpense()" title="Add the current result as a new row in Necessities &amp; Expenses"
             style="background:var(--surface2); border:1px dashed var(--border2); color:var(--text2); border-radius:var(--radius-sm); font-size:11px; padding:5px 12px; cursor:pointer;">₱ Add as expense</button>
         </div>
-        <div id="calcKbHint" style="display:none; font-size:10px; color:var(--text3); text-align:right; margin:-4px 0 8px;">&#9000; Keyboard ready &mdash; digits &middot; + &minus; &times; &divide; ^ % &middot; Enter = &middot; Esc AC &middot; Backspace &#9003;</div>
+        <div id="calcKbHint" style="display:none; font-size:10px; color:var(--text3); text-align:right; margin:-4px 0 8px;">&#9000; Keyboard ready &mdash; digits &middot; + &minus; &times; &divide; ^ % ( ) &middot; Enter = &middot; Esc AC &middot; Backspace &#9003;</div>
         <!-- 7-column scientific grid -->
         <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">
           <!-- Row 0: Deg/Rad toggle + x! + ( + ) + % + AC -->
@@ -7319,8 +7357,61 @@ let calcJustEq  = false;
 let calcLastAns = 0;
 let calcIsDeg   = true;   // true=degrees, false=radians
 let calcIsInv   = false;  // true=inverse trig mode
-let calcParenDepth = 0;   // simple open-paren counter
-let calcExprStack  = [];  // pending paren expression stack
+let calcParenDepth = 0;   // open-paren counter (mirrors calcExprStack.length)
+let calcExprStack  = [];  // parked {prev, oper} frames — one per open paren
+
+// Two one-shot flags, both CONSUMED by calcRender:
+//  • calcExprPending — a finished line ("5 + 3 =") that should stay on the
+//    expression row until the next keypress. It used to be written straight
+//    to the element, and calcRender (which rewrites that row from calcPrev /
+//    calcOper on every call) wiped it a microsecond later — so the line you
+//    just calculated flashed and vanished. Rendering it THROUGH calcRender is
+//    what makes it stick.
+//  • calcOpPending — an operator was just pressed and no operand has been
+//    entered yet, so pressing another operator swaps it instead of evaluating.
+// Both are cleared at the end of calcRender, so any function that ends in a
+// render automatically resets them — no per-function bookkeeping to forget.
+let calcExprPending = null;
+let calcOpPending   = false;
+
+// The live expression echo, rebuilt from state (never accumulated), so it can
+// never drift from what will actually be calculated. Walks the open parens
+// outermost-first: [{prev:'2',oper:'+'}] with calcPrev '3', calcOper '*'
+// reads "2 + ( 3 ×".
+function calcExprLive() {
+  let s = '';
+  for (const f of calcExprStack) {
+    if (f.prev !== '') s += f.prev + ' ';
+    if (f.oper)        s += calcOperSym(f.oper) + ' ';
+    s += '( ';
+  }
+  s += calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
+  return s.trim();
+}
+
+// The full line for "=" — the live echo plus the operand on screen plus a
+// closing bracket for every paren "=" is about to close for you.
+function calcEqualsText() {
+  let s = calcExprLive();
+  s += (s ? ' ' : '') + calcCurrent;
+  for (let i = 0; i < calcExprStack.length; i++) s += ' )';
+  return s;
+}
+
+// Keep the number on ONE line inside the fixed-height display by stepping the
+// font down until it fits. Without this a 16-digit result either wrapped (and
+// resized the whole calculator, which is what this build set out to stop) or
+// scrolled its leading digits out of sight.
+function calcFitScreen() {
+  const s = document.getElementById('calcScreen');
+  if (!s) return;
+  s.style.fontSize = '28px';
+  // scrollWidth is 0 in a layout-less environment (jsdom) — the loop simply
+  // does not run and the default size stands.
+  for (let px = 26; px >= 14 && s.scrollWidth > s.clientWidth; px -= 2) {
+    s.style.fontSize = px + 'px';
+  }
+}
 
 function calcRender() {
   const screen = document.getElementById('calcScreen');
@@ -7336,8 +7427,12 @@ function calcRender() {
     sel.addRange(range);
   }
   if (expr) {
-    expr.textContent = calcPrev + (calcOper ? ' ' + calcOperSym(calcOper) : '');
+    expr.textContent = (calcExprPending !== null) ? calcExprPending : calcExprLive();
+    // Long expressions scroll rather than wrap — keep the tail (what you just
+    // pressed) in view instead of the start.
+    expr.scrollLeft = expr.scrollWidth;
   }
+  calcFitScreen();
   // Highlight active op
   document.querySelectorAll('.calc-op').forEach(b => b.classList.remove('active-op'));
   if (calcOper && !calcJustEq) {
@@ -7346,6 +7441,9 @@ function calcRender() {
       if (b.textContent.trim() === sym) b.classList.add('active-op');
     });
   }
+  // Consume the one-shot flags: whatever was set for THIS render is spent.
+  calcExprPending = null;
+  calcOpPending   = false;
 }
 
 // Allow typing and pasting directly into the calculator screen
@@ -7411,8 +7509,11 @@ function calcRender() {
     calcCurrent = cleaned;
     // Re-render (which also puts the caret back at the end) only when what
     // should be on screen differs from what is — otherwise a mid-string edit
-    // would yank the caret to the end on every keystroke.
+    // would yank the caret to the end on every keystroke. The display is a
+    // fixed height either way, so a value typed straight in still has to be
+    // scaled to fit.
     if (cleaned !== raw) calcRender();
+    else calcFitScreen();
   });
 
   // Allow tab out but not enter (enter = equals).
@@ -7427,6 +7528,7 @@ function calcRender() {
       e.preventDefault(); calcOp(e.key); return;
     }
     if (e.key === '%') { e.preventDefault(); calcPercent(); return; }
+    if (e.key === '(' || e.key === ')') { e.preventDefault(); calcParen(e.key); return; }
     // Some keyboard layouts send "," for the numpad decimal key
     if (e.key === ',') { e.preventDefault(); calcDot(); return; }
     // digits, ".", Backspace, arrows etc. fall through to the contenteditable
@@ -7457,7 +7559,7 @@ function calcRender() {
   });
 })();
 function calcOperSym(op) {
-  return { '*': '×', '/': '÷', '+': '+', '-': '−', '^': 'xʸ' }[op] || op;
+  return { '*': '×', '/': '÷', '+': '+', '-': '−', '^': 'xʸ', 'exp10': '× 10^' }[op] || op;
 }
 
 function calcSetDeg(deg) {
@@ -7504,12 +7606,24 @@ function calcDot() {
 
 function calcOp(op) {
   if (calcCurrent === 'Error') return;
-  if (calcOper && !calcJustEq) calcEquals(true);
+  // Two operators in a row = you changed your mind. Swap, don't evaluate.
+  if (calcOper && calcOpPending) {
+    calcOper = op;
+    calcRender();
+    calcOpPending = true;   // still waiting for the operand
+    return;
+  }
+  // Chain whenever something is pending. This used to be guarded by
+  // `!calcJustEq`, which silently DROPPED the pending half after anything
+  // that finishes a value: "5 + 9 √ × 2" evaluated 3 × 2 = 6 instead of
+  // (5 + 3) × 2 = 16, and the same for MR and for a closing paren.
+  if (calcOper) calcEvalPending();
   calcPrev   = calcCurrent;
   calcOper   = op;
   calcJustEq = false;
   calcCurrent = '0';
   calcRender();
+  calcOpPending = true;     // set AFTER the render that clears it
 }
 
 
@@ -7524,9 +7638,8 @@ function calcBackspace() {
 function calcClear() {
   calcCurrent = '0'; calcPrev = ''; calcOper = null; calcJustEq = false;
   calcParenDepth = 0; calcExprStack = [];
-  const exprEl = document.getElementById('calcExpr');
-  if (exprEl) exprEl.textContent = '';
-  calcRender();
+  calcExprPending = null; calcOpPending = false;
+  calcRender();   // rebuilds the (now empty) expression row from state
 }
 
 function calcPercent() {
@@ -7624,87 +7737,105 @@ function calcFactorial() {
   });
 }
 
+// π, e and Ans drop a COMPLETE value on the screen, so calcJustEq is true:
+// a digit pressed straight after starts a new number instead of gluing itself
+// onto the end (π then 5 used to read 3.141592653589795).
 function calcConst(name) {
-  const val = name === 'pi' ? Math.PI : Math.E;
-  if (calcJustEq || calcCurrent === '0') { calcCurrent = String(val); calcJustEq = false; }
-  else calcCurrent = String(val);
+  calcCurrent = String(name === 'pi' ? Math.PI : Math.E).slice(0, 16);
+  calcJustEq  = true;
   calcRender();
 }
 
 function calcAns() {
   calcCurrent = String(calcLastAns);
-  calcJustEq = false;
+  calcJustEq  = true;
   calcRender();
 }
 
 function calcEXP() {
   // Inserts ×10^ — sets up a power-of-10 operation
   if (calcCurrent === 'Error') return;
-  const exprEl = document.getElementById('calcExpr');
-  if (exprEl) exprEl.textContent = calcCurrent + ' × 10^';
+  if (calcOper) calcEvalPending();   // "2 + 3 EXP 4" → 5 × 10⁴, not 3 × 10⁴
   calcPrev   = calcCurrent;
   calcOper   = 'exp10';
   calcCurrent = '0';
   calcJustEq = false;
   calcRender();
+  calcOpPending = true;
 }
 
-// Override calcEquals to handle 'exp10'
-const _origCalcEquals = calcEquals;
-
-function calcEquals(chain = false) {
-  if (calcOper === 'exp10') {
-    const a = parseFloat(calcPrev)    || 0;
-    const b = parseFloat(calcCurrent) || 0;
-    const result = a * Math.pow(10, b);
-    const str = +parseFloat(result.toFixed(10)) + '';
-    if (!chain) {
-      const exprEl = document.getElementById('calcExpr');
-      if (exprEl) exprEl.textContent = calcPrev + ' × 10^' + calcCurrent + ' =';
-      if (str !== 'Error') pushCalcTape(calcPrev + ' × 10^' + calcCurrent, str);
-      calcLastAns = parseFloat(str) || 0;
-      calcOper = null; calcPrev = ''; calcJustEq = true;
-    }
-    calcCurrent = str;
-    calcRender();
-    return;
-  }
+// Evaluate the pending operation INTO calcCurrent and clear it. No display,
+// no tape — this is the arithmetic on its own, shared by chaining (5 + 3 + …),
+// by a closing paren, and by "=".
+function calcEvalPending() {
   if (!calcOper) return;
   const a = parseFloat(calcPrev)    || 0;
   const b = parseFloat(calcCurrent) || 0;
   let result;
-  if      (calcOper === '+') result = a + b;
-  else if (calcOper === '-') result = a - b;
-  else if (calcOper === '*') result = a * b;
-  else if (calcOper === '/') result = b === 0 ? 'Error' : a / b;
-  else if (calcOper === '^') result = Math.pow(a, b);
-  const str = (result === 'Error' || result === undefined)
+  if      (calcOper === '+')     result = a + b;
+  else if (calcOper === '-')     result = a - b;
+  else if (calcOper === '*')     result = a * b;
+  else if (calcOper === '/')     result = b === 0 ? 'Error' : a / b;
+  else if (calcOper === '^')     result = Math.pow(a, b);
+  else if (calcOper === 'exp10') result = a * Math.pow(10, b);
+  calcCurrent = (typeof result !== 'number' || !isFinite(result))
     ? 'Error'
     : +parseFloat(result.toFixed(10)) + '';
-  if (!chain) {
-    const exprEl = document.getElementById('calcExpr');
-    if (exprEl) exprEl.textContent = calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent + ' =';
-    if (result !== 'Error' && result !== undefined) {
-      calcLastAns = parseFloat(str) || 0;
-      pushCalcTape(calcPrev + ' ' + calcOperSym(calcOper) + ' ' + calcCurrent, str);
-    }
-    calcOper = null; calcPrev = ''; calcJustEq = true;
+  calcPrev = ''; calcOper = null;
+}
+
+// Close one open bracket: finish whatever is pending inside it, then bring
+// back the operation that was parked when the bracket opened.
+function calcCloseParen() {
+  calcEvalPending();
+  const f = calcExprStack.pop() || { prev: '', oper: null };
+  calcParenDepth = calcExprStack.length;
+  calcPrev   = f.prev;
+  calcOper   = f.oper;
+  calcJustEq = true;   // the sub-result is a finished value
+}
+
+function calcEquals(chain = false) {
+  // Chaining: arithmetic only, no line, no tape entry.
+  if (chain) { calcEvalPending(); calcRender(); return; }
+  if (calcCurrent === 'Error') return;
+  const hadWork = !!calcOper || calcExprStack.length > 0;
+  if (!hadWork) return;                 // nothing pending — "=" does nothing
+  const text = calcEqualsText();        // built BEFORE the state is consumed
+  while (calcExprStack.length) calcCloseParen();   // "=" closes what you left open
+  calcEvalPending();
+  calcExprPending = text + ' =';
+  if (calcCurrent !== 'Error') {
+    calcLastAns = parseFloat(calcCurrent) || 0;
+    pushCalcTape(text, calcCurrent);
   }
-  calcCurrent = str;
+  calcJustEq = true;
   calcRender();
 }
 
+// Brackets used to be COSMETIC — the counter went up and a "(" was appended to
+// the expression row (where the next render wiped it), while the arithmetic
+// ignored them entirely: 2 + ( 3 × 4 ) = returned 20 instead of 14. Opening a
+// bracket now parks the pending operation on calcExprStack and starts a fresh
+// sub-expression; closing one evaluates the sub-expression and brings the
+// parked operation back.
 function calcParen(p) {
-  // Very simple paren tracking — just adjusts depth visually
+  if (calcCurrent === 'Error') return;
   if (p === '(') {
-    calcParenDepth++;
-    const exprEl = document.getElementById('calcExpr');
-    if (exprEl) exprEl.textContent = (exprEl.textContent || '') + '(';
+    // "8 (" means 8 × ( — without this the 8 was simply dropped on the floor.
+    // Only after a TYPED value: a fresh 0 or a just-finished result starts a
+    // new expression instead.
+    if (!calcOper && !calcJustEq && calcCurrent !== '0' && calcCurrent !== '') {
+      calcPrev = calcCurrent; calcOper = '*';
+    }
+    calcExprStack.push({ prev: calcPrev, oper: calcOper });
+    calcParenDepth = calcExprStack.length;
+    calcPrev = ''; calcOper = null; calcCurrent = '0'; calcJustEq = false;
   } else {
-    if (calcParenDepth > 0) { calcParenDepth--; }
-    const exprEl = document.getElementById('calcExpr');
-    if (exprEl) exprEl.textContent = (exprEl.textContent || '') + ')';
+    if (!calcExprStack.length) return;  // nothing open to close
+    calcCloseParen();
   }
+  calcRender();
 }
 
 // ─── CALCULATOR HISTORY TAPE ──────────────────────────────────
@@ -7752,9 +7883,11 @@ function renderCalcTape() {
   }
   if (clear) clear.disabled = false;
 
+  // escH'd on the way out: the strip is restored from localStorage, which a
+  // sync/import/hand-edit can put anything into — chips are markup, not text.
   tape.innerHTML = calcTape.map((t, i) => `
-    <button type="button" class="calc-tape-chip" onclick="calcTapeUse(${i})" title="Tap to reuse ${t.r}">
-      ${t.e} = <span style="color:var(--teal-text); font-weight:500;">${t.r}</span>
+    <button type="button" class="calc-tape-chip" onclick="calcTapeUse(${i})" title="Tap to reuse ${escH(String(t.r))}">
+      ${escH(String(t.e))} = <span style="color:var(--teal-text); font-weight:500;">${escH(String(t.r))}</span>
     </button>`).join('');
   tape.scrollLeft = 0;
   calcTapeUpdateFade();
@@ -7778,8 +7911,8 @@ function calcTapeUse(i) {
   calcOper    = null;
   calcJustEq  = true;
   calcLastAns = parseFloat(t.r) || 0;
-  const exprEl = document.getElementById('calcExpr');
-  if (exprEl) exprEl.textContent = t.e + ' =';
+  calcParenDepth = 0; calcExprStack = [];
+  calcExprPending = t.e + ' =';   // rendered THROUGH calcRender, so it stays
   calcRender();
 }
 
@@ -7846,6 +7979,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === '*') calcOp('*');
   else if (e.key === '/') { e.preventDefault(); calcOp('/'); }
   else if (e.key === '^') calcOp('^');
+  else if (e.key === '(' || e.key === ')') calcParen(e.key);
   else if (e.key === 'Enter' || e.key === '=') calcEquals();
   else if (e.key === 'Escape') calcClear();
   else if (e.key === 'Backspace') calcBackspace();
