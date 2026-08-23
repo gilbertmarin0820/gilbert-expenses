@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v37';
+const CACHE = 'gilbert-expenses-v38';
 
 // How long a page load waits for the network before falling back to the cached
 // shell. Long enough that a normal mobile connection is never cut short, short

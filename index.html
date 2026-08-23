@@ -561,6 +561,20 @@
   }
   .calc-deg-btn.active { background: var(--surface2); color: var(--teal-text); }
 
+  /* THE CALCULATOR CARD MUST NOT SET ITS OWN COLUMN'S WIDTH.
+     .spend-calc-grid is `grid-template-columns: 1fr 1fr`, and `1fr` means
+     `minmax(auto, 1fr)` — so the column's MINIMUM is the card's min-content
+     width. The history chips below are nowrap, so a few long results pushed
+     the card's min-content past the viewport and the column obediently grew
+     with it: measured 932px of card inside a 370px phone. The tape's own
+     `overflow-x: auto` never got a chance to scroll, because nothing was
+     ever narrower than the content.
+     `min-width: 0` on the grid items caps that minimum at zero, so the
+     column is sized by the grid instead of by the chips, and the strip
+     scrolls sideways the way it was always meant to. Applies to both cards
+     and at every breakpoint (the mobile rule is `1fr` too). */
+  .spend-calc-grid > * { min-width: 0; }
+
   /* CALCULATOR HISTORY TAPE — fixed height, scrolls left/right.
      The strip is ALWAYS on screen (a dim placeholder fills it when the
      history is empty) so the display and keypad below it never jump when
@@ -1189,7 +1203,13 @@
     .spend-calc-grid { grid-template-columns: 1fr !important; }
     .calc-btn      { height: 48px; font-size: 13px; border-radius: 8px; }
     .calc-fn, .calc-sci { font-size: 11px; }
-    #calcScreen    { font-size: 26px !important; }
+    /* NO !important — calcFitScreen() shrinks this by writing an inline
+       font-size, and an !important author rule beats a non-important inline
+       style, so the whole auto-fit was silently dead on phones (measured: a
+       40-char value at 390px still overflowed by 268px while the inline
+       style read 14px). This rule sits after the base #calcScreen rule and
+       has the same specificity, so it still wins on its own. */
+    #calcScreen    { font-size: 26px; }
 
     /* ── Touch targets ────────────────────────────────────── */
     .add-btn       { min-height: 46px; padding: 10px 14px; font-size: 14px; }
@@ -1289,7 +1309,7 @@
   @media (max-width: 390px) {
     .main          { padding: 10px; gap: 12px; }
     .calc-btn      { height: 58px; font-size: 20px; }
-    #calcScreen    { font-size: 24px !important; }
+    #calcScreen    { font-size: 24px; }   /* no !important — see the 700px block */
     .net-value     { font-size: 26px; }
     .nb-row        { font-size: 12px; }
     .card          { padding: 12px; }
@@ -2176,7 +2196,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-19a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-23a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -7404,11 +7424,18 @@ function calcEqualsText() {
 // scrolled its leading digits out of sight.
 function calcFitScreen() {
   const s = document.getElementById('calcScreen');
-  if (!s) return;
-  s.style.fontSize = '28px';
-  // scrollWidth is 0 in a layout-less environment (jsdom) — the loop simply
-  // does not run and the default size stands.
-  for (let px = 26; px >= 14 && s.scrollWidth > s.clientWidth; px -= 2) {
+  // clientWidth is 0 when the card is hidden (Units panel, collapsed section)
+  // or in a layout-less environment (jsdom). Measuring there would step the
+  // font all the way down against a zero-width box, so leave it alone — the
+  // next render with the card on screen sizes it properly.
+  if (!s || !s.clientWidth) return;
+  // Start from whatever the STYLESHEET says, not a hardcoded 28px: the two
+  // mobile breakpoints declare 26px and 24px, and writing 28px inline used to
+  // override them and blow the number up on exactly the screens with the least
+  // room. Clearing first also lets a value that got short again grow back.
+  s.style.fontSize = '';
+  const base = Math.round(parseFloat(getComputedStyle(s).fontSize)) || 28;
+  for (let px = base - 2; px >= 14 && s.scrollWidth > s.clientWidth; px -= 2) {
     s.style.fontSize = px + 'px';
   }
 }
@@ -7417,14 +7444,27 @@ function calcRender() {
   const screen = document.getElementById('calcScreen');
   const expr   = document.getElementById('calcExpr');
   if (screen && screen.textContent !== calcCurrent) {
+    // Placing a selection inside a contenteditable FOCUSES it. Doing that
+    // unconditionally cost us twice:
+    //  • on mobile, tapping any keypad button focused the display and slid the
+    //    on-screen keyboard up over the keys you were trying to press;
+    //  • on desktop, the first digit typed with focus elsewhere landed twice —
+    //    the global handler ran calcDigit, this line focused the display
+    //    mid-keydown, and the browser's own text insertion for that same
+    //    keystroke then went into it ("3" → "33", "45" → "445").
+    // The caret only needs moving for someone already typing IN the display,
+    // so ask first and otherwise leave focus where the user put it.
+    const hadFocus = document.activeElement === screen;
     screen.textContent = calcCurrent;
-    // Keep cursor at end when updated programmatically
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(screen);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    if (hadFocus) {
+      // Keep cursor at end when updated programmatically
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(screen);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   }
   if (expr) {
     expr.textContent = (calcExprPending !== null) ? calcExprPending : calcExprLive();
@@ -7644,8 +7684,11 @@ function calcClear() {
 
 function calcPercent() {
   const v = parseFloat(calcCurrent) || 0;
-  // If there's a pending operation, calculate percentage of that value
-  if (calcOper && calcPrev !== '') {
+  // "+" and "−" want a percentage OF the first operand: 200 + 10% = 220.
+  // "×", "÷" and "^" want the plain fraction: 200 × 10% = 20, 200 ÷ 10% = 2000,
+  // 2 ^ 50% = √2. Applying the first rule to all of them (which is what this
+  // did) turned 200 × 10% into 200 × 20 = 4000.
+  if (calcOper && calcPrev !== '' && (calcOper === '+' || calcOper === '-')) {
     const a = parseFloat(calcPrev) || 0;
     calcCurrent = String(+(a * v / 100).toFixed(10));
   } else {
@@ -7966,23 +8009,42 @@ document.addEventListener('keydown', e => {
   // Skip when a shortcut modifier is held (e.g. Alt+1–5 switches tabs, not calc digits)
   if (e.altKey || e.ctrlKey || e.metaKey) return;
 
-  // Skip while the calculator card is showing the Units panel — otherwise
-  // digits typed on the page would land in the hidden calculator screen.
+  // Only type into the calculator when the calculator is actually ON SCREEN.
+  // Checking the Units panel alone was not enough: on the Tracker/Plan tabs,
+  // or with the "Calculator & Currency Converter" section collapsed (which is
+  // its first-run default), every digit still accumulated invisibly and the
+  // next visit to the tab opened on a number nobody typed. offsetParent is
+  // null for anything display:none anywhere up the tree, which covers the
+  // inactive page, the collapsed section and the Units panel in one question.
   const calcPanel = document.getElementById('calcMainPanel');
-  if (calcPanel && calcPanel.style.display === 'none') return;
+  if (!calcPanel || calcPanel.offsetParent === null) return;
 
+  // EVERY key this handler consumes is preventDefault'd, not just "/". A key
+  // we act on must not ALSO reach the browser: a bare Backspace is still "go
+  // back" in some browsers (which would leave the app), "/" opens Firefox's
+  // quick-find, and — the one that actually bit — if anything focuses the
+  // contenteditable display during this keydown, the browser's own insertion
+  // for the same keystroke lands there on top of what we just did.
+  // Enter on a focused button or link means "activate this control", not
+  // "equals". Cancelling it here would break keyboard navigation for anyone
+  // tabbing the page, so hand that one key back.
+  if (e.key === 'Enter' && (activeTag === 'BUTTON' || activeTag === 'A')) return;
+
+  let handled = true;
   if ('0123456789'.includes(e.key)) calcDigit(e.key);
   else if (e.key === '.' || e.key === ',') calcDot(); // "," = numpad decimal on some layouts
   else if (e.key === '%') calcPercent();
   else if (e.key === '+') calcOp('+');
   else if (e.key === '-') calcOp('-');
   else if (e.key === '*') calcOp('*');
-  else if (e.key === '/') { e.preventDefault(); calcOp('/'); }
+  else if (e.key === '/') calcOp('/');
   else if (e.key === '^') calcOp('^');
   else if (e.key === '(' || e.key === ')') calcParen(e.key);
   else if (e.key === 'Enter' || e.key === '=') calcEquals();
   else if (e.key === 'Escape') calcClear();
   else if (e.key === 'Backspace') calcBackspace();
+  else handled = false;
+  if (handled) e.preventDefault();
 });
 
 // ─── UNIT CONVERTER (Units tab inside the calculator card) ────
