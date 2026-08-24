@@ -2196,7 +2196,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-23a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-24a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -11776,11 +11776,36 @@ function acctRemoveCustom(key) {
   const list = (ledgerPrefs.accts || []);
   const i = list.findIndex(c => c.key === key);
   if (i === -1) return;
-  const tagged = ledger.filter(e => e.acct === key || e.acct2 === key).length;
-  if (tagged && !confirm(list[i].label + ' is on ' + tagged + ' ledger row'
-    + (tagged === 1 ? '' : 's') + '.\n\nThose rows keep their amounts but go back to "no account". Remove it?')) return;
+  const tagged = ledger.filter(e => e.acct === key || e.acct2 === key);
+  if (tagged.length && !confirm(list[i].label + ' is on ' + tagged.length + ' ledger row'
+    + (tagged.length === 1 ? '' : 's') + '.\n\nThose rows keep their amounts but go back to "no account". Remove it?')) return;
   list.splice(i, 1);
   saveLedgerPrefs();
+
+  // THE ROWS WERE PROMISED THEY WOULD GO BACK TO "NO ACCOUNT", AND NOTHING
+  // DID IT. They kept a key that resolves to nothing, which is worse than
+  // being untagged in every direction: acctUntaggedCount ignored them, so the
+  // "N entries have no account yet · Guess from my habits" prompt never
+  // offered to re-file them; acctMonthStats went on accumulating their spend
+  // under a key no card renders, so the money was in neither the per-account
+  // view nor the untagged count; and the row's chip fell back to acctLabel's
+  // slug stripping and showed a ghost account. acctSuggest already refuses to
+  // suggest a deleted account and the chat's editentry already refuses an
+  // unknown one — this was the one path that could create the thing they both
+  // guard against.
+  // A savings allocation on 'custom' keys the same way a hand-added account
+  // does, so a name can be BOTH — and then removing the hand-added one leaves
+  // the key perfectly live. Only clear tags when nothing answers to it.
+  if (!acctFind(key)) {
+    tagged.forEach(e => {
+      if (e.acct  === key) e.acct  = '';
+      if (e.acct2 === key) e.acct2 = '';
+    });
+    if (String(ledgerPrefs.lastAcct || '') === key) ledgerPrefs.lastAcct = '';
+    if (String(ledgerPrefs.payAcct  || '') === key) ledgerPrefs.payAcct  = '';
+    saveLedgerPrefs();
+    ledgerCommit();   // rewrites the rows, invalidates the account memory, redraws
+  }
   renderAccounts();
   renderLedger();
 }
@@ -13019,12 +13044,8 @@ function ledgerEditSave(id) {
   // If this row took money out of a balance when it was logged, the balance
   // has to follow the edit — otherwise the account quietly disagrees with the
   // entry that moved it. Old move undone, new one applied at the new size.
-  if (wasMoved && !isTransfer(e) && (amtR !== wasAmt || acct !== wasAcct)) {
-    if (wasAcct) acctApplyDelta(wasAcct, wasAmt);
-    if (acct && acctApplyDelta(acct, -amtR)) e.movedFrom = true;
-    else e.movedFrom = false;          // no tracked account left to hold it
-    acctFlushBalances();
-  }
+  // Shared with the chat's editentry, which used to skip this entirely.
+  entryFollowMove(e, wasAmt, wasAcct, wasMoved);
   if (changed) e.edited = true;
   ledgerEditId = 0;
   ledgerViewYM = ymOf(e.date);           // follow the row if it moved months
@@ -15815,6 +15836,31 @@ function billApplyBalance(entry, noPrompt) {
 function entryUnmoveBalance(e) {
   if (!e || isTransfer(e) || !e.movedFrom || !e.acct) return false;
   if (!acctApplyDelta(e.acct, e.amt)) return false;
+  acctFlushBalances();
+  return true;
+}
+
+// Keep the balance in step with an EDIT of a row that moved one.
+//
+// entryUnmoveBalance reverses by reading the entry's CURRENT amount and
+// account, which is only correct while the two still describe the move that
+// was actually applied. Editing the row without settling the difference is
+// what breaks that: the inline editor has always settled it, the chat's
+// `editentry` did not, and the disagreement stayed invisible until the bill
+// was un-ticked — at which point the reversal credited the NEW figure to the
+// NEW account. Reproduced both ways: editing ₱3,000 → ₱3,200 handed back
+// ₱10,200 out of a ₱10,000 account, and retagging GCash → BPI took ₱3,000
+// out of GCash for ever and put ₱3,000 into BPI that had never left it.
+//
+// Two writers of e.amt/e.acct, so ONE function rather than two copies that
+// can drift apart — the 28b lesson.
+function entryFollowMove(e, wasAmt, wasAcct, wasMoved) {
+  if (!e || !wasMoved || isTransfer(e)) return false;
+  const amt  = Math.round((parseFloat(e.amt) || 0) * 100) / 100;
+  const acct = String(e.acct || '');
+  if (Math.abs(amt - wasAmt) < 0.005 && acct === (wasAcct || '')) return false;
+  if (wasAcct) acctApplyDelta(wasAcct, wasAmt);          // put the old move back
+  e.movedFrom = !!(acct && acctApplyDelta(acct, -amt));  // apply the new one
   acctFlushBalances();
   return true;
 }
@@ -18638,15 +18684,25 @@ function chatApplyOne(intent) {
     if (!e) return 'That entry no longer exists.';
     const wasYM = ymOf(e.date);
     const before = `${fPHP(e.amt)} on ${e.cat}`;
+    // Captured BEFORE the patch: a row that took money out of a balance has
+    // to settle the difference, exactly as the inline editor does. Without
+    // this the chat could edit an amount the account had never been debited
+    // for, and un-ticking the bill then handed back the edited figure.
+    const wasAmt = e.amt, wasAcct = e.acct || '', wasMoved = !!e.movedFrom;
     if (intent.amount   !== undefined) e.amt  = Math.round(intent.amount * 100) / 100;
     if (intent.category !== undefined) e.cat  = intent.category;
     if (intent.date     !== undefined) e.date = intent.date;
     if (intent.note     !== undefined) e.note = intent.note;
     if (intent.account  !== undefined) e.acct = intent.account;
     e.edited = true;
+    const settled = entryFollowMove(e, wasAmt, wasAcct, wasMoved);
     ledgerViewYM = ymOf(e.date);
     ledgerCommit();
     let out = `✓ <b>${escH(before)}</b> → <b>${fPHP(e.amt)} on ${escH(e.cat)}</b>${escH(e.date !== wasYM ? '' : '')}`;
+    // This row had taken money out of a balance, so the balance moved with
+    // the edit. Say so — a silent balance change is the thing the confirm
+    // card exists to prevent.
+    if (settled) out += `\n💰 ${escH(acctLabel(e.acct) || 'The account')} now reads ${fPHP((acctFind(e.acct) || { bal: 0 }).bal)}.`;
     // A closed month keeps the total it was closed with, exactly as the
     // inline editor warns — the chat must not be quieter about it.
     const hist = loadMonthHistory();
