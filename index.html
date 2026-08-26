@@ -2196,7 +2196,7 @@
     max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px);
     overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-24a</span></div>
+      <div style="font-size:16px; font-weight:600; color:var(--text);">⚙️ Settings &amp; Backup <span style="font-size:10px; font-weight:400; color:var(--text3);">build 2026-08-26a</span></div>
       <button onclick="closeSettings()" style="background:none; border:none; color:var(--text3); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">✕</button>
     </div>
 
@@ -4517,6 +4517,14 @@ let countdownSec = 60;
 let countdownTimer = null;
 let fetching = false;
 
+// ─── CAP ROLLOVER CARRY CACHE (hoisted) ───────────────────────
+// Declared up here rather than beside capCarryFor because the load paths
+// (loadData, loadLedgerPrefs, loadPlanData, loadLedger) all drop this cache
+// and any of them can run before the script reaches that point — a `let`
+// read during its temporal dead zone throws, and a throw at init aborts the
+// rest of the script.
+let _capCarryMemo = {};
+
 // ─── QUICK BALANCE SYNC STATE (hoisted) ────────────────────────
 let quickBalances = {};
 // ── WHICH SINKING PAYOUTS ARE CURRENTLY APPLIED TO A BALANCE ──
@@ -6097,6 +6105,11 @@ function saveData() {
 
 function _saveDataDirect() {
   if (_isLoading) return; // Don't overwrite localStorage while restoring DOM
+  // The rollover carry splits each past month's line into "bill" and "cap"
+  // via ledgerBudgetLines, which reads necessities and PayLater from HERE —
+  // so this data is an input to the cached figure just as the ledger and the
+  // caps are, and editing a bill has to drop the cache with them.
+  capCarryInvalidate();
   try {
     const data = {
       payMode: payMode,
@@ -6636,6 +6649,9 @@ function updateSavingsSummary() {
 
 function loadData() {
   _isLoading = true; // Prevent saveData() from firing while we restore the DOM
+  // An undo, a profile switch or a cloud restore replaces the data the carry
+  // is derived from without going through a save, so drop the cache here too.
+  capCarryInvalidate();
   try {
     const raw = localStorage.getItem('va_payroll_data');
     if (!raw) { _isLoading = false; _undoEnabled = true; return; }
@@ -11449,11 +11465,22 @@ let _insightErr  = null; // { ym, msg } of the last failure, shown on the card
 // the rows (the bug class swept in 23h), and the list is short enough that an
 // index is a stable enough handle between two renders.
 function loadLedgerPrefs() {
+  capCarryInvalidate();
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(LEDGER_PREFS_KEY) || 'null'); } catch (e) { raw = null; }
   const caps = (raw && Array.isArray(raw.caps) ? raw.caps : [])
     .filter(c => c && typeof c === 'object')
-    .map(c => ({ label: String(c.label || '').slice(0, 60), amt: Math.round((parseFloat(c.amt) || 0) * 100) / 100 }))
+    // `roll` was NOT carried through here, so the whole rollover feature
+    // reverted on every load: capSetRoll wrote it, saveLedgerPrefs stored it,
+    // and this normaliser rebuilt each cap as {label, amt} and dropped it on
+    // the floor. You picked "Carry leftovers", it worked for the rest of the
+    // session, and the next open (or import, or sync from another device)
+    // silently put every cap back to 'reset' — the carry note under the bar
+    // just vanished with nothing saying why. Validated through capRollMode so
+    // this stays the one place that decides what a legal mode is.
+    .map(c => ({ label: String(c.label || '').slice(0, 60),
+                 amt: Math.round((parseFloat(c.amt) || 0) * 100) / 100,
+                 roll: capRollMode(c) }))
     .slice(0, CAP_MAX);
   const al = raw && BILL_AUTOLOG.indexOf(raw.autolog) !== -1 ? raw.autolog : 'ask';
   // Accounts that are NOT savings allocations. Keyed by a slug of the name,
@@ -11479,6 +11506,9 @@ function loadLedgerPrefs() {
 
 function saveLedgerPrefs() {
   armUndo();
+  // The caps ARE an input to the carry, so changing one has to drop the cache
+  // the same way a ledger write does.
+  capCarryInvalidate();
   try { localStorage.setItem(LEDGER_PREFS_KEY, JSON.stringify(ledgerPrefs)); }
   catch (e) { console.warn('Cap save failed', e); }
 }
@@ -11509,11 +11539,24 @@ function capRemove(i) {
 
 // The row inputs deliberately do NOT re-render themselves — renderCatCaps
 // would replace the element being typed into. Only the bars are refreshed.
+//
+// And they are refreshed on a DEBOUNCE. renderLedger rebuilds every budget
+// line, bar, drift row and allowance figure on the screen; firing it from an
+// oninput meant paying for all of that on every single character typed into a
+// cap name or amount, which on a full ledger is the difference between typing
+// and waiting. The value itself is still stored synchronously on every
+// keystroke, so nothing can be lost by looking away — only the drawing waits.
+let _capRenderTimer = null;
+function capRenderSoon() {
+  if (_capRenderTimer) clearTimeout(_capRenderTimer);
+  _capRenderTimer = setTimeout(() => { _capRenderTimer = null; renderLedger(); }, 250);
+}
+
 function capSetLabel(i, v) {
   if (!ledgerPrefs.caps[i]) return;
   ledgerPrefs.caps[i].label = String(v || '').slice(0, 60);
   saveLedgerPrefs();
-  renderLedger();
+  capRenderSoon();
 }
 
 function capSetRoll(i, v) {
@@ -11527,7 +11570,7 @@ function capSetAmt(i, v) {
   if (!ledgerPrefs.caps[i]) return;
   ledgerPrefs.caps[i].amt = Math.round((parseFloat(v) || 0) * 100) / 100;
   saveLedgerPrefs();
-  renderLedger();
+  capRenderSoon();
 }
 
 // Used by the drift list: bring a category's BUDGET LINE to what it has
@@ -12720,9 +12763,30 @@ function capCarry(cap, ym) {
 }
 
 // Every cap on one line, combined — two caps sharing a name carry as one.
+//
+// MEMOISED, because this is the most expensive readout in the app and
+// renderLedger asks for it twice per cap (the allowance headline and the bar
+// underneath). Each uncached answer walks up to 12 months and rebuilds
+// ledgerBudgetLines for every one of them: with 2,000 entries and 5 rollover
+// caps that measured 249ms per render against 152ms with rollover off — and
+// capSetAmt/capSetLabel call renderLedger on every keystroke, so typing a cap
+// amount paid that cost per character.
+//
+// The cache is keyed on key+month and dropped by catmemInvalidate(), which
+// already fires on every ledger write, plus saveLedgerPrefs, which is the
+// only other thing that can change the answer (the caps themselves). Same
+// derived-and-invalidated shape as _catmem, so there is no second truth to
+// keep in step.
+function capCarryInvalidate() { _capCarryMemo = {}; }
+
 function capCarryFor(key, ym) {
-  return Math.round(capsActive().reduce((s, c) =>
-    s + (ledgerCatKey(c.label) === key ? capCarry(c, ym) : 0), 0) * 100) / 100;
+  const m  = ym || ledgerViewYM || ymNow();
+  const ck = key + '|' + m;
+  if (Object.prototype.hasOwnProperty.call(_capCarryMemo, ck)) return _capCarryMemo[ck];
+  const v = Math.round(capsActive().reduce((s, c) =>
+    s + (ledgerCatKey(c.label) === key ? capCarry(c, m) : 0), 0) * 100) / 100;
+  _capCarryMemo[ck] = v;
+  return v;
 }
 
 // What of a cap line is actually spendable, and what has actually gone
@@ -13084,7 +13148,10 @@ function catmemTokens(s) {
   return out.slice(0, 10);
 }
 
-function catmemInvalidate() { _catmem = null; _acctmem = null; }
+// Everything derived from `ledger` is dropped together: the merchant→category
+// index, the merchant→account index, and the rollover carry (which reads the
+// last 12 months of rows, so any write can move it).
+function catmemInvalidate() { _catmem = null; _acctmem = null; capCarryInvalidate(); }
 
 function catmemIndex() {
   if (_catmem) return _catmem;
@@ -15350,6 +15417,9 @@ function planFlushUndo() {
 }
 
 function savePlanData() {
+  // Subscriptions, installments and the sinking reserve are budget lines too,
+  // so they move the cap/bill split the carry is computed against.
+  capCarryInvalidate();
   // Snapshot the state BEFORE this burst of changes
   if (_planPendingSnapshot === null) {
     try { _planPendingSnapshot = localStorage.getItem('va_plan_data'); } catch(e) {}
@@ -15458,6 +15528,7 @@ function resetPlan() {
 }
 
 function loadPlanData() {
+  capCarryInvalidate();
   try {
     const raw = localStorage.getItem('va_plan_data');
     if (!raw) return;
@@ -17540,7 +17611,17 @@ function loadSquads() {
     if (!raw) return;
     const d = JSON.parse(raw);
     squads   = Array.isArray(d.squads) ? d.squads : [];
-    squadSeq = d.seq || (squads.length ? Math.max(...squads.map(s => s.id)) + 1 : 1);
+    // Same drift guard every other id counter in this app got in 23h, one
+    // file late. `d.seq || …` let a STORED counter win even when it sat below
+    // the highest id in the array — an older backup, a pre-counter import, a
+    // partial write — so the next squad reused an id an existing one already
+    // had, and applySquad/deleteSquad both look up by id: deleting one squad
+    // deleted the wrong one. Math.max(...) also returned NaN the moment any
+    // squad arrived without an id, which poisoned the counter outright.
+    // Reseed FIRST, then stamp: a squad stamped before the counter cleared
+    // the existing ids would just collide with one of them.
+    squadSeq = Math.max(parseInt(d.seq, 10) || 1, maxIdIn(squads) + 1);
+    squads.forEach(s => { if (s && typeof s.id !== 'number') s.id = squadSeq++; });
   } catch(e) { squads = []; squadSeq = 1; }
 }
 
@@ -17606,6 +17687,15 @@ function applySquad(id, target) {
     updateHSSummary();
     saveHS();
   }
+
+  // `added` was counted and then thrown away, so loading a squad that was
+  // already in the list looked exactly like loading four new people —
+  // nothing on screen moved and nothing said why.
+  const skipped = squad.members.length - added;
+  showToast(added
+    ? '👥 ' + squad.name + ' — ' + added + (added === 1 ? ' person' : ' people') + ' added'
+        + (skipped ? ' · ' + skipped + ' already here' : '')
+    : '👥 Everyone in ' + squad.name + ' is already on this list');
 }
 
 // Save the current session's people as a named squad. If a squad
