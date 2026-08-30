@@ -43,6 +43,66 @@
     window.parseInt   = function (v, r) { return _pi(strip(v), r); };
   })();
 
+  // ═══════════════════════════════════════════════════════════
+  // STORAGE-FULL GUARD
+  //
+  // Nearly every save in this app is wrapped in a bare
+  // `try { setItem(...) } catch(e) {}`, so a full origin quota
+  // used to be COMPLETELY SILENT: the user keeps entering
+  // expenses, every one of them is dropped, and nothing on
+  // screen says so. (saveWalletQRs was the one exception.)
+  //
+  // Hooking setItem once here, before any app code runs, covers
+  // all ~51 call sites without touching them. The write still
+  // throws exactly as before — existing catches behave the same
+  // — but the user now finds out. Latched so it fires once per
+  // session instead of on every keystroke.
+  //
+  // NOTE: the sync auto-upload hook later in the file does
+  // `localStorage.setItem.bind(localStorage)`, which picks up
+  // THIS wrapper. The two layer correctly; leave this one first.
+  // ═══════════════════════════════════════════════════════════
+  // Installs `impl` as localStorage.<name>, returning the original. Patches
+  // Storage.prototype rather than the instance: defining a property directly
+  // on a Storage object is treated as a STORAGE WRITE by some engines, so the
+  // method never actually gets replaced and the wrapper silently does nothing.
+  // The prototype is shared with sessionStorage, hence the `this` check.
+  window.__patchStorage = function (name, make) {
+    var proto = Object.getPrototypeOf(localStorage) || Storage.prototype;
+    var orig  = proto[name];
+    var bound = function () { return orig.apply(localStorage, arguments); };
+    var impl  = make(bound);
+    proto[name] = function () {
+      if (this !== localStorage) return orig.apply(this, arguments);
+      return impl.apply(this, arguments);
+    };
+    return bound;
+  };
+
+  (function () {
+    try {
+      var warned = false;
+      window.__patchStorage('setItem', function (origSet) {
+        return function (k, v) {
+          try {
+            origSet(k, v);
+          } catch (e) {
+            if (!warned) {
+              warned = true;
+              var msg = '\u26A0 Storage full \u2014 changes are NOT being saved. '
+                      + 'Export a backup now, then remove old QR images or clear chat history.';
+              // showToast isn't defined this early; queue for the app to flush.
+              if (typeof window.showToast === 'function') window.showToast(msg, true);
+              else window.__storageFullMsg = msg;
+              console.error('[storage] quota exceeded on key', k, e);
+            }
+            throw e; // preserve existing behaviour for every caller
+          }
+        };
+      });
+    } catch (e) { /* storage unavailable (private mode) — app handles that already */ }
+  })();
+
   try {
     var t = localStorage.getItem('va_theme');
     var m = document.querySelector('meta[name="theme-color"]');
@@ -908,6 +968,30 @@
   }
   .toast.err { border-color: var(--red); color: var(--red-text); }
   .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Service-worker update prompt. Kept SEPARATE from .toast because that one
+     is pointer-events:none on purpose (its hidden resting position overlaps
+     the mobile tab bar and would eat taps). This one must be tappable, so it
+     sits at the TOP of the screen, clear of the tabs. */
+  .sw-update-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    background: var(--surface2); border-bottom: 1px solid var(--green);
+    color: var(--green-text); font-family: 'DM Mono', monospace; font-size: 13px;
+    z-index: 1000; cursor: pointer;
+    transform: translateY(-120%); transition: transform 0.3s ease;
+  }
+  .sw-update-bar.show { transform: translateY(0); }
+  .sw-update-bar button {
+    background: var(--green); color: #06240f; border: 0;
+    border-radius: 6px; padding: 5px 12px; font: inherit; font-weight: 600;
+    cursor: pointer;
+  }
+  .sw-update-bar .sw-dismiss {
+    background: transparent; color: inherit; opacity: 0.6;
+    padding: 5px 8px; font-weight: 400;
+  }
 
   /* BANK SELECTOR */
   .bank-select-wrap {
@@ -2324,13 +2408,30 @@
     <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
       <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">💾 Storage used</div>
       <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
-        Everything lives in this browser's local storage (usually capped around ~5&nbsp;MB). Wallet QR images and long histories take the most space — export a backup before it fills up.
+        The bar is this browser's <strong style="color:var(--text2);">local storage</strong> — one shared bucket, usually capped near ~5&nbsp;MB, and the limit that actually bites. Wallet QR images and chat history now live in device storage instead, which is far roomier.
       </div>
       <div style="height:10px; background:var(--surface3); border:1px solid var(--border); border-radius:999px; overflow:hidden;">
         <div id="storageBarFill" style="height:100%; width:0%; background:var(--green); border-radius:999px; transition:width 0.35s ease;"></div>
       </div>
       <div id="storageUsageText" style="font-size:12px; color:var(--text2); margin-top:8px; font-family:'DM Mono',monospace;">—</div>
       <div id="storageTopKeys" style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.7;"></div>
+      <div id="storageDeviceText" style="font-size:11.5px; color:var(--text3); margin-top:10px; font-family:'DM Mono',monospace;"></div>
+      <div id="storagePersistText" style="font-size:11px; color:var(--text3); margin-top:6px; line-height:1.5;"></div>
+    </div>
+
+    <!-- Automatic snapshots -->
+    <div style="margin-bottom:16px; padding:16px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border);">
+      <div style="font-size:13px; font-weight:500; color:var(--text); margin-bottom:4px;">🕘 Automatic snapshots</div>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5;">
+        A full copy of your data is saved automatically when the month turns, and weekly in between. The last <strong style="color:var(--text2);">3</strong> are kept on this device — so a bad import, a wrong restore, or a mistake you notice late is recoverable without a backup file. Restoring saves a snapshot of the current data first, so it can be undone.
+      </div>
+      <div id="snapshotList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+      <button onclick="snapshotTakeUI()" style="
+        width:100%; padding:10px; background:var(--surface3); border:1px solid var(--border);
+        color:var(--text2); border-radius:var(--radius-sm); cursor:pointer;
+        font-family:'Outfit',sans-serif; font-size:13px;">
+        Take one now
+      </button>
     </div>
 
     <!-- Export -->
@@ -4466,6 +4567,227 @@
 <div id="toast" class="toast"></div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+// INDEXEDDB OFFLOAD  (big values move out of localStorage)
+//
+// localStorage is ONE synchronous ~5 MB bucket for the whole origin,
+// and two things were eating most of it: wallet QR images (up to six
+// base64 PNGs) and the chat transcript. Neither is small, and neither
+// needs to be synchronous — but everything that reads them IS, and
+// they're woven through export, cloud sync and profile stashing.
+//
+// So rather than rewrite ~20 call sites, the swap happens underneath:
+// localStorage.getItem / setItem / removeItem are intercepted for the
+// offloaded keys and served from an in-memory mirror that IndexedDB
+// backs. Every existing caller keeps working verbatim — export still
+// does localStorage.getItem('va_wallet_qrs'), sync still bundles it,
+// profile switching still stashes it. IndexedDB gets hundreds of MB
+// instead of five, so the space these two used to occupy goes back to
+// the ledger and history, which are the things that actually grow.
+//
+// Same interception trick this file already uses twice (the
+// parseFloat comma patch and hookStorage), for the same reason.
+// ═══════════════════════════════════════════════════════════════
+const IDB_NAME = 'gibsxpenses';
+const IDB_STORE = 'kv';
+
+// Base keys whose VALUE is big enough to be worth moving. Profile
+// stashes of these ("va_profile__Work__va_wallet_qrs") are matched by
+// suffix below, or switching profiles would put the blob straight back
+// into localStorage and undo the whole thing.
+const OFFLOAD_KEYS = ['va_wallet_qrs', 'va_chat_log'];
+
+function isOffloaded(k) {
+  if (OFFLOAD_KEYS.indexOf(k) !== -1) return true;
+  if (k.lastIndexOf('va_profile__', 0) === 0) {
+    for (let i = 0; i < OFFLOAD_KEYS.length; i++) {
+      const suffix = '__' + OFFLOAD_KEYS[i];
+      if (k.length > suffix.length && k.indexOf(suffix, k.length - suffix.length) !== -1) return true;
+    }
+  }
+  return false;
+}
+
+let _idbConn = null;
+function idbOpen() {
+  if (_idbConn) return _idbConn;
+  _idbConn = new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('no indexedDB'));
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+    req.onblocked = () => reject(new Error('indexedDB blocked'));
+  }).catch((e) => { _idbConn = null; throw e; });
+  return _idbConn;
+}
+
+function idbTx(mode, fn) {
+  return idbOpen().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, mode);
+    const store = tx.objectStore(IDB_STORE);
+    let out;
+    try { out = fn(store); } catch (e) { reject(e); return; }
+    tx.oncomplete = () => resolve(out && out.result !== undefined ? out.result : out);
+    tx.onerror    = () => reject(tx.error);
+    tx.onabort    = () => reject(tx.error || new Error('aborted'));
+  }));
+}
+
+function idbSet(k, v)  { return idbTx('readwrite', (s) => s.put(v, k)); }
+function idbDel(k)     { return idbTx('readwrite', (s) => s.delete(k)); }
+function idbGetAll()   {
+  return idbTx('readonly', (s) => {
+    const out = {};
+    return new Promise((resolve) => {
+      const cur = s.openCursor();
+      cur.onsuccess = (e) => {
+        const c = e.target.result;
+        if (!c) { resolve(out); return; }
+        out[c.key] = c.value;
+        c.continue();
+      };
+      cur.onerror = () => resolve(out);
+    });
+  }).then((p) => p);
+}
+
+// ── The mirror ─────────────────────────────────────────────────
+// Synchronous reads come from here. Writes land here first and are
+// flushed to IndexedDB in the background, so no caller ever has to
+// await anything.
+const _bigMirror = Object.create(null);
+let _idbAvailable = true;
+let _idbHydrated  = false;
+const _idbPending  = Object.create(null); // key -> latest value awaiting flush
+
+function _idbFlush(k) {
+  if (!_idbAvailable) return;
+  const v = _idbPending[k];
+  delete _idbPending[k];
+  if (v === undefined) return;
+  const p = (v === null) ? idbDel(k) : idbSet(k, v);
+  p.catch((e) => {
+    // IndexedDB has its own quota, far larger, but it can still fail
+    // (Safari private mode, disk pressure). Say so rather than lose
+    // the write in silence — same principle as the head storage guard.
+    console.warn('[idb] write failed', k, e);
+    if (!_idbFlush._warned) {
+      _idbFlush._warned = true;
+      const msg = '\u26A0 Could not save QR images / chat history to device storage.';
+      if (typeof window.showToast === 'function') window.showToast(msg, true);
+    }
+  });
+}
+
+(function installOffloadShim() {
+  let ls;
+  try { ls = window.localStorage; if (!ls) return; } catch (e) { return; }
+
+  // __patchStorage (defined in the head) patches Storage.prototype, not the
+  // instance — see the note there. Each call returns the previous
+  // implementation, so this layer sits INSIDE the head's quota guard and
+  // OUTSIDE nothing yet; hookStorage later wraps around both.
+  if (typeof window.__patchStorage !== 'function') { _idbAvailable = false; return; }
+  let origGet, origSet, origDel;
+
+  // Seed the mirror from whatever is still in localStorage, so an
+  // existing install has its data available on this very first paint
+  // — no waiting on the async hydrate below.
+  try {
+    for (let i = 0; i < ls.length; i++) {
+      const k = ls.key(i);
+      if (k && isOffloaded(k)) _bigMirror[k] = ls.getItem(k);
+    }
+  } catch (e) {}
+
+  try {
+    origGet = window.__patchStorage('getItem', (orig) => function (k) {
+      if (isOffloaded(k)) {
+        const v = _bigMirror[k];
+        return v === undefined ? null : v;
+      }
+      return orig(k);
+    });
+    origSet = window.__patchStorage('setItem', (orig) => function (k, v) {
+      if (isOffloaded(k)) {
+        const str = String(v);
+        _bigMirror[k] = str;
+        _idbPending[k] = str;
+        _idbFlush(k);
+        return;
+      }
+      return orig(k, v);
+    });
+    origDel = window.__patchStorage('removeItem', (orig) => function (k) {
+      if (isOffloaded(k)) {
+        delete _bigMirror[k];
+        _idbPending[k] = null;
+        _idbFlush(k);
+        return;
+      }
+      return orig(k);
+    });
+  } catch (e) { _idbAvailable = false; return; }
+
+  // ── Hydrate + migrate ────────────────────────────────────────
+  // Anything already in IndexedDB wins over the localStorage seed
+  // (it's the newer home). Anything still sitting in localStorage is
+  // copied across and then deleted, which is what actually frees the
+  // space. Runs once, in the background.
+  idbGetAll().then((rows) => {
+    let changed = false;
+    Object.keys(rows).forEach((k) => {
+      if (!isOffloaded(k)) return;
+      if (_bigMirror[k] !== rows[k]) { _bigMirror[k] = rows[k]; changed = true; }
+    });
+    // Migrate leftovers out of localStorage.
+    const stragglers = [];
+    try {
+      for (let i = 0; i < ls.length; i++) {
+        const k = ls.key(i);
+        if (k && isOffloaded(k)) stragglers.push(k);
+      }
+    } catch (e) {}
+    return Promise.all(stragglers.map((k) => {
+      const v = origGet(k);
+      if (v === null) return null;
+      return idbSet(k, v).then(() => { origDel(k); })
+        .catch((e) => console.warn('[idb] migration failed for', k, e));
+    })).then(() => changed);
+  }).then((changed) => {
+    _idbHydrated = true;
+    // The chat transcript is read during startup, before this resolves.
+    // If IndexedDB held something the seed didn't, re-read and repaint.
+    if (changed) {
+      try {
+        if (typeof chatLoadLog === 'function') chatLoadLog();
+        if (typeof chatRender  === 'function') chatRender();
+      } catch (e) {}
+    }
+  }).catch((e) => {
+    // No IndexedDB (very old WebView, or blocked). The mirror still
+    // holds whatever localStorage had, so nothing breaks — the app
+    // just doesn't get the extra room. Fall back to localStorage.
+    console.warn('[idb] unavailable, staying on localStorage', e);
+    _idbAvailable = false;
+    // Put the offloaded values back where the un-shimmed getters will find
+    // them, then step out of the way. Better a full localStorage than data
+    // that reads as missing.
+    try {
+      Object.keys(_bigMirror).forEach((k) => {
+        try { origSet(k, _bigMirror[k]); } catch (e2) {}
+      });
+      window.__patchStorage('getItem',    () => origGet);
+      window.__patchStorage('setItem',    () => origSet);
+      window.__patchStorage('removeItem', () => origDel);
+    } catch (e2) {}
+  });
+})();
+
 const DAYS_PER_WEEK = 5;
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -6359,6 +6681,13 @@ function todayLocalStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+// Local "YYYY-MM-DD HH:MM:SS" for file stamps. toISOString() gave UTC, which
+// put yesterday's date on anything exported before 08:00 Manila time.
+function localStampStr() {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+    + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
 function daysBetweenLocal(fromStr, toStr) {
   const a = new Date(fromStr + 'T00:00:00'), b = new Date(toStr + 'T00:00:00');
   if (isNaN(a) || isNaN(b)) return 0;
@@ -6485,6 +6814,9 @@ function renderSavingsItems() {
   const container = document.getElementById('savingsItemsContainer');
   if (!container) return;
   container.innerHTML = '';
+  // Set by the loop below when it backfills interest defaults onto an old
+  // item. Persisted once after the loop rather than left dangling in memory.
+  let _savDefaultsWritten = false;
 
   savingsItems.forEach((item, i) => {
     const bankId  = item.bankId || 'custom';
@@ -6500,10 +6832,13 @@ function renderSavingsItems() {
     const intTax    = item.intTax != null ? item.intTax : '20';
     // Persist the defaults onto the item so the computed interest matches
     // what the fields display (old items had no interest fields at all).
-    if (item.intPeriod == null) item.intPeriod = intPeriod;
-    if (item.intTax == null)    item.intTax    = intTax;
-    if (item.intRate == null)   item.intRate   = '';
-    if (item.intBasis == null)  item.intBasis  = 'annual';
+    // A render that mutates the model without saving used to leave the two
+    // out of step until some unrelated edit happened to call saveData();
+    // _savDefaultsWritten now flags it so the loop can persist once at the end.
+    if (item.intPeriod == null) { item.intPeriod = intPeriod; _savDefaultsWritten = true; }
+    if (item.intTax == null)    { item.intTax    = intTax;    _savDefaultsWritten = true; }
+    if (item.intRate == null)   { item.intRate   = '';        _savDefaultsWritten = true; }
+    if (item.intBasis == null)  { item.intBasis  = 'annual';  _savDefaultsWritten = true; }
     const intGrown  = parseFloat(item.intGrown) || 0;
     const perOpts   = [['day','daily'],['month','monthly'],['year','yearly']].map(([v,l]) =>
       `<option value="${v}"${v === intPeriod ? ' selected' : ''}>${l}</option>`).join('');
@@ -6548,6 +6883,13 @@ function renderSavingsItems() {
     container.appendChild(div);
     updateSavItemInterest(i);
   });
+
+  // Backfilled defaults are real model changes — write them out now instead
+  // of waiting for some unrelated edit to happen to call saveData().
+  // Guarded on _isLoading so this can't fire mid-restore.
+  if (_savDefaultsWritten && !_isLoading) {
+    try { _saveDataDirect(); } catch (e) { console.warn('savings defaults save failed', e); }
+  }
 
   updateSavingsSummary();
 }
@@ -11093,6 +11435,12 @@ function updateDebtsSummary() {
 function drawChart() {
   const canvas = document.getElementById('incomeExpenseChart');
   if (!canvas || !canvas.getContext) return;
+  // getContext('2d') RETURNS NULL on a 0x0 canvas, under memory pressure on
+  // low-end devices, and when too many contexts are already live. drawChart is
+  // called synchronously from recalcAll() inside the startup sequence, so a
+  // null here used to throw on ctx.clearRect and abort every remaining init
+  // call — the app came up half-loaded with nothing on screen to explain it.
+  if (!canvas.getContext('2d')) return;
 
   // Read values from live DOM (already computed by recalcAll)
   function readNB(id) {
@@ -11137,6 +11485,7 @@ function drawChart() {
   canvas.width  = W;
   canvas.height = W;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return; // see drawChart — a null 2d context must not throw
   ctx.clearRect(0, 0, W, W);
 
   if (total === 0) {
@@ -14136,6 +14485,7 @@ function drawNetWorthChart(pts) {
   const cssH = 150, dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
   const ctx = cv.getContext('2d');
+  if (!ctx) return; // see drawChart — a null 2d context must not throw
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
 
@@ -15025,6 +15375,7 @@ function drawSalaryChart() {
   canvas.width  = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   const ctx = canvas.getContext('2d');
+  if (!ctx) return; // see drawChart — a null 2d context must not throw
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
 
@@ -15648,63 +15999,97 @@ let trkrViewYear = new Date().getFullYear();
 // 'replace' is the old behaviour, kept for correcting a wrong figure.
 let trkrAddMode  = 'add';
 
-loadData();
-loadLedger();       // actual-spend ledger + month-end history (va_expense_log / va_spend_log)
-loadReceivables();  // what people still owe you from splits you fronted
-loadLedgerPrefs();  // category caps + the bill-tick logging choice (va_ledger_prefs)
+// ─── STARTUP SEQUENCE ─────────────────────────────────────────
+// Every step runs inside boot() so ONE failure can't take out the rest.
+// This used to be ~30 bare top-level calls: a single throw anywhere in
+// the chain (a null canvas context, a corrupted key in localStorage)
+// silently skipped every call after it, and the app came up half-built
+// with no error the user could see. checkDayRollover() already wraps its
+// steps this way; the startup path now matches it.
+function boot(label, fn) {
+  try { fn(); }
+  catch (e) {
+    console.error('[init] ' + label + ' failed', e);
+    (window.__bootFailures = window.__bootFailures || []).push(label);
+  }
+}
+
+boot('loadData', loadData);
+boot('loadLedger', loadLedger);           // actual-spend ledger + month-end history
+boot('loadReceivables', loadReceivables); // what people still owe you from splits you fronted
+boot('loadLedgerPrefs', loadLedgerPrefs); // category caps + the bill-tick logging choice
 // Default the Expenses date-range "From" to today when it's empty, so the
 // range always starts from the current date without manual entry.
-(function () {
+boot('dateStart default', function () {
   const ds = document.getElementById('dateStart');
   if (ds && !ds.value) { ds.value = todayLocalStr(); saveData(); }
-})();
-renderNec();
-renderCatCaps();
-(function () {
+});
+boot('renderNec', renderNec);
+boot('renderCatCaps', renderCatCaps);
+boot('billPayUI', function () {
   const al = document.getElementById('bclAutolog');
   if (al) al.value = ledgerPrefs.autolog;
-  try { updateBillPayUI(); } catch (e) {}
-})();
-renderLedger();
-renderPL('shopee');
-renderPL('tiktok');
-renderPL('maya');
-initPLPurchaseForms();
-renderSavingsItems();
+  updateBillPayUI();
+});
+boot('renderLedger', renderLedger);
+boot('renderPL shopee', function () { renderPL('shopee'); });
+boot('renderPL tiktok', function () { renderPL('tiktok'); });
+boot('renderPL maya',   function () { renderPL('maya'); });
+boot('initPLPurchaseForms', initPLPurchaseForms);
+boot('renderSavingsItems', renderSavingsItems);
 // Rates are read as ANNUAL from this build on. Migrate first so nothing
 // back-accrues under the old "rate is per-day" reading, then credit.
-(function () {
+boot('savings interest migration', function () {
   const reinterpreted = migrateSavingsInterestBasis();
   runDailyAccrual(true);   // credit any interest earned since the last open
   if (reinterpreted > 0) {
     renderSavingsItems();
     saveData();
     setTimeout(function () {
-      showToast('💹 Interest rates now read as % per YEAR — check your '
+      showToast('\uD83D\uDCB9 Interest rates now read as % per YEAR \u2014 check your '
         + reinterpreted + ' daily-credited allocation' + (reinterpreted > 1 ? 's' : ''), true);
     }, 1200);
   }
-})();
-loadCachedRate(); // show last known rate immediately while live fetch runs
-fetchRate(false); // then fetch a fresh live rate in the background
+});
+boot('loadCachedRate', loadCachedRate);              // show last known rate immediately
+boot('fetchRate', function () { fetchRate(false); }); // then fetch a fresh live rate
 
-loadCC();
-loadHS();
+boot('loadCC', loadCC);
+boot('loadHS', loadHS);
 // CC Split, Hangout, the Plan calendar, the payoff planner, and both
 // session archives are LAZY-RENDERED on first visit to their tab (see
 // switchPage) — data loads now, DOM builds only when needed, which
 // noticeably cuts initial page-load work.
 
-loadPlanData();
-renderDebts(); // debts section now lives on the Expenses page — render at startup
-setTimeout(drawChart, 200);
-updateConverter();
-renderCalcTape();
+boot('loadPlanData', loadPlanData);
+boot('renderDebts', renderDebts); // debts section lives on the Expenses page
+setTimeout(function () { boot('drawChart', drawChart); }, 200);
+boot('updateConverter', updateConverter);
+boot('renderCalcTape', renderCalcTape);
 
 // ─── NEW FEATURE INIT ─────────────────────────────────────────
-loadBillChecks();
-renderSalaryHistory();
-trkrInit();
+boot('loadBillChecks', loadBillChecks);
+boot('renderSalaryHistory', renderSalaryHistory);
+boot('trkrInit', trkrInit);
+
+// Catch-up snapshot: covers a long-running month, and takes the very first
+// one for an existing install. Deferred so it never competes with first
+// paint, and snapshotMaybeTake() no-ops if a recent one already exists.
+boot('snapshot catch-up', function () {
+  setTimeout(function () {
+    try { snapshotMaybeTake('periodic'); } catch (e) {}
+  }, 4000);
+});
+
+// The head's storage-full guard fires before showToast exists, so flush
+// any queued warning now that the UI is up.
+boot('storage warning flush', function () {
+  if (window.__storageFullMsg) {
+    const m = window.__storageFullMsg;
+    window.__storageFullMsg = null;
+    setTimeout(function () { showToast(m, true); }, 1500);
+  }
+});
 
 // ─── TAB MEMORY ────────────────────────────────────────────────
 // Reopen on whatever tab was active last time instead of always
@@ -15989,6 +16374,11 @@ function checkDayRollover() {
   try { renderDueSoon(); } catch (e) {}
   try { refreshPaidUI(); } catch (e) {}      // ends in recalcAll → Net Summary
   try { renderLedger(); } catch (e) {}
+  if (monthTurned) {
+    // The month just closed — the one moment the data is a meaningful
+    // "finished" state, so it's the natural point to snapshot it.
+    try { snapshotMaybeTake('month-rollover'); } catch (e) {}
+  }
   if (monthTurned) {
     // A new month can be the month a sinking fund's bill lands in, and an
     // installed PWA may not be reloaded for weeks — so the payout prompt has
@@ -16614,6 +17004,7 @@ function processQRImage(file, cb) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       const ctx = c.getContext('2d');
+      if (!ctx) { showToast('\u26A0 Could not process that image on this device', true); return; }
       ctx.fillStyle = '#ffffff';         // flatten transparency to white
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(img, 0, 0, w, h);
@@ -16771,6 +17162,7 @@ let _syncSuspended = false;   // true while we're restoring cloud data locally
 let _syncTimer     = null;    // debounce timer for auto-upload
 let _syncBusy      = false;
 let _syncKeyCache  = null;    // imported CryptoKey for this session
+let _syncKeyCacheFor = null;  // the keyB64 _syncKeyCache was imported from
 let _lastSyncCheck = 0;       // throttle for the visibility-change cloud check
 
 function getSyncMeta() {
@@ -16801,13 +17193,55 @@ function syncScopedPhrase(phrase) {
   return phrase;
 }
 
-// Hash the sync code so the raw phrase never leaves the device.
-// NOTE: uses a DIFFERENT salt than the encryption key derivation, so
-// knowing the user_id reveals nothing about the encryption key.
+// ── Deriving the row id from the sync code ─────────────────────
+// v1 did this, and it was the weak point of the whole design:
+//
+//     SHA-256('gibsxpenses::' + phrase)      // one hash, no salt
+//
+// The publishable key is in this file, so the row-id list is readable.
+// Against an unsalted single-round hash, confirming a guessed phrase cost
+// exactly one SHA-256 — run a wordlist, hash each candidate, see which ids
+// exist. PBKDF2 never entered it, because matching the ID is enough to know
+// you've guessed right. An 8-character human-chosen code does not survive
+// that. And because the KEY salt was also a constant, one precomputed table
+// covered every user who picked a common phrase.
+//
+// v2 fixes both halves:
+//   • the id is PBKDF2 at ID_ITERATIONS, so each guess costs ~250k hashes
+//     instead of one — a wordlist sweep goes from seconds to infeasible;
+//   • the key gets a RANDOM per-row salt (see deriveSyncKeyB64), stored in
+//     the clear in the envelope, so no table amortises across users.
+//
+// The id salt stays constant BY NECESSITY — the id is the lookup key, so it
+// has to be derivable from the phrase alone. Cost is the defence there. The
+// encryption key has no such constraint: you fetch the row before you need
+// the key, so its salt can be random and per-row.
+const ID_ITERATIONS  = 250000;
+const KEY_ITERATIONS = 150000;
+
+async function _pbkdf2Bits(phrase, saltBytes, iterations, bits) {
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    'raw', enc.encode(phrase.trim().toLowerCase()), 'PBKDF2', false, ['deriveBits']);
+  return crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' }, material, bits);
+}
+
+function _hex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function hashSyncPhrase(phrase) {
+  const salt = new TextEncoder().encode('gibsxpenses-id::v2');
+  return _hex(await _pbkdf2Bits(phrase, salt, ID_ITERATIONS, 256));
+}
+
+// The v1 derivation, kept ONLY so an existing cloud row can still be found
+// and migrated. Never used for new rows.
+async function hashSyncPhraseLegacy(phrase) {
   const text = 'gibsxpenses::' + phrase.trim().toLowerCase();
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return _hex(buf);
 }
 
 // ── End-to-end encryption of the cloud payload ─────────────────
@@ -16829,32 +17263,44 @@ function _bufFromB64(b64) {
   return bytes.buffer;
 }
 
-async function deriveSyncKeyB64(phrase) {
-  const enc = new TextEncoder();
-  const material = await crypto.subtle.importKey(
-    'raw', enc.encode(phrase.trim().toLowerCase()), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: enc.encode('gibsxpenses-enc::v1'), iterations: 150000, hash: 'SHA-256' },
-    material, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
-  const raw = await crypto.subtle.exportKey('raw', key);
-  return _b64FromBuf(raw);
+// Random 16-byte salt for a NEW row. Stored in the clear in the envelope
+// (field `ks`) — a salt is not a secret, it just has to be unique per row so
+// an attacker can't precompute one table that covers everybody.
+function newKeySaltB64() {
+  return _b64FromBuf(crypto.getRandomValues(new Uint8Array(16)).buffer);
+}
+
+async function deriveSyncKeyB64(phrase, saltB64) {
+  const salt = saltB64
+    ? new Uint8Array(_bufFromB64(saltB64))
+    : new TextEncoder().encode('gibsxpenses-enc::v1'); // v1 constant salt
+  return _b64FromBuf(await _pbkdf2Bits(phrase, salt, KEY_ITERATIONS, 256));
 }
 
 async function getSyncCryptoKey(meta) {
   if (!meta || !meta.keyB64 || !syncCryptoAvailable()) return null;
-  if (_syncKeyCache) return _syncKeyCache;
+  // Cache keyed on the key material itself. A bare `if (_syncKeyCache)` went
+  // stale the moment meta.keyB64 changed under it — which now happens during
+  // the v1→v2 migration in enableSync, where the same session reads with the
+  // old key and writes with the new one.
+  if (_syncKeyCache && _syncKeyCacheFor === meta.keyB64) return _syncKeyCache;
   _syncKeyCache = await crypto.subtle.importKey(
     'raw', _bufFromB64(meta.keyB64), 'AES-GCM', false, ['encrypt', 'decrypt']);
+  _syncKeyCacheFor = meta.keyB64;
   return _syncKeyCache;
 }
 
-// Envelope: { enc:1, iv, ct, synced_at } — synced_at stays in the clear
-// so conflict checks can compare timestamps without decrypting.
-async function encryptSyncBundle(bundle, key) {
+// Envelope: { enc:2, ks, iv, ct, synced_at } — synced_at stays in the clear
+// so conflict checks can compare timestamps without decrypting, and `ks` is
+// the per-row key salt (also public; see newKeySaltB64). enc:1 envelopes have
+// no `ks` and fall back to the old constant salt on read.
+async function encryptSyncBundle(bundle, key, keySaltB64) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(bundle)));
-  return { enc: 1, iv: _b64FromBuf(iv.buffer), ct: _b64FromBuf(ct), synced_at: bundle.synced_at };
+  const env = { enc: keySaltB64 ? 2 : 1, iv: _b64FromBuf(iv.buffer), ct: _b64FromBuf(ct), synced_at: bundle.synced_at };
+  if (keySaltB64) env.ks = keySaltB64;
+  return env;
 }
 
 async function decryptSyncBundle(envelope, key) {
@@ -16918,8 +17364,10 @@ async function cloudUpload(manual, force) {
           return;
         }
         const when = new Date(remoteTime).toLocaleString();
+        const detail = await syncDescribeConflict(remote, meta);
         const loadCloud = confirm(
-          '\u2601\ufe0f The cloud has newer data (from ' + when + ') \u2014 probably from another device.\n\n' +
+          '\u2601\ufe0f The cloud has newer data (from ' + when + ') \u2014 probably from another device.\n' +
+          detail + '\n' +
           'OK \u2014 load the cloud data on this device (recommended).\n' +
           'Cancel \u2014 overwrite the cloud with THIS device\u2019s data.');
         if (loadCloud) {
@@ -16936,7 +17384,9 @@ async function cloudUpload(manual, force) {
 
     const bundle = buildSyncPayload();
     const key = await getSyncCryptoKey(meta);
-    const payloadObj = key ? await encryptSyncBundle(bundle, key) : bundle;
+    // meta.keySaltB64 is set for v2 accounts; a v1 device (meta.v absent) has
+    // none and keeps writing enc:1 until the user re-enters their code.
+    const payloadObj = key ? await encryptSyncBundle(bundle, key, meta.keySaltB64 || null) : bundle;
     const res = await fetch(SUPA_URL + '/rest/v1/user_data?on_conflict=user_id', {
       method: 'POST',
       headers: supaHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
@@ -16980,7 +17430,7 @@ async function fetchCloudEnvelope(meta) {
 // automatically on this device's next upload).
 async function openCloudBundle(envelope, meta) {
   if (!envelope) return null;
-  if (envelope.enc === 1) {
+  if (envelope.enc === 1 || envelope.enc === 2) {
     const key = await getSyncCryptoKey(meta);
     if (!key) throw new Error('This cloud data is encrypted \u2014 turn sync off and on again with your sync code to unlock it.');
     try { return await decryptSyncBundle(envelope, key); }
@@ -17028,6 +17478,102 @@ async function cloudDownload() {
   }
 }
 
+
+// ── What actually differs between this device and the cloud ────
+// A conflict prompt that says only "the cloud is newer" asks the user to
+// choose between two copies of their own financial history with nothing
+// to go on. This turns the question into an answerable one: which
+// sections differ, and which side has more in each.
+//
+// The comparison is on the RAW stored strings, the same values that
+// would be written or overwritten — so "same" here means byte-identical,
+// with no chance of reporting a match that a restore would then change.
+// STORAGE_KEY_LABELS gives them the names already used in the storage
+// meter, so a section reads as "Spending ledger", not "va_expense_log".
+function syncBundleDiff(cloudBundle) {
+  const out = { onlyCloud: [], onlyLocal: [], differ: [], same: 0 };
+  if (!cloudBundle || !cloudBundle.data) return out;
+  const cloud = cloudBundle.data;
+
+  SYNC_KEYS.forEach((k) => {
+    const localRaw = localStorage.getItem(k);
+    const cloudRaw = Object.prototype.hasOwnProperty.call(cloud, k) ? cloud[k] : null;
+    if (localRaw === null && cloudRaw === null) return;
+    const label = STORAGE_KEY_LABELS[k] || k;
+    if (cloudRaw === null)      { out.onlyLocal.push({ label: label }); return; }
+    if (localRaw === null)      { out.onlyCloud.push({ label: label }); return; }
+    if (localRaw === cloudRaw)  { out.same++; return; }
+
+    // Both sides have it and they're different. Row counts are the most
+    // useful signal a user can act on ("the cloud has 12 more entries"),
+    // so try for them; fall back to size when the shape isn't a list.
+    out.differ.push({ label: label, local: _syncCount(localRaw), cloud: _syncCount(cloudRaw) });
+  });
+  return out;
+}
+
+// Best-effort "how much is in here". Returns {n, unit} — entry counts
+// where the value is a list-ish structure, byte size otherwise.
+function _syncCount(raw) {
+  try {
+    const v = JSON.parse(raw);
+    if (Array.isArray(v)) return { n: v.length, unit: 'entries' };
+    if (v && typeof v === 'object') {
+      // The app's own containers: {entries:[…]}, {items:[…]}, {wallets:[…]}…
+      const listKey = ['entries', 'items', 'wallets', 'squads', 'pts', 'list', 'checks']
+        .find((k) => Array.isArray(v[k]));
+      if (listKey) return { n: v[listKey].length, unit: 'entries' };
+      return { n: Object.keys(v).length, unit: 'fields' };
+    }
+  } catch (e) {}
+  return { n: raw.length * 2, unit: 'bytes' };
+}
+
+// Renders the diff as plain lines for a confirm() dialog. Capped so a
+// wide diff can't produce a box taller than the screen.
+function syncDiffText(diff) {
+  if (!diff) return '';
+  const lines = [];
+  const MAX = 6;
+
+  diff.differ.slice(0, MAX).forEach((d) => {
+    let detail;
+    if (d.local.unit === d.cloud.unit && d.local.unit !== 'bytes') {
+      const delta = d.cloud.n - d.local.n;
+      detail = delta === 0
+        ? 'both ' + d.cloud.n + ' ' + d.cloud.unit + ', but edited'
+        : (delta > 0 ? 'cloud has ' + delta + ' more' : 'this device has ' + (-delta) + ' more');
+    } else {
+      detail = 'changed';
+    }
+    lines.push('  \u2022 ' + d.label + ' \u2014 ' + detail);
+  });
+  if (diff.differ.length > MAX) lines.push('  \u2022 \u2026and ' + (diff.differ.length - MAX) + ' more');
+
+  diff.onlyCloud.slice(0, 3).forEach((d) => lines.push('  + ' + d.label + ' \u2014 only in the cloud'));
+  diff.onlyLocal.slice(0, 3).forEach((d) => lines.push('  \u2212 ' + d.label + ' \u2014 only on this device'));
+
+  if (!lines.length) {
+    return diff.same
+      ? '\nEvery section is identical \u2014 only the timestamp differs, so either choice is safe.\n'
+      : '\n';
+  }
+  return '\nWhat differs:\n' + lines.join('\n')
+    + (diff.same ? '\n\n(' + diff.same + ' other section' + (diff.same === 1 ? '' : 's') + ' identical.)' : '')
+    + '\n';
+}
+
+// Fetch + decrypt purely to describe the difference. Never throws — a
+// diff is a nicety, and failing to build one must not block the choice.
+async function syncDescribeConflict(envelope, meta) {
+  try {
+    const bundle = await openCloudBundle(envelope, meta);
+    return syncDiffText(syncBundleDiff(bundle));
+  } catch (e) {
+    return '\n(Could not read the cloud copy to compare it \u2014 ' + (e.message || 'unknown error') + ')\n';
+  }
+}
+
 // ── Enable / disable ───────────────────────────────────────────
 async function enableSync() {
   const input = document.getElementById('syncPhraseInput');
@@ -17037,19 +17583,74 @@ async function enableSync() {
     setSyncMsg('Sync needs a secure connection (https:// or localhost) \u2014 it\u2019s unavailable when opened as a plain file.', false);
     return;
   }
-  setSyncMsg('Setting up\u2026');
+  setSyncMsg('Setting up\u2026 (deriving keys, this takes a moment)');
   const scoped = syncScopedPhrase(phrase); // profile-aware — see syncScopedPhrase()
-  const userId = await hashSyncPhrase(scoped);
-  const keyB64 = await deriveSyncKeyB64(scoped);
   _syncKeyCache = null; // force re-import from the new key
-  const meta = { userId: userId, keyB64: keyB64, lastSyncedAt: null };
+
+  // ── v2 row first, then the v1 row for migration ──────────────
+  // A device that already synced under v1 must still find its data. We look
+  // for the hardened id first; only if there's nothing there do we check the
+  // old unsalted id. Either way the NEXT upload writes to the v2 id with a
+  // fresh random key salt, so the account migrates on first use and the weak
+  // id stops being the one in play.
+  const userId = await hashSyncPhrase(scoped);
+  let meta = null;
+  let envelope = null;
+
+  try {
+    envelope = await fetchCloudEnvelope({ userId: userId });
+  } catch (e) {
+    updateSyncUI();
+    setSyncMsg('\u2717 ' + (e && e.message ? e.message : 'Could not reach the cloud.'), false);
+    return;
+  }
+
+  if (envelope) {
+    // Existing v2 row — reuse ITS salt or we'd derive a key that can't open it.
+    const ks = envelope.ks || null;
+    meta = { v: 2, userId: userId, keySaltB64: ks,
+             keyB64: await deriveSyncKeyB64(scoped, ks), lastSyncedAt: null };
+  } else {
+    let legacyEnv = null;
+    try {
+      const legacyId = await hashSyncPhraseLegacy(scoped);
+      legacyEnv = await fetchCloudEnvelope({ userId: legacyId });
+    } catch (e) { /* legacy lookup is best-effort */ }
+
+    if (legacyEnv) {
+      // Open it with the v1 key, but point meta at the v2 id and a NEW random
+      // salt so the very next upload lands on the hardened row.
+      setSyncMsg('Found older cloud data \u2014 upgrading its encryption\u2026');
+      envelope = legacyEnv;
+      meta = { v: 2, userId: userId, keySaltB64: newKeySaltB64(),
+               keyB64: await deriveSyncKeyB64(scoped, null), // v1 key, to READ
+               lastSyncedAt: null, _migrating: true };
+    } else {
+      // Brand new account.
+      const ks = newKeySaltB64();
+      meta = { v: 2, userId: userId, keySaltB64: ks,
+               keyB64: await deriveSyncKeyB64(scoped, ks), lastSyncedAt: null };
+    }
+  }
+
   saveSyncMeta(meta);
   input.value = '';
   try {
-    const bundle = await fetchCloudBundle(meta);
+    const bundle = await openCloudBundle(envelope, meta);
+    // Migration: the bundle was read with the v1 key; swap meta over to the
+    // v2 key now so everything written from here on uses the salted one.
+    if (meta._migrating) {
+      delete meta._migrating;
+      meta.keyB64 = await deriveSyncKeyB64(scoped, meta.keySaltB64);
+      _syncKeyCache = null;
+      saveSyncMeta(meta);
+    }
     if (bundle && bundle.data && Object.keys(bundle.data).length) {
       const when = bundle.synced_at ? new Date(bundle.synced_at).toLocaleString() : 'unknown time';
-      if (confirm('Found existing cloud data for this sync code.\n\n\u2022 Last uploaded: ' + when + '\n\nDownload it to this device? (Cancel keeps this device\u2019s data and uploads it instead.)')) {
+      const detail = syncDiffText(syncBundleDiff(bundle));
+      if (confirm('Found existing cloud data for this sync code.\n\n\u2022 Last uploaded: ' + when + '\n'
+          + detail
+          + '\nDownload it to this device? (Cancel keeps this device\u2019s data and uploads it instead.)')) {
         applyCloudBundle(bundle, meta);
         updateSyncUI();
         setSyncMsg('\u2713 Sync is on \u2014 reloading with cloud data\u2026', true);
@@ -17089,8 +17690,14 @@ function updateSyncUI() {
       const pm = getProfilesMeta();
       if (pm.list.length > 1) line += ' <span style="color:var(--text3);">Profile: ' + escH(pm.current) + ' (each profile syncs to its own cloud copy).</span>';
     } catch(e) {}
-    if (meta.keyB64) {
+    if (meta.keyB64 && meta.v === 2) {
       line += ' <span style="color:var(--text3);">\ud83d\udd12 End-to-end encrypted.</span>';
+    } else if (meta.keyB64) {
+      // v1 account: encrypted, but the row id is still the unsalted SHA-256
+      // and the key still uses the shared constant salt. Only re-entering the
+      // phrase can re-derive both, so ask for it — same pattern this UI
+      // already used for the plaintext→encrypted migration.
+      line += ' <span style="color:var(--amber-text);">\ud83d\udd12 Encrypted, but using the older key setup \u2014 turn sync off and on again with the same code to upgrade it.</span>';
     } else if (syncCryptoAvailable()) {
       line += ' <span style="color:var(--amber-text);">\u26a0 Not encrypted yet \u2014 turn sync off and on again with the same code to enable encryption.</span>';
     }
@@ -17112,16 +17719,20 @@ function scheduleCloudUpload() {
 }
 (function hookStorage() {
   try {
-    const origSet = localStorage.setItem.bind(localStorage);
-    const origDel = localStorage.removeItem.bind(localStorage);
-    Object.defineProperty(localStorage, 'setItem', { value: function(k, v) {
+    // Uses __patchStorage for the same reason the other two layers do: a
+    // property defined straight onto the Storage object can be swallowed as
+    // a storage write, leaving auto-sync silently disabled. This wraps
+    // OUTSIDE the IndexedDB shim and the quota guard, so an offloaded key
+    // still schedules an upload even though its bytes never touch
+    // localStorage.
+    window.__patchStorage('setItem', (origSet) => function(k, v) {
       origSet(k, v);
       if (SYNC_KEYS.indexOf(k) !== -1) scheduleCloudUpload();
-    }});
-    Object.defineProperty(localStorage, 'removeItem', { value: function(k) {
+    });
+    window.__patchStorage('removeItem', (origDel) => function(k) {
       origDel(k);
       if (SYNC_KEYS.indexOf(k) !== -1) scheduleCloudUpload();
-    }});
+    });
   } catch(e) { console.warn('Storage hook failed \u2014 auto-sync disabled, manual upload still works.', e); }
 })();
 
@@ -17137,7 +17748,10 @@ async function syncStartupCheck() {
     const localTime = Date.parse(meta.lastSyncedAt || '') || 0;
     if (cloudTime > localTime + 2000) { // cloud is newer than this device's last sync
       const when = new Date(cloudTime).toLocaleString();
-      if (confirm('\u2601\ufe0f Newer data found in the cloud (from ' + when + ') \u2014 probably from another device.\n\nLoad it on this device? (Cancel keeps this device\u2019s data.)')) {
+      const detail = await syncDescribeConflict(envelope, meta);
+      if (confirm('\u2601\ufe0f Newer data found in the cloud (from ' + when + ') \u2014 probably from another device.\n'
+          + detail
+          + '\nLoad it on this device? (Cancel keeps this device\u2019s data.)')) {
         const bundle = await openCloudBundle(envelope, meta);
         if (!bundle) return;
         applyCloudBundle(bundle, meta);
@@ -17836,33 +18450,81 @@ function updateStorageIndicator() {
   const top   = document.getElementById('storageTopKeys');
   if (!fill || !text) return;
 
-  let totalBytes = 0;
+  // localStorage half — measured by walking the keys, since there is no
+  // API for it. The ~5 MB cap here is real and per-origin.
+  let lsBytes = 0;
   const sizes = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       const v = localStorage.getItem(k) || '';
       const bytes = (k.length + v.length) * 2;   // UTF-16: 2 bytes per char
-      totalBytes += bytes;
+      lsBytes += bytes;
       sizes.push({ key: k, bytes });
     }
   } catch(e) {
     text.textContent = 'Could not read storage usage.';
     return;
   }
+  // QR images and the chat log live in IndexedDB now (see the offload
+  // shim), so they no longer show up in the walk above. Add them back —
+  // they're still the user's data and still worth seeing in the list.
+  Object.keys(_bigMirror).forEach((k) => {
+    const v = _bigMirror[k] || '';
+    sizes.push({ key: k, bytes: (k.length + v.length) * 2, idb: true });
+  });
 
-  const pct = Math.min(100, (totalBytes / STORAGE_LIMIT_BYTES) * 100);
-  fill.style.width = pct.toFixed(1) + '%';
-  fill.style.background = pct >= 85 ? 'var(--red)' : pct >= 60 ? 'var(--amber)' : 'var(--green)';
-  text.textContent = (totalBytes / (1024 * 1024)).toFixed(2) + ' MB used of ~5 MB (' + pct.toFixed(0) + '%)';
+  const lsPct = Math.min(100, (lsBytes / STORAGE_LIMIT_BYTES) * 100);
+  fill.style.width = lsPct.toFixed(1) + '%';
+  fill.style.background = lsPct >= 85 ? 'var(--red)' : lsPct >= 60 ? 'var(--amber)' : 'var(--green)';
+  text.textContent = (lsBytes / (1024 * 1024)).toFixed(2) + ' MB used of ~5 MB (' + lsPct.toFixed(0) + '%)';
 
   if (top) {
     const biggest = sizes.sort((a, b) => b.bytes - a.bytes).slice(0, 3).filter(s => s.bytes >= 5 * 1024);
     top.innerHTML = biggest.length
       ? 'Largest: ' + biggest.map(s =>
-          `<span style="white-space:nowrap;">${escH(STORAGE_KEY_LABELS[s.key] || s.key)} <span style="font-family:'DM Mono',monospace; color:var(--text2);">${fmtBytes(s.bytes)}</span></span>`
+          `<span style="white-space:nowrap;">${escH(STORAGE_KEY_LABELS[s.key] || s.key)} <span style="font-family:'DM Mono',monospace; color:var(--text2);">${fmtBytes(s.bytes)}</span>${s.idb ? '<span style="color:var(--text3);"> (device)</span>' : ''}</span>`
         ).join('<span style="margin:0 6px; color:var(--border);">·</span>')
       : '';
+  }
+
+  // ── Real device figures ──────────────────────────────────────
+  // The bar above is the localStorage cap, which is the one that
+  // actually bites. This second line is what the BROWSER says the whole
+  // origin has — quota is typically hundreds of MB or more, and it's
+  // what IndexedDB draws on, so it shows how much room the offloaded
+  // QR images and backups really have. Async, so it fills in a beat later.
+  const dev = document.getElementById('storageDeviceText');
+  if (dev && navigator.storage && navigator.storage.estimate) {
+    dev.textContent = 'Checking device storage\u2026';
+    navigator.storage.estimate().then((est) => {
+      if (!est || !est.quota) { dev.textContent = ''; return; }
+      const usedMB  = (est.usage || 0) / (1024 * 1024);
+      const quotaMB = est.quota / (1024 * 1024);
+      const q = quotaMB >= 1024
+        ? (quotaMB / 1024).toFixed(1) + ' GB'
+        : quotaMB.toFixed(0) + ' MB';
+      let line = 'Whole app on this device: ' + usedMB.toFixed(1) + ' MB of ' + q + ' available';
+      const dpct = (est.usage || 0) / est.quota * 100;
+      if (dpct >= 80) line += ' \u2014 \u26A0 running low';
+      dev.textContent = line;
+      dev.style.color = dpct >= 80 ? 'var(--amber-text)' : 'var(--text3)';
+    }).catch(() => { dev.textContent = ''; });
+  } else if (dev) {
+    dev.textContent = '';
+  }
+
+  // Whether the browser has promised not to evict us under disk pressure.
+  const per = document.getElementById('storagePersistText');
+  if (per && navigator.storage && navigator.storage.persisted) {
+    navigator.storage.persisted().then((ok) => {
+      per.textContent = ok
+        ? '\uD83D\uDD12 Protected \u2014 the browser will not clear this data to free space.'
+        : '\u26A0 Not protected \u2014 the browser may clear this data if the device runs out of space. Keep a backup file.';
+      per.style.color = ok ? 'var(--text3)' : 'var(--amber-text)';
+    }).catch(() => { per.textContent = ''; });
+  } else if (per) {
+    per.textContent = '';
   }
 }
 
@@ -17873,6 +18535,7 @@ function openSettings() {
   updateThemeButtons();
   renderProfileUI();
   renderWalletQRList();
+  renderSnapshots();
   updateSyncUI();
   setSyncMsg('');
   updateStorageIndicator();
@@ -17899,7 +18562,9 @@ function csvRow(arr) { return arr.map(csvCell).join(',') + '\n'; }
 function csvSection(title, header) { return '\n' + csvRow(['# ' + title]) + csvRow(header); }
 
 function buildCSV() {
-  let out = csvRow(['GibsXpenses export', new Date().toISOString().slice(0, 19).replace('T', ' ')]);
+  // Local time, not toISOString() — that stamped UTC, so any export made
+  // before 08:00 in Manila carried YESTERDAY's date on the file.
+  let out = csvRow(['GibsXpenses export', localStampStr()]);
   try {
     const pm = getProfilesMeta();
     if (pm && pm.current) out += csvRow(['Profile', pm.current]);
@@ -18128,6 +18793,224 @@ function exportData() {
   document.getElementById('settingsMsg').style.color = 'var(--green-text)';
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// AUTOMATIC SNAPSHOTS
+//
+// Manual export exists, but it only helps the people who remember to
+// use it — and this is the only copy of somebody's financial history.
+// So a snapshot is taken automatically when the month turns (the one
+// moment the data is a meaningful "closed" state), plus once on any
+// day the newest snapshot is more than a week old, so a long-running
+// month still leaves a trail.
+//
+// Kept in IndexedDB, not localStorage: three full bundles would eat
+// most of the ~5 MB cap on their own. Only the last SNAPSHOT_KEEP are
+// retained; older ones are dropped as new ones land.
+//
+// The bundle format is deliberately IDENTICAL to exportData()'s, so a
+// snapshot can be restored through the same path as an imported file
+// — and can be downloaded as one if the user wants it off-device.
+// ═══════════════════════════════════════════════════════════════
+const SNAPSHOT_PREFIX = 'snapshot::';
+const SNAPSHOT_KEEP   = 3;
+const SNAPSHOT_MAX_AGE_DAYS = 7;
+
+function buildBackupBundle(reason) {
+  const bundle = {
+    appName:  'GibsXpenses',
+    version:  2,
+    exported: new Date().toISOString(),
+    reason:   reason || 'manual',
+    data:     {},
+  };
+  BACKUP_KEYS.forEach((key) => {
+    const val = localStorage.getItem(key);
+    if (val !== null) bundle.data[key] = val;
+  });
+  return bundle;
+}
+
+function snapshotList() {
+  return idbTx('readonly', (s) => {
+    const out = [];
+    return new Promise((resolve) => {
+      const cur = s.openCursor();
+      cur.onsuccess = (e) => {
+        const c = e.target.result;
+        if (!c) { resolve(out); return; }
+        if (String(c.key).lastIndexOf(SNAPSHOT_PREFIX, 0) === 0) {
+          let meta = null;
+          try { meta = JSON.parse(c.value); } catch (err) {}
+          if (meta) out.push({
+            id: c.key,
+            at: meta.exported || '',
+            reason: meta.reason || '',
+            keys: Object.keys(meta.data || {}).length,
+            bytes: String(c.value).length * 2,
+          });
+        }
+        c.continue();
+      };
+      cur.onerror = () => resolve(out);
+    });
+  }).then((rows) => rows.sort((a, b) => (b.at || '').localeCompare(a.at || '')));
+}
+
+// Take one now. Returns a promise so callers can report failure; nothing
+// in the app blocks on it.
+function snapshotTake(reason) {
+  let bundle;
+  try { bundle = buildBackupBundle(reason); }
+  catch (e) { return Promise.reject(e); }
+  if (!Object.keys(bundle.data).length) return Promise.resolve(null); // nothing worth saving yet
+
+  const id = SNAPSHOT_PREFIX + bundle.exported;
+  return idbSet(id, JSON.stringify(bundle))
+    .then(() => snapshotList())
+    .then((list) => {
+      // Trim to the newest SNAPSHOT_KEEP. list is newest-first.
+      const stale = list.slice(SNAPSHOT_KEEP);
+      return Promise.all(stale.map((s) => idbDel(s.id).catch(() => {}))).then(() => id);
+    });
+}
+
+// Called on month rollover and at startup. Skips when a recent snapshot
+// already covers this reason, so reopening the app on the 1st doesn't
+// stack up three identical copies and push the useful older ones out.
+function snapshotMaybeTake(reason) {
+  return snapshotList().then((list) => {
+    const newest = list[0];
+    if (newest) {
+      const ageMs = Date.now() - (Date.parse(newest.at) || 0);
+      if (reason === 'month-rollover') {
+        // One per month turn is enough.
+        if (ageMs < 12 * 3600 * 1000 && newest.reason === 'month-rollover') return null;
+      } else if (ageMs < SNAPSHOT_MAX_AGE_DAYS * 86400000) {
+        return null;
+      }
+    }
+    return snapshotTake(reason);
+  }).catch((e) => { console.warn('[snapshot] failed', e); return null; });
+}
+
+function snapshotRestore(id) {
+  return idbTx('readonly', (s) => s.get(id)).then((raw) => {
+    if (!raw) throw new Error('Snapshot not found.');
+    const bundle = JSON.parse(raw);
+    if (!bundle || bundle.appName !== 'GibsXpenses' || !bundle.data) {
+      throw new Error('Snapshot is unreadable.');
+    }
+    // Before overwriting, keep a snapshot of what's here NOW — restoring
+    // the wrong one should not be the end of the story.
+    return snapshotTake('pre-restore').catch(() => null).then(() => bundle);
+  }).then((bundle) => {
+    Object.entries(bundle.data).forEach(([key, val]) => {
+      try { localStorage.setItem(key, val); }
+      catch (e) { console.warn('Failed to restore key:', key, e); }
+    });
+    return Object.keys(bundle.data).length;
+  });
+}
+
+function snapshotDownload(id) {
+  return idbTx('readonly', (s) => s.get(id)).then((raw) => {
+    if (!raw) throw new Error('Snapshot not found.');
+    const blob = new Blob([raw], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'gibsxpenses-snapshot-' + id.slice(SNAPSHOT_PREFIX.length, SNAPSHOT_PREFIX.length + 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
+// ── Settings UI ────────────────────────────────────────────────
+function renderSnapshots() {
+  const box = document.getElementById('snapshotList');
+  if (!box) return;
+  box.innerHTML = '<div style="font-size:11.5px; color:var(--text3);">Loading\u2026</div>';
+  snapshotList().then((list) => {
+    if (!list.length) {
+      box.innerHTML = '<div style="font-size:11.5px; color:var(--text3);">'
+        + 'No snapshots yet \u2014 the first one is taken automatically when the month turns.'
+        + '</div>';
+      return;
+    }
+    const REASONS = {
+      'month-rollover': 'month turned',
+      'periodic':       'weekly',
+      'pre-restore':    'before a restore',
+      'manual':         'manual',
+    };
+    box.innerHTML = list.map((s) => {
+      const when = s.at ? new Date(s.at).toLocaleString() : 'unknown time';
+      return '<div style="display:flex; align-items:center; gap:8px; padding:9px 10px;'
+        + ' background:var(--surface3); border:1px solid var(--border); border-radius:var(--radius-sm);">'
+        + '<div style="flex:1; min-width:0;">'
+        +   '<div style="font-size:12px; color:var(--text2);">' + escH(when) + '</div>'
+        +   '<div style="font-size:10.5px; color:var(--text3); font-family:\'DM Mono\',monospace;">'
+        +     escH(REASONS[s.reason] || s.reason || 'auto') + ' \u00b7 ' + s.keys + ' sections \u00b7 ' + fmtBytes(s.bytes)
+        +   '</div>'
+        + '</div>'
+        + '<button onclick="snapshotDownloadUI(\'' + escJS(s.id) + '\')" title="Download as a backup file" style="'
+        +   'padding:6px 9px; background:transparent; border:1px solid var(--border);'
+        +   'color:var(--text3); border-radius:var(--radius-sm); cursor:pointer; font-size:12px;">\u2b07</button>'
+        + '<button onclick="snapshotRestoreUI(\'' + escJS(s.id) + '\')" style="'
+        +   'padding:6px 11px; background:var(--amber-dim); border:1px solid var(--amber);'
+        +   'color:var(--amber-text); border-radius:var(--radius-sm); cursor:pointer;'
+        +   'font-family:\'Outfit\',sans-serif; font-size:12px;">Restore</button>'
+        + '</div>';
+    }).join('');
+  }).catch(() => {
+    box.innerHTML = '<div style="font-size:11.5px; color:var(--text3);">Device storage unavailable \u2014 snapshots are off. Use Download backup file instead.</div>';
+  });
+}
+
+function snapshotTakeUI() {
+  const msg = document.getElementById('settingsMsg');
+  snapshotTake('manual').then((id) => {
+    renderSnapshots();
+    if (msg) {
+      msg.textContent = id ? '\u2713 Snapshot saved.' : 'Nothing to snapshot yet.';
+      msg.style.color = 'var(--green-text)';
+    }
+  }).catch((e) => {
+    if (msg) { msg.textContent = '\u2717 Could not save snapshot: ' + (e.message || e); msg.style.color = 'var(--red-text)'; }
+  });
+}
+
+function snapshotDownloadUI(id) {
+  snapshotDownload(id).catch((e) => showToast('\u26A0 ' + (e.message || 'Download failed'), true));
+}
+
+function snapshotRestoreUI(id) {
+  snapshotList().then((list) => {
+    const s = list.find((x) => x.id === id);
+    const when = s && s.at ? new Date(s.at).toLocaleString() : 'this snapshot';
+    if (!confirm(
+      'Restore the snapshot from ' + when + '?\n\n'
+      + '\u2022 Contains: ' + (s ? s.keys : '?') + ' data sections\n\n'
+      + 'This REPLACES all current data on this device.\n'
+      + 'A snapshot of the current data is saved first, so this can be undone.\n'
+      + 'The app will reload automatically.'
+    )) return;
+    const msg = document.getElementById('settingsMsg');
+    return snapshotRestore(id).then((n) => {
+      if (msg) {
+        msg.textContent = '\u2713 Restored ' + n + ' section' + (n === 1 ? '' : 's') + ' \u2014 reloading\u2026';
+        msg.style.color = 'var(--green-text)';
+      }
+      setTimeout(() => location.reload(), 1200);
+    }).catch((e) => {
+      if (msg) { msg.textContent = '\u2717 ' + (e.message || 'Restore failed.'); msg.style.color = 'var(--red-text)'; }
+    });
+  });
+}
+
 function importData() {
   const input    = document.createElement('input');
   input.type     = 'file';
@@ -18198,16 +19081,60 @@ updateThemeButtons();
 // the app still works fully, it just won't be installable from there.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // ── Update handshake ──────────────────────────────────────
+    // sw.js no longer calls skipWaiting() in install, so a new release
+    // downloads, installs, and then WAITS. Nothing changes under the
+    // running page until the user accepts here — at which point we post
+    // SKIP_WAITING and reload, so the new code and its caches swap over
+    // together. Ignoring the bar is fine: the waiting worker activates by
+    // itself on the next cold start.
+    let _reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_reloading) return;   // controllerchange can fire more than once —
+      _reloading = true;        // without this guard the page reload-loops.
+      location.reload();
+    });
+
+    function showUpdateBar(worker) {
+      if (document.getElementById('swUpdateBar')) return;
+      const bar = document.createElement('div');
+      bar.id = 'swUpdateBar';
+      bar.className = 'sw-update-bar';
+      const label = document.createElement('span');
+      label.textContent = '\u2B06 A new version is ready';
+      const go = document.createElement('button');
+      go.textContent = 'Reload';
+      const no = document.createElement('button');
+      no.className = 'sw-dismiss';
+      no.textContent = 'Later';
+      bar.appendChild(label); bar.appendChild(go); bar.appendChild(no);
+      document.body.appendChild(bar);
+      requestAnimationFrame(() => bar.classList.add('show'));
+
+      go.addEventListener('click', () => {
+        go.disabled = true;
+        go.textContent = 'Reloading\u2026';
+        worker.postMessage('SKIP_WAITING'); // controllerchange above reloads us
+        // If the worker never answers (rare), don't strand the user.
+        setTimeout(() => { if (!_reloading) { _reloading = true; location.reload(); } }, 3000);
+      });
+      no.addEventListener('click', () => {
+        bar.classList.remove('show');
+        setTimeout(() => bar.remove(), 300);
+      });
+    }
+
     navigator.serviceWorker.register('./sw.js').then((reg) => {
-      // sw.js is now network-first for the app shell, so new releases
-      // download in the background. When one finishes installing, nudge
-      // the user instead of silently serving stale code forever.
+      // Already waiting when we registered (installed during a previous visit).
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar(reg.waiting);
+
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', () => {
+          // controller null == first ever install; nothing to update FROM.
           if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            showToast('⬆ Update downloaded — reload (or reopen the app) to get the new version');
+            showUpdateBar(nw);
           }
         });
       });
@@ -21345,17 +22272,20 @@ chatUpdateModeTag();
   // bottom, so the button must sit ABOVE it or it covers the Tracker
   // tab. Set from JS (not just CSS) so no style-precedence issue can
   // ever put it back on top of the bar. Re-checked on resize/rotate.
-  const mq = window.matchMedia('(max-width: 700px)');
+  // Guarded like every other matchMedia call in this file — an old WebView
+  // without it would otherwise throw here and take out the rest of this IIFE
+  // (the scroll handler below never gets attached).
+  const mq = window.matchMedia ? window.matchMedia('(max-width: 700px)') : null;
   const placeBtn = () => {
     btn.style.setProperty('bottom',
-      mq.matches
+      (mq && mq.matches)
         ? 'calc(84px + env(safe-area-inset-bottom, 0px))'
         : 'calc(20px + env(safe-area-inset-bottom, 0px))',
       'important');
   };
   placeBtn();
-  if (mq.addEventListener) mq.addEventListener('change', placeBtn);
-  else if (mq.addListener) mq.addListener(placeBtn); // older WebViews
+  if (mq && mq.addEventListener) mq.addEventListener('change', placeBtn);
+  else if (mq && mq.addListener) mq.addListener(placeBtn); // older WebViews
 
   let ticking = false;
   window.addEventListener('scroll', () => {

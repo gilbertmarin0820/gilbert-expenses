@@ -15,7 +15,7 @@
 //  • skipWaiting + clients.claim so a new SW takes over immediately
 //    instead of waiting for every tab to close.
 // ═══════════════════════════════════════════════════════════════
-const CACHE = 'gilbert-expenses-v40';
+const CACHE = 'gilbert-expenses-v42';
 
 // How long a page load waits for the network before falling back to the cached
 // shell. Long enough that a normal mobile connection is never cut short, short
@@ -37,6 +37,25 @@ const APP_SHELL = [
 // install on its own.
 const APP_SHELL_REQUIRED = ['./', './index.html'];
 
+// Cache writes used to be fired and forgotten:
+//     caches.open(CACHE).then((cache) => cache.put(req, copy));
+// That promise floats free of the event. respondWith() has already resolved
+// by then, so the browser is entitled to kill the worker before the write
+// lands — and on a flaky mobile connection it does. The fresh shell that was
+// just downloaded never reached the cache, which quietly defeats the whole
+// point of the network-first strategy above ("updates arrive on the very next
+// open"). event.waitUntil() keeps the worker alive until the put finishes.
+// The catch is what stops a full quota becoming an unhandled rejection.
+function cachePut(event, req, res) {
+  if (!res || !res.ok) return;
+  const copy = res.clone();
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => cache.put(req, copy))
+      .catch((err) => console.warn('[sw] cache put failed', req.url, err))
+  );
+}
+
 self.addEventListener('install', (event) => {
   // cache.addAll() is ALL-OR-NOTHING: one 404 (a renamed icon, a half-finished
   // deploy) rejected the whole install, so the worker never activated and the
@@ -50,8 +69,20 @@ self.addEventListener('install', (event) => {
           console.warn('[sw] skipped optional asset', url, err);
         })
       )))
-      .then(() => self.skipWaiting()) // don't wait for old tabs to close
   );
+  // NOTE: skipWaiting() is deliberately NOT called here any more.
+  //
+  // It used to run unconditionally, which made the message listener below
+  // dead code — the new worker had already taken over by the time the page
+  // could ask it to, and index.html never posted SKIP_WAITING at all. The
+  // page showed "reload to get the new version" for an update that had
+  // silently claimed the tab mid-session, while activate() deleted the old
+  // caches out from under the still-running page.
+  //
+  // Now the new worker waits, the page offers a tappable "Update ready"
+  // bar, and SKIP_WAITING arrives only when the user accepts — followed by
+  // a reload, so the code and its caches change over together. Ignoring the
+  // bar is safe too: the waiting worker activates on the next cold start.
 });
 
 self.addEventListener('activate', (event) => {
@@ -60,11 +91,24 @@ self.addEventListener('activate', (event) => {
       .then((keys) => Promise.all(
         keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
       ))
+      // ── Navigation preload ───────────────────────────────────
+      // The shell is network-first, so every cold open used to pay for
+      // worker startup BEFORE the fetch could even begin — the request sat
+      // waiting on this file to boot. With preload enabled the browser
+      // fires the navigation request in parallel with starting the worker,
+      // and hands us the in-flight response as event.preloadResponse. On
+      // mobile that's the startup cost removed from the critical path.
+      // Unsupported browsers (Safari < 16.4) just skip it; the navigate
+      // branch falls back to a normal fetch.
+      .then(() => (self.registration.navigationPreload
+        ? self.registration.navigationPreload.enable().catch(() => {})
+        : Promise.resolve()))
       .then(() => self.clients.claim())
   );
 });
 
-// index.html listens for this after showing its "update downloaded" toast.
+// Sent by index.html when the user taps the "Update ready" bar. This is the
+// ONLY thing that promotes a waiting worker — see the note in install above.
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
@@ -87,17 +131,21 @@ self.addEventListener('fetch', (event) => {
   // is NOT abandoned when the deadline passes: it keeps running and still
   // refreshes the cache, so the next open has the new version.
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
-    const net = fetch(req)
+    // Use the preloaded response when the browser started one for us (see
+    // activate). event.preloadResponse resolves to undefined when preload
+    // is off or unsupported, so fall through to a normal fetch — and if the
+    // preload itself rejected (offline), fall through too rather than let
+    // that rejection stand in for the network attempt.
+    const net = Promise.resolve(event.preloadResponse)
+        .catch(() => undefined)
+        .then((preloaded) => preloaded || fetch(req))
         .then((res) => {
           // ONLY a real page gets written over the cached shell. Without this
           // check a 404 or 502 from the host — a bad deploy, a paused Pages
           // build — was cached as index.html, so the app stayed broken offline
           // long after the host recovered. The static branch below always
           // checked res.ok; this one did not.
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
+          cachePut(event, req, res);
           return res;
         });
 
@@ -138,10 +186,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(req).then((hit) => {
       const refresh = fetch(req)
         .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
+          cachePut(event, req, res);
           return res;
         })
         .catch(() => hit || null);
